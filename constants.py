@@ -1,0 +1,4 @@
+APP_NAME = "KönyvTárnok"
+APP_VERSION = "0.21.0"
+APP_STAGE = "Béta"
+APP_TITLE = f"{APP_NAME}"

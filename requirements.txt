@@ -1,0 +1,5 @@
+cryptography==50.0.0
+openpyxl==3.1.5
+pdfplumber==0.11.10
+reportlab==5.0.0
+wxpython==4.2.5
