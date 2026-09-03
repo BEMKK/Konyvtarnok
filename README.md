@@ -40,7 +40,7 @@ python main.py
 ### Parancsfájlok
 
 - `Futtatas.bat` – egyszerű indító script a forráskód futtatásához.
-- `exe-port (beta).bat` – PyInstaller build parancs, amely egyetlen hordozható `.exe` állományt épít az alkalmazás ikonjával és a referencia Excel adatbázissal beágyazva.
+- `exe-port.bat` – PyInstaller build parancs, amely egyetlen hordozható `.exe` állományt épít az alkalmazás ikonjával és a referencia Excel adatbázissal beágyazva.
 
 ## Függőségek
 
