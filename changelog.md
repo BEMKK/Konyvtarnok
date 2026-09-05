@@ -10,6 +10,18 @@ A projekten végrehajtott lényegi változtatások dokumentációja.
 
 
 
+## \[0.22.0] - 2026-09-05
+
+* A KönyvTárnok kereső excel helyett mostantól json-t kezel.
+
+
+
+## \[0.21.0] - 2026-09-03
+
+* Az alkalmazás és moduljai új nevet kaptak.
+
+
+
 \[0.20.0] - 2026-08-30
 
 * Hozzáadva a súgó funkció, mely az Újdonságok és Névjegy menüponttal együtt a Súgó menüből érhető el.
