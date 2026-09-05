@@ -1,7 +1,7 @@
 import os
 import sys
 import time
-import openpyxl
+import json
 import wx
 import logging
 from config_manager import load_settings
@@ -20,8 +20,8 @@ class KonyvtarnokKeresoApp(wx.Frame):
         self.panel = wx.Panel(self)
         self.panel.SetName("Főpanel")
 
-        # 1. Excel fájl betöltése a háttérben
-        self.excel_fajlnev = "Enekeskonyvek_adatai.xlsx"
+        # 1. JSON fájl betöltése a háttérben
+        self.json_fajlnev = "Enekeskonyvek_adatai.json"  # Excel helyett JSON
         self.oszlopok = []
         self.adatok = self.adatok_betoltese()
 
@@ -42,57 +42,44 @@ class KonyvtarnokKeresoApp(wx.Frame):
         apply_theme(self, self.current_theme)
 
     def adatok_betoltese(self):
-        """Beolvassa az Excel fájlt openpyxl segítségével a megfelelő mappából."""
+        """Beolvassa a JSON fájlt a megfelelő mappából."""
         fajl_utvonal = None
 
         if getattr(sys, "frozen", False):
             # 1. Ha csomagolt EXE: először megnézzük az EXE mellett
             exe_mappa = os.path.dirname(sys.executable)
-            fajl_utvonal = os.path.join(exe_mappa, self.excel_fajlnev)
+            fajl_utvonal = os.path.join(exe_mappa, self.json_fajlnev)
 
             # 2. Ha az EXE mellett nincs ott, a Temp (_MEIPASS) mappában keresünk
             if not os.path.exists(fajl_utvonal):
                 temp_mappa = getattr(sys, "_MEIPASS", exe_mappa)
-                fajl_utvonal = os.path.join(temp_mappa, self.excel_fajlnev)
+                fajl_utvonal = os.path.join(temp_mappa, self.json_fajlnev)
         else:
             # 3. Fejlesztői környezet (.py futtatása esetén ez fut le!)
             sajat_mappa = os.path.dirname(os.path.abspath(__file__))
-            fajl_utvonal = os.path.join(sajat_mappa, self.excel_fajlnev)
+            fajl_utvonal = os.path.join(sajat_mappa, self.json_fajlnev)
 
-        # 4. Beolvasás ellenőrzése openpyxl-lel
+        # 4. Beolvasás ellenőrzése JSON modul segítségével
         if fajl_utvonal and os.path.exists(fajl_utvonal):
             try:
-                # data_only=True: a képletek helyett azok eredményét olvassa be
-                wb = openpyxl.load_workbook(fajl_utvonal, data_only=True)
-                sheet = wb.active
+                with open(fajl_utvonal, "r", encoding="utf-8") as f:
+                    adatok = json.load(f)
 
-                # Fejléc (első sor) kiolvasása
-                headers = []
-                for cell in sheet[1]:
-                    val = str(cell.value).strip() if cell.value is not None else ""
-                    headers.append(val)
+                if isinstance(adatok, list) and len(adatok) > 0:
+                    # Dinamikusan kinyerjük az első elemből a mezőneveket (oszlopokat)
+                    self.oszlopok = list(adatok[0].keys())
 
-                self.oszlopok = [h for h in headers if h]
+                    # Biztosítjuk, hogy minden érték sztring formátumú legyen a GUI-hoz
+                    adat_lista = []
+                    for sor in adatok:
+                        szurt_sor = {k: str(v).strip() if v is not None else "" for k, v in sor.items()}
+                        adat_lista.append(szurt_sor)
 
-                # Adatsorok beolvasása szótárak listájaként
-                adat_lista = []
-                for row in sheet.iter_rows(min_row=2, values_only=True):
-                    # Ha teljesen üres a sor, átugorjuk
-                    if not any(row):
-                        continue
-
-                    sor_dict = {}
-                    for idx, header in enumerate(self.oszlopok):
-                        val = row[idx] if idx < len(row) else ""
-                        sor_dict[header] = str(val).strip() if val is not None else ""
-
-                    adat_lista.append(sor_dict)
-
-                wb.close()
-                return adat_lista
+                    return adat_lista
+                return []
 
             except Exception as e:
-                logging.error(f"Hiba az Excel fájl ({fajl_utvonal}) beolvasásakor: {e}", exc_info=True)
+                logging.error(f"Hiba a JSON fájl ({fajl_utvonal}) beolvasásakor: {e}", exc_info=True)
                 wx.MessageBox(
                     f"Hiba a fájl beolvasásakor:\n{e}",
                     "Hiba",
@@ -101,7 +88,7 @@ class KonyvtarnokKeresoApp(wx.Frame):
                 return None
         else:
             wx.MessageBox(
-                f"A(z) '{self.excel_fajlnev}' nem található a program mappájában!\n\nKeresett útvonal:\n{fajl_utvonal}",
+                f"A(z) '{self.json_fajlnev}' nem található a program mappájában!\n\nKeresett útvonal:\n{fajl_utvonal}",
                 "Fájl hiányzik",
                 wx.OK | wx.ICON_WARNING,
             )

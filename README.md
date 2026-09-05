@@ -1,6 +1,6 @@
 # KönyvTárnok
 
-> **Verzió:** 0.21.0 Béta
+> **Verzió:** 0.22.0 Béta
 
 ## Leírás
 
@@ -40,7 +40,7 @@ python main.py
 ### Parancsfájlok
 
 - `Futtatas.bat` – egyszerű indító script a forráskód futtatásához.
-- `exe-port.bat` – PyInstaller build parancs, amely egyetlen hordozható `.exe` állományt épít az alkalmazás ikonjával és a referencia Excel adatbázissal beágyazva.
+- `exe-port.bat` – PyInstaller build parancs, amely egyetlen hordozható `.exe` állományt épít az alkalmazás ikonjával és a referencia adatbázissal beágyazva.
 
 ## Függőségek
 
@@ -52,7 +52,6 @@ A `requirements.txt` tartalmazza a szükséges csomagokat:
 | `cryptography` | 50.0.0 | Adatbázis és dezideráta Fernet‑titkosítása |
 | `reportlab` | 5.0.0 | PDF adatlapok és statisztikai jelentések generálása |
 | `pdfplumber` | 0.11.10 | PDF könyvadatlapok beolvasása és importálása |
-| `openpyxl` | 3.1.5 | Excel referencia‑adatbázis beolvasása (KönyvTárnok kereső) |
 
 ## Projektstruktúra
 
@@ -71,12 +70,12 @@ A `requirements.txt` tartalmazza a szükséges csomagokat:
 ├─ dialogs.py                  # Párbeszédablakok (szerkesztő, statisztika, keresés, beállítások, névjegy stb.)
 ├─ help.py              # Súgó és billentyűparancsok
 ├─ konyv_lista.py              # Virtuális könyvlista UI (rendezés, gyorskeresés)
-├─ konyvtarnok_kereso.py                # KönyvTárnok kereső – külső Excel referencia‑adatbázis kereső és átemelő modul
+├─ konyvtarnok_kereso.py                # KönyvTárnok kereső – külső referencia‑adatbázis kereső és átemelő modul
 ├─ deziderata.py               # Dezideráta‑kezelő – beszerzési kívánságlista modul
 ├─ sablon.py                   # PDF export sablongenerátor (bibliográfiai adatlap formázása)
 ├─ constants.py                # Alkalmazás‑állandók (név, verzió, állapot)
 ├─ ikon.ico                    # Alkalmazásikon
-├─ Enekeskonyvek_adatai.xlsx   # KönyvTárnok kereső referencia‑adatbázisa (Excel)
+├─ Enekeskonyvek_adatai.json   # KönyvTárnok kereső referencia‑adatbázisa
 ├─ Futtatas.bat                # Indító script
 ├─ exe-port.bat         # PyInstaller build script
 ```
@@ -104,4 +103,4 @@ Ez a projekt egy vibecoding kísérlet eredménye: a teljes alkalmazás kódját
 
 ---
 
-*Ez a README a projekt aktuális állapotát tükrözi (v0.21.0 Béta), és a fejlesztés előrehaladtával frissíthető.*
+*Ez a README a projekt aktuális állapotát tükrözi (v0.22.0 Béta), és a fejlesztés előrehaladtával frissíthető.*
