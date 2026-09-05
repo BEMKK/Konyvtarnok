@@ -17,7 +17,7 @@ for row in sheet.iter_rows(min_row=2, values_only=True):
         data.append(row_dict)
 
 # Mentés JSON-ba (a magyar ékezetek és a szép formázás megtartásával)
-with open('referencia_adatbazis.json', 'w', encoding='utf-8') as f:
+with open('enekeskonyvek_adatai.json', 'w', encoding='utf-8') as f:
     json.dump(data, f, ensure_ascii=False, indent=2)
 
 print("A JSON adatbázis sikeresen frissítve!")
