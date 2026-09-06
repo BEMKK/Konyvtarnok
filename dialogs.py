@@ -1052,7 +1052,7 @@ class UjdonsagokDialog(wx.Dialog):
         main_sizer.Add(wx.StaticLine(self), 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 15)
         
         ujdonsagok_lista = [
-            "A KönyvTárnok kereső excel helyett mostantól json adatbázist kezel."
+            "Javítva a right click menü billentyűzetes előhívásának hibája."
         ]
 
         szoveg_box = wx.BoxSizer(wx.VERTICAL)

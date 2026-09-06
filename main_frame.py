@@ -187,6 +187,8 @@ class KonyvtarApp(wx.Frame):
         elif key_code == wx.WXK_SPACE:
             if hasattr(self.lista, "FeldolgozKarakter"):
                 self.lista.FeldolgozKarakter(' ')
+        elif key_code == wx.WXK_WINDOWS_MENU or (key_code == wx.WXK_F10 and event.ShiftDown()):
+            self._MegjelenitPopUpMenut()
         else:
             event.Skip()
 
