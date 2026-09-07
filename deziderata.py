@@ -338,7 +338,7 @@ class MainFrame(wx.Frame):
         # --- Gombok ---
         btn_box = wx.BoxSizer(wx.HORIZONTAL)
 
-        self.btn_details = wx.Button(panel, label="Részletek")
+        self.btn_details = wx.Button(panel, label="Tétel részletei")
         self.btn_add = wx.Button(panel, label="Új tétel hozzáadása")
         self.btn_edit = wx.Button(panel, label="Tétel szerkesztése")
         self.btn_allomany = wx.Button(panel, label="Felvétel az állományba")
@@ -377,7 +377,7 @@ class MainFrame(wx.Frame):
         menubar = wx.MenuBar()
         menu_items = wx.Menu()
 
-        item_details = menu_items.Append(wx.ID_ANY, "Részletek megtekintése\tCTRL+R")
+        item_details = menu_items.Append(wx.ID_ANY, "Tétel részletei")
         item_add = menu_items.Append(wx.ID_NEW, "Új tétel hozzáadása\tCTRL+N")
         item_edit = menu_items.Append(wx.ID_EDIT, "Tétel szerkesztése\tCTRL+E")
         item_allomany = menu_items.Append(wx.ID_ANY, "Tétel állományba vétele\tCTRL+F")
