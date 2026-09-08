@@ -24,7 +24,7 @@ A **KönyvTárnok** egy asztali alkalmazás könyvgyűjtemények nyilvántartás
 ## Telepítés
 
 1. A program fejlesztéséhez és futtatásához **Python 3.10+** telepítése szükséges.
-2. Telepítsd a függőségeket a projekt gyökerében:
+2. Telepítsd a függőségeket a QickInstallRequirements script futtatásával, vagy az alábbi paranccsal a projekt gyökerében:
    ```bash
    pip install -r requirements.txt
    ```
@@ -32,7 +32,7 @@ A **KönyvTárnok** egy asztali alkalmazás könyvgyűjtemények nyilvántartás
 
 ## Használat
 
-Futtasd az alábbi parancsot a program forráskódjának mappájában:
+Futtasd az alábbi parancsot a program forráskódjának mappájában, vagy kattints duplán a main.py, vagy a futtatas.bat fájlra:
 ```bash
 python main.py
 ```
@@ -41,10 +41,9 @@ python main.py
 
 - `Futtatas.bat` – egyszerű indító script a forráskód futtatásához.
 - `exe-port.bat` – PyInstaller build parancs, amely egyetlen hordozható `.exe` állományt épít az alkalmazás ikonjával és a referencia adatbázissal beágyazva.
+- `QuickInstallRequirements.bat` – A függőségek gyors telepítésére.
 
 ## Függőségek
-
-A `requirements.txt` tartalmazza a szükséges csomagokat:
 
 | Csomag | Verzió | Funkció |
 |--------|--------|---------|
@@ -78,6 +77,10 @@ A `requirements.txt` tartalmazza a szükséges csomagokat:
 ├─ Enekeskonyvek_adatai.json   # KönyvTárnok kereső referencia‑adatbázisa
 ├─ Futtatas.bat                # Indító script
 ├─ exe-port.bat         # PyInstaller build script
+├─ QuickInstallRequirements.bat         # A függőségek gyors telepítésére.
+├─ converter/excel_to_json.exe         # Excel fájlok JSON-ra történő gyors átalakítására szolgáló segédprogram.
+├─ converter/excel_to_json.py         # A segédprogram forráskódja.
+├─ converter/build.py         # Az excel-konvertáló pyinstaller fordítására szolgáló script.
 ```
 
 ## Tesztelés
@@ -96,6 +99,7 @@ A projekt jelenleg nincs automatizált tesztkerettel ellátva, de a következők
 1. Forkold a repót.
 2. Hozz létre egy új ágat (`git checkout -b feature/új-funkció`).
 3. Készíts változtatásokat, majd nyújts be `pull request`‑et.
+4. A referencia-adatbázis bővítéséhez bővítsd az excel fájlt a projekt Convert mappájában, majd a mellékelt segédprogrammal alakítsd json fájllá, és tedd a program gyökérmappájába.
 
 ## A projektről
 
