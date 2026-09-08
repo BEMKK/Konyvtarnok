@@ -1052,7 +1052,6 @@ class UjdonsagokDialog(wx.Dialog):
         main_sizer.Add(wx.StaticLine(self), 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 15)
         
         ujdonsagok_lista = [
-            "Javítva a right click menü billentyűzetes előhívásának hibája.",
             "Bővítve a súgó tartalma és a billentyűparancsok listája.",
             "A Dezideráta-kezelőben a Ctrl+R már nem nyitja meg a tétel részleteit, azok megtekintésére kizárólag az enter billentyű vagy a dupla kattintás szolgál."
         ]
