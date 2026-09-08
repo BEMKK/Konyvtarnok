@@ -10,6 +10,19 @@ A projekten végrehajtott lényegi változtatások dokumentációja.
 
 
 
+## \[0.22.1] - 2026-09-06
+
+- Jelentősen kibővítve a súgó és a billentyűparancsok listája.
+- A Dezideráta-kezelőből eltávolítva a Ctrl+R billentyűparancs, a tétel részletei dialog immár kizárólag enterrel vagy dupla kattintással nyitható meg.
+
+
+
+## \[0.22.1] - 2026-09-06
+
+- Javítva a right click menü billentyűzetes előhívása.
+
+
+
 ## \[0.22.0] - 2026-09-05
 
 * A KönyvTárnok kereső excel helyett mostantól json-t kezel.
