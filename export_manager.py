@@ -42,35 +42,7 @@ def export_konyv_pdf(konyv, fajlnev):
             y = 800
 
     c.save()
-    print(f"PDF mentve: {fajlnev}")
-
-def tomeges_export_pdf(konyvek_listaja, mentesi_utvonal):
-    sikeres = 0
-    for konyv in konyvek_listaja:
-        if not konyv.get('cim'):
-            continue
-            
-        biztonsagos_cim = "".join([c for c in konyv['cim'] if c.isalpha() or c.isdigit() or c in (' ', '-', '_')]).rstrip()
-        if not biztonsagos_cim:
-            biztonsagos_cim = "konyv"
-
-        ev = str(konyv.get('ev', '')).strip()
-        biztonsagos_ev = "".join([c for c in ev if c.isalnum() or c in ('-', '_')]).rstrip()
-        
-        if biztonsagos_ev:
-            fajlnev = f"{biztonsagos_cim} ({biztonsagos_ev}).pdf"
-        else:
-            fajlnev = f"{biztonsagos_cim} (nincs_ev_megadva).pdf"
-
-        fajl_utvonal = os.path.join(mentesi_utvonal, fajlnev)
-
-        try:
-            export_konyv_pdf(konyv, fajl_utvonal)
-            sikeres += 1
-        except Exception as e:
-            logging.error(f"Hiba a(z) {konyv.get('cim')} exportálásakor", exc_info=True)
-            
-    return sikeres
+    logging.info(f"PDF mentve: {fajlnev}")
 
 def export_statisztika_pdf(szoveg, fajlnev):
     """Statisztikai jelentés exportálása PDF fájlba."""

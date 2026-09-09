@@ -10,7 +10,14 @@ A projekten végrehajtott lényegi változtatások dokumentációja.
 
 
 
-## \[0.22.1] - 2026-09-06
+## \[0.23.0] - 2026-09-09
+
+- Hozzáadva a frissítés keresése funkció.
+- Javítva a kezdőbetűvel való keresés hibája, mely hosszú magánhangzóval kezdődő cím hiánya esetén, hosszú magánhangzóra annak rövid párjára ugrott.
+
+
+
+## \[0.22.2] - 2026-09-08
 
 - Jelentősen kibővítve a súgó és a billentyűparancsok listája.
 - A Dezideráta-kezelőből eltávolítva a Ctrl+R billentyűparancs, a tétel részletei dialog immár kizárólag enterrel vagy dupla kattintással nyitható meg.

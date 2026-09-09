@@ -13,6 +13,7 @@ from konyvtarnok_kereso import KonyvtarnokKeresoApp
 from menu_bar import KonyvtarMenuBar
 from konyv_lista import KonyvListaCtrl
 from deziderata import MainFrame as Deziderata
+from update import check_for_updates_async
 
 class KonyvtarApp(wx.Frame):
     def __init__(self, adatbazis):
@@ -30,9 +31,9 @@ class KonyvtarApp(wx.Frame):
                 icon = wx.Icon(icon_path, wx.BITMAP_TYPE_ICO)
                 self.SetIcon(icon)
             else:
-                print(f"Az ikon nem található ezen az útvonalon: {icon_path}")
+                logging.warning(f"Az ikon nem található ezen az útvonalon: {icon_path}")
         except Exception as e:
-            print(f"Nem sikerült betölteni az alkalmazás ikonját: {e}")
+            logging.error(f"Nem sikerült betölteni az alkalmazás ikonját: {e}")
 
         menusor = KonyvtarMenuBar()
         self.SetMenuBar(menusor)
@@ -136,6 +137,7 @@ class KonyvtarApp(wx.Frame):
         self.Bind(wx.EVT_MENU, self.on_open_help, menusor.help)
         self.Bind(wx.EVT_MENU, self.OnAbout, id=wx.ID_ABOUT)
         self.Bind(wx.EVT_MENU, self.OnUjdonsagok, menusor.Ujdonsagok)
+        self.Bind(wx.EVT_MENU, self.OnFrissites, menusor.frissites)
 
         self.Bind(wx.EVT_MENU, lambda e: self.kereso_ctrl.SetFocus(), id=id_kereso_fokusz)
 
@@ -164,6 +166,7 @@ class KonyvtarApp(wx.Frame):
             
         self.FrissitStatusBar()
         self.Show()
+        wx.CallAfter(check_for_updates_async, parent=self, is_manual=False)
 
     # --- ESEMÉNYKEZELŐK ---
 
@@ -769,6 +772,9 @@ class KonyvtarApp(wx.Frame):
             self.lista.Focus(index)
             self.lista.EnsureVisible(index)
         self.lista.SetFocus()
+
+    def OnFrissites(self, event):
+        check_for_updates_async(parent=self, is_manual=True)
 
     def on_open_help(self, event):
         """Ez a metódus fut le a Súgó menüpontra vagy az F1-re kattintva."""

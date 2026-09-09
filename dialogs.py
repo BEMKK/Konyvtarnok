@@ -1,6 +1,7 @@
 import re
 import os
 import sys
+import logging
 import wx
 from constants import APP_NAME, APP_VERSION, APP_STAGE
 from theme_manager import get_theme_names, apply_theme
@@ -219,19 +220,15 @@ class KonyvSzerkesztoDialog(wx.Dialog):
                         return
                 else:
                     konyv_id = self.konyv_adatok.get("id")
-                    if konyv_id:
-                        sikeres = self.db.konyv_mentese_by_id(konyv_id, uj_adatok)
-                    else:
-                        eredeti_cim = self.konyv_adatok.get("cim")
-                        sikeres = self.db.konyv_mentese(eredeti_cim, uj_adatok)
+                    sikeres = self.db.konyv_mentese_by_id(konyv_id, uj_adatok)
 
-                        if not sikeres:
-                            wx.MessageBox(
-                                "Nem található az eredeti könyv a módosításhoz.",
-                                "Hiba",
-                                wx.OK | wx.ICON_ERROR,
-                            )
-                            return
+                    if not sikeres:
+                        wx.MessageBox(
+                            "Nem található az eredeti könyv a módosításhoz.",
+                            "Hiba",
+                            wx.OK | wx.ICON_ERROR,
+                        )
+                        return
 
                 self.EndModal(wx.ID_OK)
             except Exception as e:
@@ -918,10 +915,45 @@ class BeallitasokDialog(wx.Dialog):
 
         panel_mappak.SetSizer(mappa_sizer)
 
+        # --- 4. FÜL: Frissítések ---
+        panel_frissites = wx.Panel(self.notebook)
+        frissites_sizer = wx.BoxSizer(wx.VERTICAL)
+
+        self.cb_auto_update = wx.CheckBox(panel_frissites, label="Frissítések automatikus ellenőrzése")
+        self.cb_auto_update.SetValue(config.get("auto_update_check", True))
+
+        lbl_freq = wx.StaticText(panel_frissites, label="Ellenőrzés gyakorisága:")
+        self.FREKVENCIA_OPCIOK = [
+            ("startup", "Minden indításkor"),
+            ("daily", "Naponta"),
+            ("weekly", "Hetente"),
+            ("monthly", "Havonta")
+        ]
+        self.choice_freq = wx.Choice(panel_frissites, choices=[nev for _, nev in self.FREKVENCIA_OPCIOK])
+        
+        akt_freq = config.get("update_frequency", "startup")
+        freq_kulcsok = [k for k, _ in self.FREKVENCIA_OPCIOK]
+        self.choice_freq.SetSelection(freq_kulcsok.index(akt_freq) if akt_freq in freq_kulcsok else 0)
+
+        # Ha a checkbox nincs bepipálva, a választó legyen inaktív
+        self.choice_freq.Enable(self.cb_auto_update.IsChecked())
+        self.cb_auto_update.Bind(wx.EVT_CHECKBOX, lambda e: self.choice_freq.Enable(self.cb_auto_update.IsChecked()))
+
+        btn_manual_check = wx.Button(panel_frissites, label="Frissítések keresése most...")
+        btn_manual_check.Bind(wx.EVT_BUTTON, self.on_manual_update_check)
+
+        frissites_sizer.Add(self.cb_auto_update, 0, wx.ALL, 10)
+        frissites_sizer.Add(lbl_freq, 0, wx.LEFT | wx.RIGHT | wx.TOP, 10)
+        frissites_sizer.Add(self.choice_freq, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 10)
+        frissites_sizer.Add(btn_manual_check, 0, wx.ALL | wx.ALIGN_LEFT, 10)
+
+        panel_frissites.SetSizer(frissites_sizer)
+
         # Fülek hozzáadása a Notebook-hoz
         self.notebook.AddPage(panel_tema, "Téma és rendezés")
         self.notebook.AddPage(panel_oszlopok, "Megjelenítendő oszlopok")
         self.notebook.AddPage(panel_mappak, "Mappák és elérési utak")
+        self.notebook.AddPage(panel_frissites, "Frissítések")
 
         fo_sizer.Add(self.notebook, 1, wx.EXPAND | wx.ALL, 10)
 
@@ -949,6 +981,10 @@ class BeallitasokDialog(wx.Dialog):
         alap_oszlopok = ["cim", "szerzo", "kiado", "hely", "ev", "status"]
         for kulcs, cb in self.jelolo_negyzetek.items():
             cb.SetValue(kulcs in alap_oszlopok)
+
+    def on_manual_update_check(self, event):
+        from update import check_for_updates_async
+        check_for_updates_async(parent=self, is_manual=True)
 
     def GetKivalasztottOszlopok(self):
         """Visszaadja a kiválasztott oszlopok kulcsainak listáját."""
@@ -980,6 +1016,14 @@ class BeallitasokDialog(wx.Dialog):
     def GetKivalasztottJsonDir(self):
         return self.txt_json.GetValue().strip()
 
+    def GetAutoUpdateCheck(self):
+        return self.cb_auto_update.IsChecked()
+
+    def GetUpdateFrequency(self):
+        idx = self.choice_freq.GetSelection()
+        freq_kulcsok = [k for k, _ in self.FREKVENCIA_OPCIOK]
+        return freq_kulcsok[idx] if 0 <= idx < len(freq_kulcsok) else "startup"
+
 class NevjegyDialog(wx.Dialog):
     """Saját Névjegy párbeszédablak wx.Dialog alapokon."""
     def __init__(self, parent=None):
@@ -1000,9 +1044,9 @@ class NevjegyDialog(wx.Dialog):
                 icon_bitmap = wx.StaticBitmap(self, bitmap=bitmap)
                 sizer.Add(icon_bitmap, 0, wx.ALIGN_CENTER | wx.TOP, 15)
             else:
-                print(f"Névjegy ikon nem található: {icon_path}")
+                logging.warning(f"Névjegy ikon nem található: {icon_path}")
         except Exception as e:
-            print(f"Névjegy ikon hiba: {e}")
+            logging.error(f"Névjegy ikon hiba: {e}")
 
         cim_label = wx.StaticText(self, label=APP_NAME)
         font = cim_label.GetFont()
@@ -1052,8 +1096,8 @@ class UjdonsagokDialog(wx.Dialog):
         main_sizer.Add(wx.StaticLine(self), 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 15)
         
         ujdonsagok_lista = [
-            "Bővítve a súgó tartalma és a billentyűparancsok listája.",
-            "A Dezideráta-kezelőben a Ctrl+R már nem nyitja meg a tétel részleteit, azok megtekintésére kizárólag az enter billentyű vagy a dupla kattintás szolgál."
+            "Javítva a kezdőbetűvel való keresés hibája, melynekk során hosszú magánhangzóval kezdődő cím hiánya esetén, hosszú magánhangzóval is annak rövid párjára ugrott.",
+            "Bevezettük a frissítés keresése funkciót, mely új verzió esetén gombnyomásra megnyitja a az új verzió GitHub oldalát a böngészőben."
         ]
 
         szoveg_box = wx.BoxSizer(wx.VERTICAL)

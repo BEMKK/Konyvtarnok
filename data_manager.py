@@ -105,28 +105,12 @@ class KonyvAdatbazis:
                 return konyv
         return {}
 
-    def get_konyv_adatok(self, cim):
-        """Megtartva kompatibilitási okokból."""
-        for konyv in self.konyvek:
-            if konyv.get("cim") == cim:
-                return konyv
-        return {}
-
     # --- ID ALAPÚ MENTÉS ---
     def konyv_mentese_by_id(self, konyv_id, uj_adatok):
         for konyv in self.konyvek:
             if konyv.get("id") == konyv_id:
                 konyv.update(uj_adatok)
                 konyv["id"] = konyv_id  # ID megőrzése
-                self.AdatokMentese()
-                return True
-        return False
-
-    def konyv_mentese(self, eredeti_cim, uj_adatok):
-        """Cím alapú mentés (visszafelé kompatibilitás)."""
-        for konyv in self.konyvek:
-            if konyv.get("cim") == eredeti_cim:
-                konyv.update(uj_adatok)
                 self.AdatokMentese()
                 return True
         return False
@@ -147,14 +131,6 @@ class KonyvAdatbazis:
     def konyv_torlese_by_id(self, konyv_id):
         for i, konyv in enumerate(self.konyvek):
             if konyv.get("id") == konyv_id:
-                del self.konyvek[i]
-                self.AdatokMentese()
-                return True
-        return False
-
-    def konyv_torlese(self, cim):
-        for i, konyv in enumerate(self.konyvek):
-            if konyv.get("cim") == cim:
                 del self.konyvek[i]
                 self.AdatokMentese()
                 return True

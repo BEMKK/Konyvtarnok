@@ -74,7 +74,7 @@ if __name__ == '__main__':
         frame.SetIcon(icon)
     else:
         # Hibakereséshez: ha nem találja, kiírja a pontos utat
-        print(f"Az ikon nem található ezen az útvonalon: {icon_path}")
+        logging.warning(f"Az ikon nem található ezen az útvonalon: {icon_path}")
 
     frame.Show()
     app.MainLoop()

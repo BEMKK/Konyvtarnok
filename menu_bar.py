@@ -44,6 +44,8 @@ class KonyvtarMenuBar(wx.MenuBar):
         help_menu = wx.Menu()
         self.help = help_menu.Append(wx.ID_ANY, '&Súgó és billentyűparancsok\tF1', 'Az alkalmazás súgója és billentyűparancsai')
         self.Ujdonsagok = help_menu.Append(wx.ID_ANY, '&Újdonságok\tCTRL+SHIFT+U', 'Megjeleníti az aktuális verzió újdonságait')
+        self.frissites = help_menu.Append(wx.ID_ANY, '&Frissítések keresése...\tCTRL+SHIFT+F', 'Új verzió keresése a GitHub-on')
+        help_menu.AppendSeparator()
         self.nevjegy = help_menu.Append(wx.ID_ABOUT, '&Névjegy\tCTRL+SHIFT+N', 'Megjeleníti a névjegy ablakot')
 
         self.Append(help_menu, '&Súgó')

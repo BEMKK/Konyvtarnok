@@ -379,29 +379,6 @@ class KonyvtarnokKeresoApp(wx.Frame):
         if talalt == -1 and not is_single_char_repeat:
             talalt = keres_elo_tag(keresett, 0)
 
-        # 3. Ékezetes párokat is megpróbáljuk
-        if talalt == -1 and len(keresett) > 0:
-            elso_kar = keresett[0]
-            ekezet_parok = {
-                'á': 'a', 'é': 'e', 'í': 'i', 'ó': 'o', 'ö': 'o', 'ő': 'o',
-                'ú': 'u', 'ü': 'u', 'ű': 'u',
-                'a': 'á', 'e': 'é', 'i': 'í', 'o': ['ó', 'ö', 'ő'], 'u': ['ú', 'ü', 'ű']
-            }
-            alternativ_karakterek = []
-            if elso_kar in ekezet_parok:
-                par = ekezet_parok[elso_kar]
-                if isinstance(par, list):
-                    alternativ_karakterek.extend(par)
-                else:
-                    alternativ_karakterek.append(par)
-
-            for alt_kar in alternativ_karakterek:
-                modositott = alt_kar + keresett[1:]
-                talalt = keres_elo_tag(modositott, start_idx, korokre=is_single_char_repeat)
-                if talalt == -1 and not is_single_char_repeat:
-                    talalt = keres_elo_tag(modositott, 0)
-                if talalt != -1:
-                    break
 
         if talalt != -1:
             for i in range(total):

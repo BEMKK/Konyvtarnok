@@ -114,8 +114,6 @@ def import_konyv_pdf(fajlnev):
                 szoveg += kivont + "\n"
     return _szoveg_feldolgozas(szoveg)
 
-import os
-
 def import_tobb_fajl(fajl_list):
     """
     Egy listányi fájlnevet vár, és visszaadja az importált adatok listáját.
@@ -124,7 +122,7 @@ def import_tobb_fajl(fajl_list):
     osszes_adat = []
     for fajlnev in fajl_list:
         if not os.path.exists(fajlnev):
-            print(f"Hiba: A fájl nem található: {fajlnev}")
+            logging.error(f"A fájl nem található: {fajlnev}")
             continue
             
         ext = os.path.splitext(fajlnev)[1].lower()
@@ -133,7 +131,7 @@ def import_tobb_fajl(fajl_list):
                 adat = import_konyv_pdf(fajlnev)
                 osszes_adat.append(adat)
             else:
-                print(f"Nem támogatott formátum: {fajlnev}")
+                logging.warning(f"Nem támogatott formátum: {fajlnev}")
         except Exception as e:
             logging.error(f"Hiba történt a(z) {fajlnev} feldolgozása közben", exc_info=True)
             
