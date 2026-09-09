@@ -100,6 +100,18 @@ class HelpNotebookDialog(wx.Dialog):
                 "  Kiválaszthatja, hogy a program indításakor a könyvlista milyen mező szerint legyen automatikusan sorba rendezve.\n\n"
                 "5. Mappák automatikus megjegyzése:\n"
                 "  A program automatikusan megjegyzi a legutóbb használt PDF export/import és JSON mentési könyvtárakat, így nem kell minden alkalommal kikeresni azokat.\n"
+                "6. Frissítések keresése:\n"
+                "  A Beállítások ablak frissítések fülén megadhatja, hogy a program keressen e automatikusan frissítéseket. Ehhez jelölje be a frissítések automatikus ellenőrzése jelölőnégyzetet.\n"
+                "  Ha a négyzet be van jelölve, megjelenik egy kombinált listamező, ahol kiválaszthatja a frissítések ellenőrzésének gyakoriságát (minden indításkor, naponta, hetente, havonta).\n"
+                "  A beállítás mentéséhez kattintson a mentés gombra.\n"
+            ),
+            (
+                "Frissítések keresése",
+                "FRISSÍTÉSEK KERESÉSE\n\n"
+                "1. Új verzió ellenőrzéséhez használja a Súgó menü Frissítések keresése menüpontját, vagy nyomja meg a Ctrl+Shift+F billentyűkombinációt.\n"
+                "2. Amennyiben van új verzió, a felugró ablakban megjelenik annak leírása, valamint a GitHub kiadási oldal megnyitására, és a frissítés elhalasztására szolgáló gombok.\n"
+                "3. Ha nincs új verzió, a program felugró ablakban tájékoztat erről.\n"
+                "4. A program alapértelmezés szerint minden indításkor ellenőrzi a frissítéseket, ezt a beállítások ablakban módosíthatja.\n"
             ),
             (
                 "Billentyűparancsok",
@@ -131,6 +143,7 @@ class HelpNotebookDialog(wx.Dialog):
                 "  F1                    - Súgó és billentyűparancsok megnyitása\n"
                 "  Ctrl + Shift + U      - Újdonságok megjelenítése\n"
                 "  Ctrl + Shift + N      - Névjegy megjelenítése\n"
+                "  Ctrl + Shift + F      - Frissítések keresése\n"
                 "  ESC                   - Párbeszédablakok bezárása\n"
                 "  Ctrl + W              - Ablak bezárása\n\n"
                 "   2. A Dezideráta-kezelő billentyűparancsai:\n"
