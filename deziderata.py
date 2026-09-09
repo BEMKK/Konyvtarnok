@@ -6,7 +6,7 @@ import time
 import unicodedata
 import webbrowser
 import wx
-from config_manager import load_settings
+from config_manager import load_settings, save_settings
 from theme_manager import apply_theme
 
 # Magyar locale beállítása
@@ -661,9 +661,13 @@ class MainFrame(wx.Frame):
                 self.list.SetFocus()
 
     def on_export_json(self, event):
+        config = load_settings()
+        default_dir = config.get("last_json_dir", "")
+
         fileDialog = wx.FileDialog(
             self,
             message="Jegyzék exportálása titkosítás nélkül",
+            defaultDir=default_dir,
             defaultFile="deziderata.json",
             wildcard="JSON fájlok (*.json)|*.json",
             style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT
@@ -671,6 +675,8 @@ class MainFrame(wx.Frame):
 
         if fileDialog.ShowModal() == wx.ID_OK:
             pathname = fileDialog.GetPath()
+            config["last_json_dir"] = os.path.dirname(pathname)
+            save_settings(config)
             try:
                 with open(pathname, "w", encoding="utf-8") as f:
                     json.dump(self.items, f, ensure_ascii=False, indent=4)
@@ -682,9 +688,13 @@ class MainFrame(wx.Frame):
         fileDialog.Destroy()
 
     def on_import_json(self, event):
+        config = load_settings()
+        default_dir = config.get("last_json_dir", "")
+
         with wx.FileDialog(
             self,
             message="Jegyzék betöltése",
+            defaultDir=default_dir,
             wildcard="JSON fájlok (*.json)|*.json",
             style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST
         ) as fileDialog:
@@ -693,6 +703,9 @@ class MainFrame(wx.Frame):
                 return
 
             pathname = fileDialog.GetPath()
+            config["last_json_dir"] = os.path.dirname(pathname)
+            save_settings(config)
+
             try:
                 with open(pathname, "r", encoding="utf-8") as f:
                     imported_data = json.load(f)

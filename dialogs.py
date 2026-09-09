@@ -1096,8 +1096,7 @@ class UjdonsagokDialog(wx.Dialog):
         main_sizer.Add(wx.StaticLine(self), 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 15)
         
         ujdonsagok_lista = [
-            "Javítva a kezdőbetűvel való keresés hibája, melynekk során hosszú magánhangzóval kezdődő cím hiánya esetén, hosszú magánhangzóval is annak rövid párjára ugrott.",
-            "Bevezettük a frissítés keresése funkciót, mely új verzió esetén gombnyomásra megnyitja a az új verzió GitHub oldalát a böngészőben."
+            "Javítva a Dezideráta-kezelő JSON fájl alapértelmezett mappájával kapcsolatos hibája."
         ]
 
         szoveg_box = wx.BoxSizer(wx.VERTICAL)
