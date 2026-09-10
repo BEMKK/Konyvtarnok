@@ -1096,7 +1096,7 @@ class UjdonsagokDialog(wx.Dialog):
         main_sizer.Add(wx.StaticLine(self), 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 15)
         
         ujdonsagok_lista = [
-            "Javítva a Dezideráta-kezelő JSON fájl alapértelmezett mappájával kapcsolatos hibája."
+            "Status-bar hozzáadása a KönyvTárnok keresőhöz, amely mutatja az adatbázisban lévő kötetek számát."
         ]
 
         szoveg_box = wx.BoxSizer(wx.VERTICAL)

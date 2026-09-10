@@ -33,6 +33,11 @@ class KonyvtarnokKeresoApp(wx.Frame):
         # UI elemek létrehozása
         self.init_ui()
 
+        # Status bar létrehozása az ablak alján
+        self.CreateStatusBar()
+        osszesen = len(self.adatok) if self.adatok else 0
+        self.SetStatusText(f"Keresési adatbázis: {osszesen} kötet")
+
         # Gyorsbillentyű tábla a Ctrl+W bezáráshoz
         self.init_shortcuts()
 
