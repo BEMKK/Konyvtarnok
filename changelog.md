@@ -4,12 +4,6 @@ A projekten végrehajtott lényegi változtatások dokumentációja.
 
 
 
-## \[Fejlesztés alatt]
-
-* Statisztikából való szűrés esetén, ha a statisztika a szűrési szempont szerint rendezte a listát, a szűrés törlése gomb megnyomásakor térjen vissza az alapértelmezett rendezés.
-
-
-
 ## [0.23.1] - 2026-09-09
 
 - Javítva a JSON fájlok alapértelmezett mentési és betöltési útvonalának hibája a Dezideráta-kezelőben.
