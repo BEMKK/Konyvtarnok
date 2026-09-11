@@ -3,6 +3,11 @@
 A projekten végrehajtott lényegi változtatások dokumentációja.
 
 
+## [0.23.2] - 2026-09-11
+
+- Hozzáadva a referencia-adatbázisban lévő kötetek számát mutató status-bar a KönyvTárnok-keresőhöz.
+
+
 
 ## [0.23.1] - 2026-09-09
 
