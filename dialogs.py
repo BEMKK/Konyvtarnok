@@ -1058,7 +1058,7 @@ class NevjegyDialog(wx.Dialog):
         verzio_label = wx.StaticText(self, label=f"v{APP_VERSION} {APP_STAGE}".strip())
         sizer.Add(verzio_label, 0, wx.ALIGN_CENTER | wx.TOP, 5)
         
-        leiras_label = wx.StaticText(self, label="Állomány- és Katalóguskezelő rendszer magángyűjtemények számára.")
+        leiras_label = wx.StaticText(self, label="Akadálymentes könyvkatalógus-kezelő magángyűjtemények számára.")
         sizer.Add(leiras_label, 0, wx.ALIGN_CENTER | wx.ALL, 15)
         
         fejleszto_label = wx.StaticText(self, label="© 2026 KönyvTárnok")
@@ -1096,7 +1096,7 @@ class UjdonsagokDialog(wx.Dialog):
         main_sizer.Add(wx.StaticLine(self), 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 15)
         
         ujdonsagok_lista = [
-            "Status-bar hozzáadása a KönyvTárnok keresőhöz, amely mutatja az adatbázisban lévő kötetek számát."
+            "Súgó és gui címkék javítása."
         ]
 
         szoveg_box = wx.BoxSizer(wx.VERTICAL)

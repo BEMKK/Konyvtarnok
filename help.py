@@ -20,8 +20,8 @@ class HelpNotebookDialog(wx.Dialog):
 
         pages_data = [
             (
-                "Az alkalmazás használata",
-                "HASZNÁLATI ÚTMUTATÓ - FŐABLAK ÉS ÁLLOMÁNYKEZELÉS\n\n"
+                "Állománykezelés",
+                "FŐABLAK ÉS ÁLLOMÁNYKEZELÉS\n\n"
                 "1. Új könyv felvétele:\n"
                 "  Új könyv felvételéhez kattintson az 'Új könyv' gombra a lista feletti eszköztárban, nyomja meg a Ctrl + N billentyűkombinációt, vagy válassza a Fájl -> Új könyv felvétele menüpontot. A megnyíló ablakban kitöltheti a könyv adatait (Cím, Alcím, Összeállító, Egyéb személyek, Kiadó, Kiadás helye és éve, Oldalszám, Méret, Kötés típusa, Rövid cím, Bekerülés dátuma, Példány forrása, Státusz és Rövid leírás). A mentéshez kattintson a Mentés gombra vagy nyomja meg a Ctrl + S billentyűket.\n\n"
                 "2. Könyv megtekintése és szerkesztése:\n"
@@ -35,19 +35,31 @@ class HelpNotebookDialog(wx.Dialog):
             ),
             (
                 "Keresés és statisztika",
-                "KERESÉS, SZŰRÉS ÉS ÁLLOMÁNYSTATISZTIKA\n\n"
+                "KERESÉS, SZŰRÉS, RENDEZÉS ÉS ÁLLOMÁNYSTATISZTIKA\n\n"
                 "1. Élő keresősáv a főablakban:\n"
                 "  A főablak felső részén található keresőmezővel (Ctrl + F) gépelés közben azonnal szűrheti az állományt. A rendszer a könyvek minden adatmezőjében (cím, szerző, kiadó, év stb.) keresi a beírt kifejezést.\n\n"
                 "2. Részletes keresés párbeszédablak:\n"
                 "  Az Eszközök -> Keresés az állományban menüpontban vagy a Ctrl + K billentyűkombinációval megnyitható keresőablakban pontos vagy részleges egyezésre is kereshet a teljes adatbázisban.\n\n"
                 "3. Szűrés törlése:\n"
-                "  Aktív szűrés vagy keresés esetén a lista feletti 'Szűrés törlése' gombra kattintva visszaállíthatja a teljes könyvállomány megjelenítését.\n\n"
+                "  Aktív szűrés vagy keresés esetén a lista feletti 'Szűrés törlése' gomb aktívvá válik, rákattintva visszaállíthatja a teljes könyvállomány megjelenítését.\n\n"
                 "4. Állománystatisztika készítése:\n"
                 "  Az Eszközök -> Állománystatisztika menüpontban (Ctrl + T) részletes kimutatásokat készíthet az állományról. Kiválaszthatja a statisztika alapját (pl. Kiadó, Kiadás éve, Kiadás évszázada, Kiadás évtizede, Kötés típusa, Példány forrása, Státusz stb.), majd szűrhet egy adott értékre vagy a hiányzó adatokra (\"Nincs kitöltve\"). A statisztikai szűrés automatikusan a releváns mező szerint rendezi a listát.\n\n"
                 "5. Állomány rendezése:\n"
                 "  A Rendezés menüpontban vagy az Alt billentyűparancsokkal (pl. Alt + C: Cím, Alt + S: Összeállító, Alt + K: Kiadó, Alt + E: Kiadás éve, Alt + O: Oldalszám, Alt + M: Méret, Alt + D: Bekerülés dátuma) tetszőlegesen sorba rendezheti a könyveket.\n"
             ),
             (
+                "Importálás és exportálás",
+                "IMPORTÁLÁS, EXPORTÁLÁS ÉS ADATMENTÉS\n\n"
+                "1. Könyvadatlap exportálása PDF fájlba:\n"
+                "  A kijelölt könyv(ek)ről nyomtatható PDF adatlapot generálhat a Fájl -> Könyvadatlap(ok) exportálása PDF-ként... menüpontban vagy a Ctrl + Shift + E billentyűkombinációval. Egyetlen könyv esetén egyedi fájlnevet adhat meg, több könyv kijelölése esetén pedig egy kiválasztott mappába tömegesen exportálhatja az adatlapokat.\n\n"
+                "2. Könyvadatlap importálása PDF-ből:\n"
+                "  A korábban exportált vagy standard PDF adatlapokból automatikusan beolvashatja a könyv adatait a Fájl -> Könyvadatlap(ok) importálása PDF-ből... menüpontban (Ctrl + Shift + I). A rendszer felismeri az adatmezőket, kiszűri a már állományban lévő duplikált köteteket, és jelzi az eredményt.\n\n"
+                "3. Állományjegyzék mentése JSON-ba (Biztonsági mentés):\n"
+                "  A teljes könyvkatalógus kimenthető titkosítás nélküli JSON fájlba a Fájl -> Állományjegyzék mentése JSON fájlba... menüpontban (Ctrl + Shift + M). Ez kiválóan alkalmas biztonsági mentésre vagy adatok átvitelére.\n\n"
+                "4. Állományjegyzék betöltése JSON-ból:\n"
+                "  Egy korábban elmentett JSON állományjegyzék beolvasásához használja a Fájl -> Állományjegyzék betöltése JSON fájlból... menüpontot (Ctrl + Shift + B).\n"
+            ),
+                        (
                 "Dezideráta-kezelő",
                 "DEZIDERÁTA-KEZELŐ (KÍVÁNSÁGLISTA ÉS BESZERZÉSI JEGYZÉK)\n\n"
                 "1. A Dezideráta-kezelő megnyitása:\n"
@@ -76,18 +88,6 @@ class HelpNotebookDialog(wx.Dialog):
                 "  A kiválasztott találat(ok)at a Ctrl + D billentyűkombinációval felveheti a Dezideráta (kívánság) jegyzékbe, vagy a Ctrl + F billentyűkombinációval közvetlenül átmásolhatja a saját fő könyvállományába.\n"
             ),
             (
-                "Importálás és exportálás",
-                "IMPORTÁLÁS, EXPORTÁLÁS ÉS ADATMENTÉS\n\n"
-                "1. Könyvadatlap exportálása PDF fájlba:\n"
-                "  A kijelölt könyv(ek)ről nyomtatható PDF adatlapot generálhat a Fájl -> Könyvadatlap(ok) exportálása PDF-ként... menüpontban vagy a Ctrl + Shift + E billentyűkombinációval. Egyetlen könyv esetén egyedi fájlnevet adhat meg, több könyv kijelölése esetén pedig egy kiválasztott mappába tömegesen exportálhatja az adatlapokat.\n\n"
-                "2. Könyvadatlap importálása PDF-ből:\n"
-                "  A korábban exportált vagy standard PDF adatlapokból automatikusan beolvashatja a könyv adatait a Fájl -> Könyvadatlap(ok) importálása PDF-ből... menüpontban (Ctrl + Shift + I). A rendszer felismeri az adatmezőket, kiszűri a már állományban lévő duplikált köteteket, és jelzi az eredményt.\n\n"
-                "3. Állományjegyzék mentése JSON-ba (Biztonsági mentés):\n"
-                "  A teljes könyvkatalógus kimenthető titkosítás nélküli JSON fájlba a Fájl -> Állományjegyzék mentése JSON fájlba... menüpontban (Ctrl + Shift + M). Ez kiválóan alkalmas biztonsági mentésre vagy adatok átvitelére.\n\n"
-                "4. Állományjegyzék betöltése JSON-ból:\n"
-                "  Egy korábban elmentett JSON állományjegyzék beolvasásához használja a Fájl -> Állományjegyzék betöltése JSON fájlból... menüpontot (Ctrl + Shift + B).\n"
-            ),
-            (
                 "Beállítások",
                 "BEÁLLÍTÁSOK ÉS SZEMÉLYRE SZABÁS\n\n"
                 "1. A Beállítások ablak megnyitása:\n"
@@ -108,10 +108,10 @@ class HelpNotebookDialog(wx.Dialog):
             (
                 "Frissítések keresése",
                 "FRISSÍTÉSEK KERESÉSE\n\n"
-                "1. Új verzió ellenőrzéséhez használja a Súgó menü Frissítések keresése menüpontját, vagy nyomja meg a Ctrl+Shift+F billentyűkombinációt.\n"
-                "2. Amennyiben van új verzió, a felugró ablakban megjelenik annak leírása, valamint a GitHub kiadási oldal megnyitására, és a frissítés elhalasztására szolgáló gombok.\n"
-                "3. Ha nincs új verzió, a program felugró ablakban tájékoztat erről.\n"
-                "4. A program alapértelmezés szerint minden indításkor ellenőrzi a frissítéseket, ezt a beállítások ablakban módosíthatja.\n"
+                "  Új verzió ellenőrzéséhez használja a Súgó menü Frissítések keresése menüpontját, vagy nyomja meg a Ctrl+Shift+F billentyűkombinációt.\n"
+                "  Ha van elérhető új verzió, a felugró ablakban megjelenik annak leírása, valamint a GitHub kiadási oldal megnyitására, és a frissítés elhalasztására szolgáló gombok.\n"
+                "  Ha nincs új verzió, a program felugró ablakban tájékoztat erről.\n"
+                "  A program alapértelmezés szerint minden indításkor ellenőrzi a frissítéseket, ezt a beállítások ablakban módosíthatja.\n"
             ),
             (
                 "Billentyűparancsok",

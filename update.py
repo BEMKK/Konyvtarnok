@@ -73,12 +73,12 @@ class FrissitesDialog(wx.Dialog):
         main_sizer = wx.BoxSizer(wx.VERTICAL)
 
         # Fejléc
-        lbl_title = wx.StaticText(self, label="Egy újabb KönyvTárnok verzió tölthető le!")
+        lbl_title = wx.StaticText(self, label="Új verzió érhető el")
         lbl_title.SetFont(wx.Font(11, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD))
         main_sizer.Add(lbl_title, 0, wx.ALL | wx.ALIGN_CENTER, 12)
 
         # Verzió infók
-        ver_info = f"Jelenlegi verzió: v{current_ver}\nLegújabb kiadás:  v{latest_ver}"
+        ver_info = f"Jelenlegi verzió: v{current_ver}\nÚj verzió:  v{latest_ver}"
         lbl_ver = wx.StaticText(self, label=ver_info)
         main_sizer.Add(lbl_ver, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 12)
 
@@ -142,7 +142,7 @@ def check_for_updates_async(parent=None, is_manual=False):
                 elif is_manual:
                     def _show_up_to_date():
                         wx.MessageBox(
-                            f"Az Ön által használt verzió (v{APP_VERSION}) a legfrissebb.",
+                            f"Ön a legújabb, (v{APP_VERSION}) verziót használja.",
                             "Nincs újabb frissítés",
                             wx.OK | wx.ICON_INFORMATION,
                             parent
@@ -151,8 +151,8 @@ def check_for_updates_async(parent=None, is_manual=False):
             elif is_manual:
                 def _show_error():
                     wx.MessageBox(
-                        "Nem sikerült lekérni a frissítési adatokat a GitHub-ról.",
-                        "Hiba a frissítés-ellenőrzéskor",
+                        "Nem sikerült lekérni a frissítési adatokat.",
+                        "Hiba a frissítés ellenőrzésekor",
                         wx.OK | wx.ICON_WARNING,
                         parent
                     )
@@ -163,7 +163,7 @@ def check_for_updates_async(parent=None, is_manual=False):
                 def _show_exc():
                     wx.MessageBox(
                         f"Hiba történt a frissítések ellenőrzése közben:\n{e}",
-                        "Hiba a frissítés-ellenőrzéskor",
+                        "Hiba a frissítés ellenőrzésekor",
                         wx.OK | wx.ICON_ERROR,
                         parent
                     )
