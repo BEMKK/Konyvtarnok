@@ -67,18 +67,18 @@ def fetch_latest_release():
 class FrissitesDialog(wx.Dialog):
     """Párbeszédablak az új verzió értesítéséhez."""
     def __init__(self, parent, current_ver, latest_ver, release_url, release_notes=""):
-        super().__init__(parent, title="Új frissítés érhető el!", size=(480, 340), style=wx.DEFAULT_DIALOG_STYLE | wx.STAY_ON_TOP)
+        super().__init__(parent, title="Frissítés", size=(480, 340), style=wx.DEFAULT_DIALOG_STYLE | wx.STAY_ON_TOP)
         self.release_url = release_url
 
         main_sizer = wx.BoxSizer(wx.VERTICAL)
 
         # Fejléc
-        lbl_title = wx.StaticText(self, label="Új verzió érhető el")
+        lbl_title = wx.StaticText(self, label="Új verzió érhető el.")
         lbl_title.SetFont(wx.Font(11, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD))
         main_sizer.Add(lbl_title, 0, wx.ALL | wx.ALIGN_CENTER, 12)
 
         # Verzió infók
-        ver_info = f"Jelenlegi verzió: v{current_ver}\nÚj verzió:  v{latest_ver}"
+        ver_info = f"Jelenlegi: v{current_ver}\nÚj verzió:  v{latest_ver}"
         lbl_ver = wx.StaticText(self, label=ver_info)
         main_sizer.Add(lbl_ver, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 12)
 
