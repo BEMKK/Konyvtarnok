@@ -1096,7 +1096,8 @@ class UjdonsagokDialog(wx.Dialog):
         main_sizer.Add(wx.StaticLine(self), 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 15)
         
         ujdonsagok_lista = [
-            "Súgó és gui címkék javítása."
+            "Javítások a súgóban.",
+            "Az Eszközök menüben csoportosítottuk a menüpontokat, a Keresés az adatbázisban menüpont neve KönyvTárnok-kereső lett."
         ]
 
         szoveg_box = wx.BoxSizer(wx.VERTICAL)

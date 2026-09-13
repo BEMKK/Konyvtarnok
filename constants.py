@@ -1,4 +1,4 @@
 APP_NAME = "KönyvTárnok"
-APP_VERSION = "0.23.3"
+APP_VERSION = "0.23.4"
 APP_STAGE = "Béta"
 APP_TITLE = f"{APP_NAME}"

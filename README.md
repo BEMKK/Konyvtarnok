@@ -1,6 +1,6 @@
 # KönyvTárnok
 
-> **Verzió:** 0.23.3 Béta
+> **Verzió:** 0.23.4 Béta
 
 ## Leírás
 
@@ -91,7 +91,7 @@ A projekt jelenleg nincs automatizált tesztkerettel ellátva, de a következők
 1. Futtasd a `main.py`‑t.
 2. Vegyél fel új könyvet, szerkeszd, majd töröld.
 3. Próbáld ki a PDF importot és exportot (Fájl menü → Könyvadatlapok importálása / exportálása).
-4. Nyisd meg a KönyvTárnok keresőt (Eszközök → Keresés az adatbázisban) és keress a referencia‑adatbázisban.
+4. Nyisd meg a KönyvTárnok keresőt (Eszközök → KönyvTárnok-kereső) és keress a referencia‑adatbázisban.
 5. Nyisd meg a Dezideráta‑kezelőt (Eszközök → Dezideráta‑kezelő).
 6. Ellenőrizd, hogy a `hibanaplo.log` akkor jön létre, amikor nem kezelt hiba történik.
 
@@ -108,4 +108,4 @@ Ez a projekt egy vibecoding kísérlet eredménye: a teljes alkalmazás kódját
 
 ---
 
-*Ez a README a projekt aktuális állapotát tükrözi (v0.23.3 Béta), és a fejlesztés előrehaladtával frissíthető.*
+*Ez a README a projekt aktuális állapotát tükrözi (v0.23.4 Béta), és a fejlesztés előrehaladtával frissíthető.*

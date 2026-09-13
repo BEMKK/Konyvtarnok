@@ -4,6 +4,12 @@ A projekten végrehajtott lényegi változtatások dokumentációja.
 
 
 
+## [0.23.4] - 2026-09-13
+
+- Javítások a súgóban és a menüben.
+
+
+
 ## [0.23.3] - 2026-09-12
 
 - Súgó és GUI szövegek javítása.

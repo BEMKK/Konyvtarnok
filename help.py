@@ -31,7 +31,7 @@ class HelpNotebookDialog(wx.Dialog):
                 "4. Összes elem kijelölése:\n"
                 "  A főlista összes kötetének egyidejű kijelöléséhez nyomja meg a Ctrl + A billentyűkombinációt.\n\n"
                 "5. Gyorskeresés a listában:\n"
-                "  Amikor a könyvlista van fókuszban, a billentyűzet gépelésével azonnal az adott betűvel vagy szóval kezdődő könyvre ugrathatja a kijelölést.\n"
+                "  Amikor a könyvlista fókuszban van, a kezdőbetű vagy szótag begépelésével is kijelölheti a kívánt kötetet.\n"
             ),
             (
                 "Keresés és statisztika",
@@ -39,7 +39,7 @@ class HelpNotebookDialog(wx.Dialog):
                 "1. Élő keresősáv a főablakban:\n"
                 "  A főablak felső részén található keresőmezővel (Ctrl + F) gépelés közben azonnal szűrheti az állományt. A rendszer a könyvek minden adatmezőjében (cím, szerző, kiadó, év stb.) keresi a beírt kifejezést.\n\n"
                 "2. Részletes keresés párbeszédablak:\n"
-                "  Az Eszközök -> Keresés az állományban menüpontban vagy a Ctrl + K billentyűkombinációval megnyitható keresőablakban pontos vagy részleges egyezésre is kereshet a teljes adatbázisban.\n\n"
+                "  Az Eszközök -> Keresés az állományban menüponttal vagy a Ctrl + K billentyűkombinációval megnyitható keresőablakban pontos vagy részleges egyezésre is kereshet a teljes adatbázisban.\n\n"
                 "3. Szűrés törlése:\n"
                 "  Aktív szűrés vagy keresés esetén a lista feletti 'Szűrés törlése' gomb aktívvá válik, rákattintva visszaállíthatja a teljes könyvállomány megjelenítését.\n\n"
                 "4. Állománystatisztika készítése:\n"
@@ -78,10 +78,10 @@ class HelpNotebookDialog(wx.Dialog):
             (
                 "KönyvTárnok kereső",
                 "KÖNYVTÁRNOK KERESŐ (KÜLSŐ ADATBÁZIS ÉS ÉNEKESKÖNYV KERESŐ)\n\n"
-                "1. A kereső modul megnyitása:\n"
-                "  A külső katalógus/énekeskönyv adatbázisban való kereséshez válassza az Eszközök -> Keresés az adatbázisban menüpontot vagy nyomja meg a Ctrl + Shift + K billentyűkombinációt.\n\n"
-                "2. Keresés végrehajtása:\n"
-                "  Írja be a keresendő szót vagy kifejezést a keresőmezőbe, majd nyomja meg az Enter billentyűt a találatok kilistázásához.\n\n"
+                "1. A KönyvTárnok-kereső modul megnyitása:\n"
+                "  A külső énekeskönyv adatbázisban való kereséshez válassza az Eszközök -> KönyvTárnok-kereső menüpontot, vagy nyomja meg a Ctrl + Shift + K billentyűkombinációt.\n\n"
+                "2. Keresés:\n"
+                "  Írja be a keresendő szót vagy kifejezést a keresőmezőbe, majd nyomja meg az Enter billentyűt a találatok kilistázásához. A mező melletti jelölőnégyzetekkel kiválaszthatja, mely oszlopokban szeretne keresni (cím, összeállító, kiadó, kiadás helye, kiadás éve, megjegyzés).\n\n"
                 "3. Találatok kijelölése és másolása:\n"
                 "  Az összes találatot kijelölheti a Ctrl + A billentyűparancsal. A kijelölt sorok adatait a Ctrl + C gombokkal másolhatja a vágólapra.\n\n"
                 "4. Találat átemelése a Deziderátába vagy az Állományba:\n"

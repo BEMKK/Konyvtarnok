@@ -31,11 +31,11 @@ class KonyvtarMenuBar(wx.MenuBar):
         self.Append(ord_menu, '&Rendezés')
 
         set_menu = wx.Menu()
-        self.deziderata = set_menu.Append(wx.ID_ANY, '&Dezideráta-kezelő\tCTRL+D', 'Dezideráta jegyzék kezelése')
-        set_menu.AppendSeparator()
-        self.find = set_menu.Append(wx.ID_ANY, '&Keresés az állományban\tCTRL+K', 'Keresés')
-        self.konyvtarnok_kereso_item = set_menu.Append(wx.ID_ANY, '&Keresés az adatbázisban\tCTRL+SHIFT+K', 'KönyvTárnok kereső')
+        self.find = set_menu.Append(wx.ID_ANY, '&Keresés és szűrés\tCTRL+K', 'Keresés')
         self.statisztika = set_menu.Append(wx.ID_ANY, '&Állománystatisztika\tCTRL+T', 'Statisztika készítése feltételek alapján')
+        set_menu.AppendSeparator()
+        self.deziderata = set_menu.Append(wx.ID_ANY, '&Dezideráta-kezelő\tCTRL+D', 'Dezideráta jegyzék kezelése')
+        self.konyvtarnok_kereso_item = set_menu.Append(wx.ID_ANY, '&KönyvTárnok-kereső\tCTRL+SHIFT+K', 'KönyvTárnok kereső')
         set_menu.AppendSeparator()
         self.set = set_menu.Append(wx.ID_ANY, '&Beállítások\tCTRL+B', 'Beállítások')
 
