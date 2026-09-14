@@ -7,7 +7,7 @@ import datetime
 import logging
 import wx
 
-from constants import APP_VERSION, APP_NAME
+from constants import APP_VERSION
 from config_manager import load_settings, save_settings
 
 GITHUB_API_URL = "https://api.github.com/repos/BEMKK/Konyvtarnok/releases/latest"
@@ -47,11 +47,9 @@ def should_check_for_updates(config=None):
         elif freq == "monthly":
             return diff_days >= 30
     except Exception as e:
-        logging.warning(f"Dátum értelmezési hiba a frissítés ellenőrzésénél: {e}")
+        logging.warning(f"Dátum értelmezési hiba a frissítés ellenőrzésékor: {e}")
         return True
     
-    return True
-
 def fetch_latest_release():
     """Lekéri a legfrissebb kiadás adatait a GitHub REST API-n keresztül."""
     req = urllib.request.Request(

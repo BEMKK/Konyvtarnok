@@ -5,7 +5,6 @@ import os
 import logging
 import uuid
 from cryptography.fernet import Fernet
-from import_manager import import_konyv_pdf
 
 class KonyvAdatbazis:
     def __init__(self, fajlnev="allomanyjegyzek.json", key=None):
@@ -95,16 +94,6 @@ class KonyvAdatbazis:
             logging.error(f"Hiba a fájl titkosítása során: {e}")
             return False
 
-    def get_osszes_cim(self):
-        return [konyv["cim"] for konyv in self.konyvek]
-
-    # --- ID ALAPÚ KERESÉS ---
-    def get_konyv_by_id(self, konyv_id):
-        for konyv in self.konyvek:
-            if konyv.get("id") == konyv_id:
-                return konyv
-        return {}
-
     # --- ID ALAPÚ MENTÉS ---
     def konyv_mentese_by_id(self, konyv_id, uj_adatok):
         for konyv in self.konyvek:
@@ -115,8 +104,8 @@ class KonyvAdatbazis:
                 return True
         return False
 
-    def uj_konyv_hozzaadasa(self, uj_adatok, engedelyez_duplikációt=False):
-        if not engedelyez_duplikációt and self.is_duplikalat(uj_adatok):
+    def uj_konyv_hozzaadasa(self, uj_adatok, engedelyez_duplikaciót=False):
+        if not engedelyez_duplikaciót and self.is_duplikalat(uj_adatok):
             return False
         
         # Generálunk egyedi azonosítót az új könyvnek
@@ -135,15 +124,6 @@ class KonyvAdatbazis:
                 self.AdatokMentese()
                 return True
         return False
-
-    def importalt_konyv_hozzaadasa(self, fajlnev):
-        if fajlnev.endswith(".pdf"):
-            konyv = import_konyv_pdf(fajlnev)
-        else:
-            return False
-
-        self.uj_konyv_hozzaadasa(konyv)
-        return True
 
     def save_to_json(self, target_filepath):
         try:

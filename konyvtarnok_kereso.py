@@ -11,7 +11,7 @@ class KonyvtarnokKeresoApp(wx.Frame):
 
     def __init__(self, parent=None):
         super().__init__(
-            parent=None, title="KönyvTárnok kereső", size=(1000, 600)
+            parent=parent, title="KönyvTárnok kereső", size=(1000, 600)
         )
 
         self.parent = parent
@@ -21,7 +21,7 @@ class KonyvtarnokKeresoApp(wx.Frame):
         self.panel.SetName("Főpanel")
 
         # 1. JSON fájl betöltése a háttérben
-        self.json_fajlnev = "Enekeskonyvek_adatai.json"  # Excel helyett JSON
+        self.json_fajlnev = "enekeskonyvek_adatai.json"  # Excel helyett JSON
         self.oszlopok = []
         self.adatok = self.adatok_betoltese()
 
@@ -649,9 +649,7 @@ class KonyvtarnokKeresoApp(wx.Frame):
         return None
 
     def atemeles_deziderataba(self):
-        import json
         import uuid
-
         if not self.parent:
             wx.MessageBox(
                 "Az átemelés nem lehetséges, mert a kereső önállóan fut!",
@@ -720,7 +718,7 @@ class KonyvtarnokKeresoApp(wx.Frame):
                 if (
                     norm(candidate.get("cim")) == norm(item.get("cim", item.get("title", ""))) and
                     norm(candidate.get("szerzo")) == norm(item.get("szerzo", item.get("author", ""))) and
-                    norm(candidate.get("egyeb_szemelyek")) == norm(item.get("egyeb_szemelyek", item.get("egyeb_szemelyek", ""))) and
+                    norm(candidate.get("egyeb_szemelyek")) == norm(item.get("egyeb_szemelyek", "")) and
                     norm(candidate.get("kiado")) == norm(item.get("kiado", item.get("publisher", ""))) and
                     norm(candidate.get("hely")) == norm(item.get("hely", item.get("place", ""))) and
                     norm(candidate.get("ev")) == norm(str(item.get("ev", item.get("year", ""))))

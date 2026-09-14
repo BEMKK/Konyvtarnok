@@ -1,4 +1,3 @@
-import re
 import os
 import pdfplumber
 import logging
@@ -137,25 +136,6 @@ def import_tobb_fajl(fajl_list):
             
     return osszes_adat
 
-
-if __name__ == "__main__":
-    # Dinamikus tesztelés: parancssori argumentumokból olvassa be a fájlokat, 
-    # így nem kell beégetni semmilyen fájlnevet.
-    import sys
-    
-    teszt_fajlok = sys.argv[1:]
-    
-    if not teszt_fajlok:
-        print("A futtatáshoz adj meg legalább egy fájlnevet argumentumként!")
-        print("Példa: python modul.py konyv1.pdf konyv2.pdf")
-    else:
-        print("Fájlok importálása...")
-        eredmenyek = import_tobb_fajl(teszt_fajlok)
-        
-        for i, adat in enumerate(eredmenyek, 1):
-            print(f"\n{i}. könyv adatai:")
-            print(adat)
-
 def feldolgoz_es_importal(fajl_utvonalak, db):
     """
     Beolvassa a fájlokat, és közvetlenül az adatbázisba illeszti őket.
@@ -178,5 +158,20 @@ def feldolgoz_es_importal(fajl_utvonalak, db):
                 db.uj_konyv_hozzaadasa(konyv)
                 sikeres += 1
                 hozzaadott_cimek.append(cim)
-
     return sikeres, hibas, duplikalt, hozzaadott_cimek
+
+if __name__ == "__main__":
+    # Dinamikus tesztelés: parancssori argumentumokból olvassa be a fájlokat, 
+    # így nem kell beégetni semmilyen fájlnevet.
+    teszt_fajlok = sys.argv[1:]
+    
+    if not teszt_fajlok:
+        print("A futtatáshoz adj meg legalább egy fájlnevet argumentumként!")
+        print("Példa: python modul.py konyv1.pdf konyv2.pdf")
+    else:
+        print("Fájlok importálása...")
+        eredmenyek = import_tobb_fajl(teszt_fajlok)
+        
+        for i, adat in enumerate(eredmenyek, 1):
+            print(f"\n{i}. könyv adatai:")
+            print(adat)

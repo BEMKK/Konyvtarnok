@@ -325,7 +325,6 @@ class Deziderata(wx.Frame):
         super().__init__(parent, title=f"{APP_NAME}", size=(900, 500))
         self.parent = parent
         self.cipher = cipher  # <-- Eltároljuk az ablak példányában
-        self.data = []
 
         # Adatmodell: a tételek listája (szótárakból álló listaként)
         self.items = []
@@ -806,8 +805,6 @@ class Deziderata(wx.Frame):
                 del self.items[idx]
             self.save_data()
             self.refresh_list()
-
-        if sikeres > 0:
             uzenet = "Az átemelés sikeresen megtörtént!\n\n"
             uzenet += f"• Hozzáadva az állományhoz: {sikeres} db könyv.\n"
             if visszautasitott > 0:

@@ -1,4 +1,3 @@
-import os
 import sys
 import traceback
 import logging
@@ -6,11 +5,6 @@ import wx
 from pathlib import Path
 from data_manager import KonyvAdatbazis
 from main_frame import Konyvtarnok
-
-def get_resource_path(relative_path):
-    if hasattr(sys, "_MEIPASS"):
-        return Path(sys._MEIPASS) / relative_path
-    return Path(__file__).parent / relative_path
 
 # Segédfüggvény az EXE MELLET lévő mappához (hibanapló, adatbázisok)
 def get_exe_dir():
@@ -68,13 +62,5 @@ if __name__ == '__main__':
     # 2. Átadjuk az adatbázist a grafikus felületnek
     frame = Konyvtarnok(adatbazis)
     
-    icon_path = get_resource_path("ikon.ico")
-    if icon_path.exists():
-        icon = wx.Icon(str(icon_path), wx.BITMAP_TYPE_ICO)
-        frame.SetIcon(icon)
-    else:
-        # Hibakereséshez: ha nem találja, kiírja a pontos utat
-        logging.warning(f"Az ikon nem található ezen az útvonalon: {icon_path}")
-
     frame.Show()
     app.MainLoop()

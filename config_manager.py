@@ -1,20 +1,29 @@
+import sys as _sys
+import os as _os
 import json
-import os
 import logging
 
-SETTINGS_FILE = "settings.json"
+if getattr(_sys, 'frozen', False):
+    _BASE_DIR = _os.path.dirname(_sys.executable)
+else:
+    _BASE_DIR = _os.path.dirname(_os.path.abspath(__file__))
+
+SETTINGS_FILE = _os.path.join(_BASE_DIR, "settings.json")
 DEFAULT_CONFIG = {
     "lathato_oszlopok": ["cim", "szerzo", "kiado", "hely", "ev", "status"],
     "tema": "vilagos",
     "last_json_dir": "",
     "last_pdf_dir": "",
     "last_stat_pdf_dir": "",
-    "alapertelmezett_rendezes": "cim"
+    "alapertelmezett_rendezes": "cim",
+    "auto_update_check": True,
+    "update_frequency": "startup",
+    "last_update_check_date": ""
 }
 
 def load_settings():
     """Betölti a beállításokat a JSON fájlból. Ha nem létezik, az alapértelmezettel tér vissza."""
-    if os.path.exists(SETTINGS_FILE):
+    if _os.path.exists(SETTINGS_FILE):
         try:
             with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
                 config = json.load(f)

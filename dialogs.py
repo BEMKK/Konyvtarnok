@@ -601,7 +601,7 @@ class StatisztikaDialog(wx.Dialog):
         
         # Helyes toldalékolás meghatározása az utolsó előtti számjegy alapján
         tizes = (evtized // 10) % 10
-        toldalek = "-es" if tizes in [1, 4, 5, 7, 9] else "-as"
+        toldalek = "-es" if tizes in [0, 1, 4, 5, 7, 9] else "-as"
         
         return f"{evtized}{toldalek} évek"
 
@@ -1096,8 +1096,8 @@ class UjdonsagokDialog(wx.Dialog):
         main_sizer.Add(wx.StaticLine(self), 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 15)
         
         ujdonsagok_lista = [
-            "Javítások a súgóban.",
-            "Az Eszközök menüben csoportosítottuk a menüpontokat, a Keresés az adatbázisban menüpont neve KönyvTárnok-kereső lett."
+            "Javítva a frissítés gyakoriságának mentési hibája a beállításokban.",
+            "Kijavítottunk egy toldalékolási hibát az Állománystatisztika kiadási évtized szempontjánál."
         ]
 
         szoveg_box = wx.BoxSizer(wx.VERTICAL)

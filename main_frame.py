@@ -2,7 +2,7 @@ import wx
 import os
 import sys
 import logging
-from constants import APP_NAME, APP_VERSION, APP_TITLE
+from constants import APP_TITLE
 from dialogs import KonyvReszletekDialog, KonyvSzerkesztoDialog, NevjegyDialog, BeallitasokDialog, KeresoDialog, UjdonsagokDialog, StatisztikaDialog, FajlutkozesDialog
 from help import HelpNotebookDialog
 from export_manager import export_konyv_pdf, tomeges_export_pdf, get_biztonsagos_pdf_fajlnev
@@ -263,9 +263,7 @@ class Konyvtarnok(wx.Frame):
                 if konyv and konyv.get("id"):
                     torlendo_id_k.append(konyv.get("id"))
                 elif konyv:
-                    cim = konyv.get("cim")
-                    if cim:
-                        self.db.konyv_torlese(cim)
+                    logging.warning(f"A könyvnek nincs ID-je, nem törölhető: {konyv.get('cim', '?')}")
             for konyv_id in torlendo_id_k:
                 self.db.konyv_torlese_by_id(konyv_id)
 
@@ -678,6 +676,8 @@ class Konyvtarnok(wx.Frame):
             config["last_pdf_dir"] = dlg.GetKivalasztottPdfDir()
             config["last_stat_pdf_dir"] = dlg.GetKivalasztottStatPdfDir()
             config["last_json_dir"] = dlg.GetKivalasztottJsonDir()
+            config["auto_update_check"] = dlg.GetAutoUpdateCheck()
+            config["update_frequency"] = dlg.GetUpdateFrequency()
             save_settings(config)
             
             if hasattr(self.lista, 'Rendezes'):
@@ -765,13 +765,6 @@ class Konyvtarnok(wx.Frame):
         dlg = UjdonsagokDialog(self)
         dlg.ShowModal()
         dlg.Destroy()
-
-    def select_and_focus(self, index):
-        if 0 <= index < self.lista.GetItemCount():
-            self.lista.Select(index)
-            self.lista.Focus(index)
-            self.lista.EnsureVisible(index)
-        self.lista.SetFocus()
 
     def OnFrissites(self, event):
         check_for_updates_async(parent=self, is_manual=True)

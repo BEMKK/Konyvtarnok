@@ -120,9 +120,6 @@ class KonyvListaCtrl(wx.ListCtrl):
             return self.jelenlegi_adatok[index]
         return None
 
-    def GetKijeloltKonyvID(self, index):
-        return self.sor_id_terkep.get(index)
-
     def Rendezes(self, mezo_kulcs):
         self.rendezes_kulcs = mezo_kulcs
         # A szűrt lista megtartásával rendezünk újra
@@ -188,7 +185,7 @@ class KonyvListaCtrl(wx.ListCtrl):
             # A tuple első eleme a 'hianyos' jelző: 0 = van adat (előre), 1 = nincs adat (a lista végére)
             return (hianyos, elso, masod, harmad)
 
-        self.jelenlegi_adatok.sort(key=osszetett_rendezesi_kulcs)        # ... (a függvény többi része változatlan)
+        self.jelenlegi_adatok.sort(key=osszetett_rendezesi_kulcs)
 
         for idx, konyv in enumerate(self.jelenlegi_adatok):
             self.sor_id_terkep[idx] = konyv.get("id")

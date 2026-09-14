@@ -4,6 +4,12 @@ A projekten végrehajtott lényegi változtatások dokumentációja.
 
 
 
+## [0.23.5] - 2026-09-14
+
+- Javítva a frissítési gyakoriság beállításának hibája.
+
+
+
 ## [0.23.4] - 2026-09-13
 
 - Javítások a súgóban és a menüben.
