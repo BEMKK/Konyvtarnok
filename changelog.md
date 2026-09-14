@@ -4,9 +4,18 @@ A projekten végrehajtott lényegi változtatások dokumentációja.
 
 
 
+## [0.23.6] - 2026-09-14
+
+- Javítva a fájlütközés-dialog hibája, mely bezáráskor automatikusan felülírt minden fájlt.
+- Javítva az 1900-as évek toldalékolási hibája az állománystatisztikában.
+- Újabb kódjavítások.
+
+
+
 ## [0.23.5] - 2026-09-14
 
 - Javítva a frissítési gyakoriság beállításának hibája.
+- Javítva a 2000-es évek toldalékolási hibája az állománystatisztikában.
 
 
 

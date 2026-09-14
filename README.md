@@ -1,6 +1,6 @@
 # KönyvTárnok
 
-> **Verzió:** 0.23.5 Béta
+> **Verzió:** 0.23.6 Béta
 
 ## Leírás
 
@@ -72,7 +72,6 @@ python main.py
 ├─ konyvtarnok_kereso.py                # KönyvTárnok kereső – külső referencia‑adatbázis kereső és átemelő modul
 ├─ deziderata.py               # Dezideráta‑kezelő – beszerzési kívánságlista modul
 ├─ update.py                   # Új verzió ellenőrzése a GitHub-on.
-├─ sablon.py                   # PDF export sablongenerátor (bibliográfiai adatlap formázása)
 ├─ constants.py                # Alkalmazás‑állandók (név, verzió, állapot)
 ├─ ikon.ico                    # Alkalmazásikon
 ├─ Enekeskonyvek_adatai.json   # KönyvTárnok kereső referencia‑adatbázisa
@@ -108,4 +107,4 @@ Ez a projekt egy vibecoding kísérlet eredménye: a teljes alkalmazás kódját
 
 ---
 
-*Ez a README a projekt aktuális állapotát tükrözi (v0.23.5 Béta), és a fejlesztés előrehaladtával frissíthető.*
+*Ez a README a projekt aktuális állapotát tükrözi (v0.23.6 Béta), és a fejlesztés előrehaladtával frissíthető.*

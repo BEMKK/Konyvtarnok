@@ -366,11 +366,14 @@ class Konyvtarnok(wx.Frame):
         valasz = dlg.ShowModal()
         dlg.Destroy()
 
-        if valasz == wx.ID_NO:
-            return "KIHAGYAS"
-        elif valasz == wx.ID_CANCEL:
+        if valasz == wx.ID_YES:
+            return "FELULIRAS"
+        elif valasz == wx.ID_YESTOALL:
             return "MINDET_FELULIR"
-        return "FELULIRAS"
+        elif valasz == wx.ID_NO:
+            return "KIHAGYAS"
+        else: # X gomb, ESC vagy "Összes kihagyása" (wx.ID_CANCEL)
+            return "OSSZES_KIHAGYASA"
 
     def OnExportalas(self, event):
         indexek = self.lista.GetKijeloltIndexek()

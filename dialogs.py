@@ -598,10 +598,16 @@ class StatisztikaDialog(wx.Dialog):
             return ""
         ev = int(match.group(1))
         evtized = (ev // 10) * 10
-        
-        # Helyes toldalékolás meghatározása az utolsó előtti számjegy alapján
-        tizes = (evtized // 10) % 10
-        toldalek = "-es" if tizes in [0, 1, 4, 5, 7, 9] else "-as"
+
+        # Helyes toldalékolás meghatározása
+        if evtized % 100 == 0:
+            if evtized % 1000 == 0:
+                toldalek = "-es"  # 1000-es, 2000-es, 3000-es ("ezer" -> magas)
+            else:
+                toldalek = "-as"  # 1500-as, 1800-as, 1900-as ("száz" -> mély)
+        else:
+            tizes = (evtized // 10) % 10
+            toldalek = "-es" if tizes in [1, 4, 5, 7, 9] else "-as"
         
         return f"{evtized}{toldalek} évek"
 
@@ -1096,8 +1102,9 @@ class UjdonsagokDialog(wx.Dialog):
         main_sizer.Add(wx.StaticLine(self), 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 15)
         
         ujdonsagok_lista = [
-            "Javítva a frissítés gyakoriságának mentési hibája a beállításokban.",
-            "Kijavítottunk egy toldalékolási hibát az Állománystatisztika kiadási évtized szempontjánál."
+            "Javítva a Fájlütközés dialog hibája, mely bezáráskor is felülírta a fájlokat.",
+            "Javítva az 1900-as évek toldalékolási hibája az állománystatisztikában.",
+            "Újabb kódjavítások."
         ]
 
         szoveg_box = wx.BoxSizer(wx.VERTICAL)
@@ -1133,13 +1140,37 @@ class UjdonsagokDialog(wx.Dialog):
         
         self.Centre()
 
-class FajlutkozesDialog(wx.MessageDialog):
+class FajlutkozesDialog(wx.Dialog):
     def __init__(self, parent, fajlnev):
-        msg = f"A(z) '{fajlnev}' fájl már létezik a célmappában.\nSzeretné felülírni?"
-        super().__init__(
-            parent, 
-            msg, 
-            "Fájlütközés", 
-            wx.YES_NO | wx.CANCEL | wx.CANCEL_DEFAULT | wx.ICON_QUESTION
-        )
-        self.SetYesNoCancelLabels("Felülírás", "Kihagyás", "Mindet felülír")
+        super().__init__(parent, title="Fájlütközés", style=wx.DEFAULT_DIALOG_STYLE | wx.STAY_ON_TOP)
+        
+        main_sizer = wx.BoxSizer(wx.VERTICAL)
+        
+        msg = f"A(z) '{fajlnev}' fájl már létezik a célmappában.\nMit szeretne tenni?"
+        lbl = wx.StaticText(self, label=msg)
+        main_sizer.Add(lbl, 0, wx.ALL, 15)
+        
+        btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        
+        btn_felulir = wx.Button(self, wx.ID_YES, "Felülírás")
+        btn_mindent_felulir = wx.Button(self, wx.ID_YESTOALL, "Mindet felülír")
+        btn_kihagy = wx.Button(self, wx.ID_NO, "Kihagyás")
+        btn_osszes_kihagy = wx.Button(self, wx.ID_CANCEL, "Összes kihagyása")
+        
+        btn_sizer.Add(btn_felulir, 0, wx.RIGHT, 5)
+        btn_sizer.Add(btn_mindent_felulir, 0, wx.RIGHT, 5)
+        btn_sizer.Add(btn_kihagy, 0, wx.RIGHT, 5)
+        btn_sizer.Add(btn_osszes_kihagy, 0)
+        
+        main_sizer.Add(btn_sizer, 0, wx.ALL | wx.ALIGN_CENTER, 15)
+        
+        btn_felulir.Bind(wx.EVT_BUTTON, lambda e: self.EndModal(wx.ID_YES))
+        btn_mindent_felulir.Bind(wx.EVT_BUTTON, lambda e: self.EndModal(wx.ID_YESTOALL))
+        btn_kihagy.Bind(wx.EVT_BUTTON, lambda e: self.EndModal(wx.ID_NO))
+        btn_osszes_kihagy.Bind(wx.EVT_BUTTON, lambda e: self.EndModal(wx.ID_CANCEL))
+        
+        config = load_settings()
+        apply_theme(self, config.get("tema", "vilagos"))
+        
+        self.SetSizerAndFit(main_sizer)
+        self.CentreOnParent()

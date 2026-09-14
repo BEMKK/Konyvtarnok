@@ -4,7 +4,6 @@ from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
-from sablon import general_sablon
 
 # Betöltjük az Arial betűtípust a PDF-hez, hogy az összes magyar ékezet (ő, ű is) működjön
 try:
@@ -43,6 +42,29 @@ def export_konyv_pdf(konyv, fajlnev):
 
     c.save()
     logging.info(f"PDF mentve: {fajlnev}")
+
+def general_sablon(konyv):
+    """Visszaadja a sablon szövegét a könyv adataival kitöltve."""
+    return f"""
+Bibliográfiai adatok
+Cím: {konyv.get('cim', '')}
+Alcím: {konyv.get('alcim', '')}
+Összeállító: {konyv.get('szerzo', '')}
+Egyéb személyek: {konyv.get('egyeb_szemelyek', '')}
+Kiadó: {konyv.get('kiado', '')}
+Kiadás helye: {konyv.get('hely', '')}
+Kiadás éve: {konyv.get('ev', '')}
+
+Példány adatai
+Oldalszám: {konyv.get('oldalszam', '')}
+Méret (Ma x sz, cm): {konyv.get('meretek', '')}
+Kötés típusa: {konyv.get('kotes', '')}
+Rövid cím: {konyv.get('rovid_cim', '')}
+Bekerülés dátuma: {konyv.get('bekerult', '')}
+Példány forrása: {konyv.get('forras', '')}
+Példány státusza: {konyv.get('status', '')}
+Példány rövid leírása: {konyv.get('rovid_leiras', '')}
+""".strip()
 
 def export_statisztika_pdf(szoveg, fajlnev):
     """Statisztikai jelentés exportálása PDF fájlba."""
@@ -92,6 +114,8 @@ def tomeges_export_pdf(konyvek_listaja, mentesi_utvonal, fajl_letezik_callback=N
                 continue
             elif valasz == "MINDET_FELULIR":
                 mindent_felulir = True
+            elif valasz == "OSSZES_KIHAGYASA":
+                break
 
         try:
             export_konyv_pdf(konyv, fajl_utvonal)
