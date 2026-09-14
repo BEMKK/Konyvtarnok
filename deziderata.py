@@ -320,7 +320,7 @@ class EditItemDialog(BaseItemDialog):
 # FŐABLAK ÉS ALKALMAZÁS LOGIKA
 # ==============================================================================
 
-class MainFrame(wx.Frame):
+class Deziderata(wx.Frame):
     def __init__(self, parent=None, cipher=None):
         super().__init__(parent, title=f"{APP_NAME}", size=(900, 500))
         self.parent = parent
@@ -959,7 +959,7 @@ class MainFrame(wx.Frame):
 
 class App(wx.App):
     def OnInit(self):
-        MainFrame()
+        Deziderata()
         return True
 
 if __name__ == "__main__":

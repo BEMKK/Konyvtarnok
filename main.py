@@ -5,7 +5,7 @@ import logging
 import wx
 from pathlib import Path
 from data_manager import KonyvAdatbazis
-from main_frame import KonyvtarApp
+from main_frame import Konyvtarnok
 
 def get_resource_path(relative_path):
     if hasattr(sys, "_MEIPASS"):
@@ -66,7 +66,7 @@ if __name__ == '__main__':
     adatbazis = KonyvAdatbazis()
     
     # 2. Átadjuk az adatbázist a grafikus felületnek
-    frame = KonyvtarApp(adatbazis)
+    frame = Konyvtarnok(adatbazis)
     
     icon_path = get_resource_path("ikon.ico")
     if icon_path.exists():

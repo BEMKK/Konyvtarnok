@@ -61,8 +61,6 @@ def export_statisztika_pdf(szoveg, fajlnev):
 
     c.save()
 
-# export_manager.py
-
 def get_biztonsagos_pdf_fajlnev(konyv):
     cim = konyv.get('cim', '')
     biztonsagos_cim = "".join([c for c in cim if c.isalpha() or c.isdigit() or c in (' ', '-', '_')]).rstrip()

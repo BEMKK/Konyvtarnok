@@ -10,12 +10,12 @@ from import_manager import feldolgoz_es_importal
 from config_manager import load_settings, save_settings
 from theme_manager import apply_theme
 from konyvtarnok_kereso import KonyvtarnokKeresoApp
-from menu_bar import KonyvtarMenuBar
+from menu_bar import MenuBar
 from konyv_lista import KonyvListaCtrl
-from deziderata import MainFrame as Deziderata
+from deziderata import Deziderata
 from update import check_for_updates_async
 
-class KonyvtarApp(wx.Frame):
+class Konyvtarnok(wx.Frame):
     def __init__(self, adatbazis):
         super().__init__(parent=None, title=APP_TITLE, size=(1050, 600))
         self.db = adatbazis
@@ -35,7 +35,7 @@ class KonyvtarApp(wx.Frame):
         except Exception as e:
             logging.error(f"Nem sikerült betölteni az alkalmazás ikonját: {e}")
 
-        menusor = KonyvtarMenuBar()
+        menusor = MenuBar()
         self.SetMenuBar(menusor)
 
         self.statusbar = self.CreateStatusBar()

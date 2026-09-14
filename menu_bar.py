@@ -1,6 +1,6 @@
 import wx
 
-class KonyvtarMenuBar(wx.MenuBar):
+class MenuBar(wx.MenuBar):
     def __init__(self):
         super().__init__()
         

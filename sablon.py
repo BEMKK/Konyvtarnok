@@ -14,7 +14,7 @@ Kiadás éve: {konyv.get('ev', '')}
 
 Példány adatai
 Oldalszám: {konyv.get('oldalszam', '')}
-Méret (Ma x sz, cm: {konyv.get('meretek', '')}
+Méret (Ma x sz, cm): {konyv.get('meretek', '')}
 Kötés típusa: {konyv.get('kotes', '')}
 Rövid cím: {konyv.get('rovid_cim', '')}
 Bekerülés dátuma: {konyv.get('bekerult', '')}
