@@ -5,6 +5,7 @@ import os
 import sys
 import logging
 import uuid
+import wx
 from cryptography.fernet import Fernet
 
 # A program (exe vagy script) mappájához kötött abszolút alapútvonal,
@@ -86,6 +87,12 @@ class KonyvAdatbazis:
                     self.AdatokMentese()
 
             except Exception as e:
+                logging.error(f"Hiba az állományjegyzék betöltésekor: {e}", exc_info=True)
+                wx.MessageBox(
+                    f"Hiba az adatok betöltésekor: {e}",
+                    "Hiba",
+                    wx.OK | wx.ICON_ERROR,
+                )
                 self.AlapertelmezettAdatok()
         else:
             self.AlapertelmezettAdatok()
