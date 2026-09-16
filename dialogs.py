@@ -1152,9 +1152,9 @@ class UjdonsagokDialog(wx.Dialog):
         main_sizer.Add(wx.StaticLine(self), 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 15)
         
         ujdonsagok_lista = [
-            "Stabilizálva a szűrt lista viselkedése könyv hozzáadása, importálása, szerkesztése és törlése esetén.",
-            "Javítva az állománystatisztika találatainak rendezési hibája a jelentésben.",
-            "Újabb kódjavítások."
+            "A program mostantól felugró ablakban jelzi, ha a JSON betöltése mind titkosítva, mind titkosítás nélkül sikertelen.",
+            "JSON importálása esetén a főprogramban, ha már vannak könyvek a listában, csak a hiányzó kötetek kerülnek importálásra.",
+            "A súgó bővítve az új funkció leírásával."
         ]
 
         szoveg_box = wx.BoxSizer(wx.VERTICAL)

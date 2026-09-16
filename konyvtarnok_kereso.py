@@ -719,7 +719,6 @@ class KonyvtarnokKeresoApp(wx.Frame):
                 if (
                     norm(candidate.get("cim")) == norm(item.get("cim", item.get("title", ""))) and
                     norm(candidate.get("szerzo")) == norm(item.get("szerzo", item.get("author", ""))) and
-                    norm(candidate.get("egyeb_szemelyek")) == norm(item.get("egyeb_szemelyek", "")) and
                     norm(candidate.get("kiado")) == norm(item.get("kiado", item.get("publisher", ""))) and
                     norm(candidate.get("hely")) == norm(item.get("hely", item.get("place", ""))) and
                     norm(candidate.get("ev")) == norm(str(item.get("ev", item.get("year", ""))))

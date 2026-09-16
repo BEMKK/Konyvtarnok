@@ -4,6 +4,14 @@ A projekten végrehajtott lényegi változtatások dokumentációja.
 
 
 
+## [0.23.8] - 2026-09-17
+
+- Felugró ablak hozzáadása sikertelen JSON betöltés esetén.
+- JSON importálása esetén a főprogramban, ha már vannak könyvek a listában, csak a hiányzó kötetek kerülnek felvételre.
+- A súgó bővítve az új funkció leírásával."
+
+
+
 ## [0.23.7] - 2026-09-16
 
 - Javítva az állománystatisztikai jelentésben a találatok rendezésének hibája.
