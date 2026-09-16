@@ -2,13 +2,24 @@
 
 import json
 import os
+import sys
 import logging
 import uuid
 from cryptography.fernet import Fernet
 
+# A program (exe vagy script) mappájához kötött abszolút alapútvonal,
+# hogy az állományjegyzék fájl mindig ugyanoda kerüljön, függetlenül
+# attól, hogy milyen munkakönyvtárból indították a programot.
+if getattr(sys, 'frozen', False):
+    _BASE_DIR = os.path.dirname(sys.executable)
+else:
+    _BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+DEFAULT_ADATBAZIS_FAJL = os.path.join(_BASE_DIR, "allomanyjegyzek.json")
+
 class KonyvAdatbazis:
-    def __init__(self, fajlnev="allomanyjegyzek.json", key=None):
-        self.fajlnev = fajlnev
+    def __init__(self, fajlnev=None, key=None):
+        self.fajlnev = fajlnev or DEFAULT_ADATBAZIS_FAJL
         if key:
             self.key = key
         else:

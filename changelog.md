@@ -4,6 +4,14 @@ A projekten végrehajtott lényegi változtatások dokumentációja.
 
 
 
+## [0.23.7] - 2026-09-16
+
+- Javítva az állománystatisztikai jelentésben a találatok rendezésének hibája.
+- Javítva a szűrés viselkedése új könyv hozzáadása, importálása és törlése esetén.
+- Újabb kódjavítások.
+
+
+
 ## [0.23.6] - 2026-09-14
 
 - Javítva a fájlütközés-dialog hibája, mely bezáráskor automatikusan felülírt minden fájlt.

@@ -1,6 +1,7 @@
 import wx
 import os
 import sys
+import re
 import logging
 from constants import APP_TITLE
 from dialogs import KonyvReszletekDialog, KonyvSzerkesztoDialog, NevjegyDialog, BeallitasokDialog, KeresoDialog, UjdonsagokDialog, StatisztikaDialog, FajlutkozesDialog
@@ -20,6 +21,15 @@ class Konyvtarnok(wx.Frame):
         super().__init__(parent=None, title=APP_TITLE, size=(1050, 600))
         self.db = adatbazis
         self.teljes_adatlista = [] 
+        # Az aktuálisan megjelenített (szűrt) könyvlista referenciája.
+        # None, ha nincs aktív szűrés/keresés. Ugyanazokra a db.konyvek
+        # elemekre mutat, ezért szerkesztés után is naprakész marad,
+        # anélkül hogy a szűrés feltételét bármiből ki kellene találni.
+        self.aktiv_szurt_lista = None
+        # Az aktív szűrés feltételét visszaadó függvény (konyv -> bool),
+        # hogy egy újonnan felvett könyvről el tudjuk dönteni, illeszkedik-e
+        # rá az éppen aktív szűrésre. None, ha nincs aktív szűrés.
+        self.aktiv_szuro_predikatum = None
         self.deziderata_frame = None
         self.konyvtarnok_kereso_frame = None
 
@@ -217,11 +227,14 @@ class Konyvtarnok(wx.Frame):
 
         if dlg.ShowModal() == wx.ID_OK:
             self.teljes_adatlista = []
-            if self.gomb_szuro_torles.IsEnabled() and self.szuro_kijelzo.GetLabel():
-                label_text = self.szuro_kijelzo.GetLabel()
-                if "'" in label_text:
-                    keresett = label_text.split("'")[1]
-                    self.kereses_az_allomanyban(keresett)
+            # A korábban aktív szűrt listát jelenítjük meg újra (ha volt ilyen),
+            # ahelyett hogy a szűrő-felirat szövegéből próbálnánk visszafejteni
+            # a keresési feltételt. Mivel a szűrt lista ugyanazokra a könyv-
+            # objektumokra mutat, mint az adatbázis, a szerkesztés hatása is
+            # azonnal látszik rajta, a szűrés típusától (szöveges keresés vagy
+            # statisztikai szűrés) függetlenül.
+            if self.aktiv_szurt_lista is not None:
+                self.lista.FeltoltLista(self.aktiv_szurt_lista)
             else:
                 self.lista.FeltoltLista(self.db.konyvek)
             self.FrissitStatusBar()
@@ -268,7 +281,16 @@ class Konyvtarnok(wx.Frame):
                 self.db.konyv_torlese_by_id(konyv_id)
 
             self.teljes_adatlista = []
-            self.lista.FeltoltLista()
+            if self.aktiv_szurt_lista is not None:
+                torolt_id_halmaz = set(torlendo_id_k)
+                self.aktiv_szurt_lista = [
+                    konyv for konyv in self.aktiv_szurt_lista
+                    if konyv.get("id") not in torolt_id_halmaz
+                ]
+                self.lista.FeltoltLista(self.aktiv_szurt_lista)
+                self._frissit_szuro_cimke_darabszamot(len(self.aktiv_szurt_lista))
+            else:
+                self.lista.FeltoltLista()
             self.FrissitStatusBar()
             
             osszesen = self.lista.GetItemCount()
@@ -314,6 +336,47 @@ class Konyvtarnok(wx.Frame):
             self.lista.Select(idx)
         self._MegjelenitPopUpMenut()
 
+    def _uj_konyvek_utani_frissites(self, uj_konyvek):
+        """Egy vagy több újonnan felvett könyv (kézi felvitel vagy PDF import)
+        után frissíti a lista nézetét úgy, hogy egy esetlegesen aktív szűrés
+        megmaradjon: a predikátumra illeszkedő új tételek bekerülnek a szűrt
+        listába, a többi rejtve marad, amíg a szűrést nem törlik.
+
+        Ez a metódus kifejezetten ADDITÍV műveletekhez való (a könyv(ek) a
+        meglévő adatbázishoz lettek hozzáadva). Teljes adatbázis-csere esetén
+        (pl. JSON-importnál) nem ez, hanem a szűrés teljes újraszámolása a
+        helyes megoldás, mert ott a régi szűrt lista elemei már nem is
+        léteznek az új adatban.
+
+        Visszaadja azokat az új könyveket, amelyek ténylegesen láthatóvá
+        váltak (a szűrt vagy a teljes listában megjelentek).
+        """
+        self.teljes_adatlista = []
+
+        if self.aktiv_szurt_lista is None:
+            self.lista.FeltoltLista()
+            self.FrissitStatusBar()
+            return list(uj_konyvek)
+
+        lathato_uj_konyvek = []
+        for konyv in uj_konyvek:
+            illeszkedik = True
+            if self.aktiv_szuro_predikatum is not None:
+                try:
+                    illeszkedik = bool(self.aktiv_szuro_predikatum(konyv))
+                except Exception:
+                    illeszkedik = False
+            if illeszkedik:
+                self.aktiv_szurt_lista.append(konyv)
+                lathato_uj_konyvek.append(konyv)
+
+        if lathato_uj_konyvek:
+            self._frissit_szuro_cimke_darabszamot(len(self.aktiv_szurt_lista))
+
+        self.lista.FeltoltLista(self.aktiv_szurt_lista)
+        self.FrissitStatusBar()
+        return lathato_uj_konyvek
+
     def OnUjKonyv(self, event):
         ures_adatok = {k: "" for k in ["cim", "alcim", "szerzo", "egyeb_szemelyek", "kiado", "hely", "ev", "oldalszam", "meretek", "kotes", "rovid_cim", "forras", "status", "rovid_leiras"]}
         dlg = KonyvSzerkesztoDialog(self, ures_adatok, self.db, uj_konyv=True)
@@ -327,11 +390,21 @@ class Konyvtarnok(wx.Frame):
             }
             dlg.Destroy()
 
-            self.teljes_adatlista = []
-            self.lista.FeltoltLista()
-            self.FrissitStatusBar()
-
             uj_cim = friss_adatok.get("cim")
+
+            # Megkeressük a ténylegesen felvett könyv objektumát az
+            # adatbázisban (a végén hozzáadva), hogy aktív szűrés esetén el
+            # tudjuk dönteni, illeszkedik-e rá.
+            uj_konyv_obj = None
+            for konyv in reversed(self.db.konyvek):
+                if konyv.get("cim") == uj_cim:
+                    uj_konyv_obj = konyv
+                    break
+
+            lathato_uj_konyvek = self._uj_konyvek_utani_frissites(
+                [uj_konyv_obj] if uj_konyv_obj is not None else []
+            )
+
             uj_idx = -1
 
             if uj_cim:
@@ -353,6 +426,13 @@ class Konyvtarnok(wx.Frame):
 
                 wx.CallAfter(kijeloles_beallitasa, uj_idx)
             else:
+                if self.aktiv_szurt_lista is not None and uj_konyv_obj is not None and not lathato_uj_konyvek:
+                    wx.MessageBox(
+                        "A könyv sikeresen felvételre került, de az aktív szűrésnek "
+                        "nem felel meg, ezért egyelőre nem jelenik meg a listában.\n"
+                        "A 'Szűrés törlése' gombbal láthatóvá teheti.",
+                        "Szűrés aktív", wx.OK | wx.ICON_INFORMATION, self
+                    )
                 self.lista.SetFocus()
         else:
             dlg.Destroy()
@@ -462,9 +542,11 @@ class Konyvtarnok(wx.Frame):
         
             try:
                 if hasattr(self.db, 'load_from_json') and self.db.load_from_json(kivalasztott_utvonal):
-                    self.teljes_adatlista = []
-                    self.lista.FeltoltLista()
-                    self.FrissitStatusBar()
+                    # Ez teljes adatcsere (nem additív import), a régi szűrt
+                    # lista objektumai innentől nem is léteznek többé - ezért
+                    # nem próbáljuk megőrizni a szűrést, hanem tudatosan és
+                    # következetesen nullázzuk (felirat, gomb, predikátum is).
+                    self.szuro_torlese()
                     wx.MessageBox("Az adatok sikeresen beolvasásra kerültek!", "Sikeres import", wx.OK | wx.ICON_INFORMATION)
                 else:
                     wx.MessageBox("Hiba történt a fájl feldolgozása során.", "Hiba", wx.OK | wx.ICON_ERROR)
@@ -520,9 +602,18 @@ class Konyvtarnok(wx.Frame):
         try:
             sikeres, hibas, duplikalt, hozzaadott_cimek = feldolgoz_es_importal(fajl_utvonalak, self.db)
 
-            self.teljes_adatlista = []  
-            self.lista.FeltoltLista()
-            self.FrissitStatusBar()
+            # Az újonnan felvett könyvek tényleges objektumainak megkeresése
+            # cím alapján, hogy a szűrés-megőrző logika tesztelni tudja őket.
+            uj_konyv_objektumok = []
+            felhasznalt_id_k = set()
+            for cim in hozzaadott_cimek:
+                for konyv in self.db.konyvek:
+                    if konyv.get("cim") == cim and konyv.get("id") not in felhasznalt_id_k:
+                        uj_konyv_objektumok.append(konyv)
+                        felhasznalt_id_k.add(konyv.get("id"))
+                        break
+
+            lathato_uj_konyvek = self._uj_konyvek_utani_frissites(uj_konyv_objektumok)
             
             elso_uj_idx = -1
             if hozzaadott_cimek:
@@ -556,6 +647,12 @@ class Konyvtarnok(wx.Frame):
                         uzenet += f"• {duplikalt} db könyv már állományban van, ezért nem lett újra felvéve.\n"
                     if hibas > 0:
                         uzenet += f"• {hibas} db fájlból nem sikerült kiolvasni a címet."
+
+                if self.aktiv_szurt_lista is not None and uj_konyv_objektumok:
+                    if not lathato_uj_konyvek:
+                        uzenet += "\nAz aktív szűrés miatt egyik újonnan felvett könyv sem látható jelenleg a listában."
+                    elif len(lathato_uj_konyvek) < len(uj_konyv_objektumok):
+                        uzenet += f"\nAz aktív szűrés miatt csak {len(lathato_uj_konyvek)}/{len(uj_konyv_objektumok)} új könyv látható jelenleg a listában."
                 
                 wx.MessageBox(uzenet, "Importálás sikeres", wx.OK | wx.ICON_INFORMATION)
 
@@ -586,6 +683,42 @@ class Konyvtarnok(wx.Frame):
                 self.kereses_az_allomanyban(keresett_szoveg, pontos_egyezes)
         dlg.Destroy()
 
+    def _szoveg_szuro_egyezik(self, konyv, keresett, pontos_egyezes):
+        """Egy könyv illeszkedik-e a megadott szöveges keresésre.
+
+        Ugyanaz az egyezés-logika, amit a kereses_az_allomanyban is használ;
+        ide van kiemelve, hogy az aktív szűrés predikátumaként (pl. újonnan
+        felvett könyv esetén) is újra lehessen használni.
+        """
+        if isinstance(konyv, dict):
+            ertekek = konyv.values()
+        elif isinstance(konyv, (list, tuple)):
+            ertekek = konyv
+        else:
+            ertekek = vars(konyv).values() if hasattr(konyv, '__dict__') else []
+
+        for ertek in ertekek:
+            if not ertek:
+                continue
+            ertek_str = str(ertek).lower().strip()
+            if pontos_egyezes:
+                if keresett == ertek_str:
+                    return True
+            else:
+                if keresett in ertek_str:
+                    return True
+        return False
+
+    def _frissit_szuro_cimke_darabszamot(self, uj_darabszam):
+        """Frissíti a szűrő-felirat végén szereplő találatszámot (pl. törlés
+        vagy hozzáadás után), anélkül hogy a szűrés szövegét/típusát
+        megváltoztatná."""
+        label = self.szuro_kijelzo.GetLabel()
+        if label:
+            uj_label = re.sub(r'\(\d+ találat\)', f'({uj_darabszam} találat)', label)
+            self.szuro_kijelzo.SetLabel(uj_label)
+            self.szuro_kijelzo.GetParent().Layout()
+
     def kereses_az_allomanyban(self, keresett_szoveg, pontos_egyezes=False):
         keresett = keresett_szoveg.lower().strip()
         
@@ -595,34 +728,15 @@ class Konyvtarnok(wx.Frame):
             elif hasattr(self.db, 'get_osszes_konyv'):
                 self.teljes_adatlista = self.db.get_osszes_konyv()
 
-        leszurt_adatok = []
-        for konyv in self.teljes_adatlista:
-            if isinstance(konyv, dict):
-                ertekek = konyv.values()
-            elif isinstance(konyv, (list, tuple)):
-                ertekek = konyv
-            else:
-                ertekek = vars(konyv).values() if hasattr(konyv, '__dict__') else []
+        leszurt_adatok = [
+            konyv for konyv in self.teljes_adatlista
+            if self._szoveg_szuro_egyezik(konyv, keresett, pontos_egyezes)
+        ]
 
-            talalat = False
-            for ertek in ertekek:
-                if not ertek:
-                    continue
-                ertek_str = str(ertek).lower().strip()
-
-                if pontos_egyezes:
-                    if keresett == ertek_str:
-                        talalat = True
-                        break
-                else:
-                    if keresett in ertek_str:
-                        talalat = True
-                        break
-
-            if talalat:
-                leszurt_adatok.append(konyv)
+        self.aktiv_szuro_predikatum = lambda k, _ker=keresett, _pe=pontos_egyezes: self._szoveg_szuro_egyezik(k, _ker, _pe)
 
         if not leszurt_adatok:
+            self.aktiv_szurt_lista = []
             self.lista.FeltoltLista([])
             self.FrissitStatusBar()
             self.szuro_kijelzo.SetLabel(f"Nincs találat: '{keresett_szoveg}'")
@@ -630,6 +744,7 @@ class Konyvtarnok(wx.Frame):
             self.Layout()
             return
 
+        self.aktiv_szurt_lista = leszurt_adatok
         self.lista.FeltoltLista(leszurt_adatok)
         talalatok_szama = len(leszurt_adatok)
         self.FrissitStatusBar()
@@ -645,6 +760,8 @@ class Konyvtarnok(wx.Frame):
             self.lista.DeleteAllItems()
 
         self.teljes_adatlista = []
+        self.aktiv_szurt_lista = None
+        self.aktiv_szuro_predikatum = None
         self.FrissitStatusBar()
         self.szuro_kijelzo.SetLabel("")
         self.gomb_szuro_torles.Disable()
@@ -689,6 +806,10 @@ class Konyvtarnok(wx.Frame):
             apply_theme(self, uj_tema)
             if self.deziderata_frame:
                 apply_theme(self.deziderata_frame, uj_tema)
+                self.deziderata_frame.current_theme = uj_tema
+            if self.konyvtarnok_kereso_frame:
+                apply_theme(self.konyvtarnok_kereso_frame, uj_tema)
+                self.konyvtarnok_kereso_frame.current_theme = uj_tema
 
             wx.MessageBox("A beállítások sikeresen mentésre kerültek!", "Beállítások", wx.OK | wx.ICON_INFORMATION)
         dlg.Destroy()
@@ -750,6 +871,12 @@ class Konyvtarnok(wx.Frame):
                 # A kiválasztott/meghatározott rendezést érvényesítjük a listán
                 self.lista.rendezes_kulcs = uj_rendezes
                 self.lista.Rendezes(uj_rendezes)
+                self.aktiv_szurt_lista = leszurt_adatok
+                self.aktiv_szuro_predikatum = (
+                    lambda k, _kulcs=kulcs, _fk=forras_kulcs, _hi=is_hianyzo, _ke=keresett_ertek, _ef=dlg.ertek_feldolgoz:
+                        (not _ef(_kulcs, k.get(_fk, ""))) if _hi
+                        else (_ef(_kulcs, k.get(_fk, "")).lower() == _ke.lower())
+                )
                 self.lista.FeltoltLista(leszurt_adatok)
         
                 talalatok_szama = len(leszurt_adatok)

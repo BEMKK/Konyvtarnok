@@ -6,6 +6,7 @@ import wx
 import logging
 from config_manager import load_settings
 from theme_manager import apply_theme
+from deziderata import DATA_FILE as DEZIDERATA_DATA_FILE
 
 class KonyvtarnokKeresoApp(wx.Frame):
 
@@ -687,7 +688,7 @@ class KonyvtarnokKeresoApp(wx.Frame):
         ]
 
         cipher = self._get_cipher()
-        json_fajl = "deziderata.json"
+        json_fajl = DEZIDERATA_DATA_FILE
         deziderata_lista = []
 
         if os.path.exists(json_fajl):

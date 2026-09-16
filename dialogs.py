@@ -7,6 +7,7 @@ from constants import APP_NAME, APP_VERSION, APP_STAGE
 from theme_manager import get_theme_names, apply_theme
 from config_manager import load_settings, save_settings
 from export_manager import export_statisztika_pdf
+from konyv_lista import bekerult_datum_kulcs, magyar_rendezesi_kulcs
 from collections import defaultdict
 
 MEZO_DEFINICIOK = [
@@ -502,8 +503,33 @@ class StatisztikaDialog(wx.Dialog):
                 rend_kulcs = self.get_kivalasztott_rendezesi_kulcs()
 
                 def riport_rendezes(konyv):
-                    val = str(konyv.get(rend_kulcs, "") or "").lower()
-                    return val
+                    """A jelentésben megjelenő lista rendezési kulcsa.
+
+                    A rend_kulcs mezőtípusának megfelelő rendezést alkalmazza
+                    (szám az évnél/oldalszámnál, méret a méreteknél, dátum a
+                    bekerülésnél, magyar ábécé egyébként) - ugyanazt a logikát,
+                    amit a főablak könyvlistája is használ. Korábban ez a
+                    függvény mindig egyszerű kisbetűs szövegként hasonlította
+                    össze az értékeket, ezért pl. a "Bekerülés éve" szerinti
+                    rendezés valójában a hónapnevek betűrendje szerint történt
+                    (augusztus, december, február, január, ...), nem
+                    időrendben.
+                    """
+                    nyers_ertek = konyv.get(rend_kulcs, "")
+
+                    if rend_kulcs in ("oldalszam", "ev"):
+                        szam_str = "".join(filter(str.isdigit, str(nyers_ertek)))
+                        return int(szam_str) if szam_str else 0
+
+                    if rend_kulcs == "meretek":
+                        magassag_resz = str(nyers_ertek).split('x')[0].split('X')[0].strip()
+                        match = re.search(r'\d+(?:[.,]\d+)?', magassag_resz)
+                        return float(match.group(0).replace(',', '.')) if match else 0.0
+
+                    if rend_kulcs == "bekerult":
+                        return bekerult_datum_kulcs(nyers_ertek)
+
+                    return magyar_rendezesi_kulcs(nyers_ertek)
 
                 talalatok.sort(key=riport_rendezes)
 
@@ -664,6 +690,30 @@ class StatisztikaDialog(wx.Dialog):
 
         return szoveg
 
+    def _kereszttabla_rendezesi_kulcs(self, kulcs, ertek):
+        """A kereszttáblás jelentés sor- és oszlopfejléceinek rendezési kulcsa.
+
+        Alapból a Python sorted() egyszerű szöveges (lexikografikus) sorrendet
+        adna, ami pl. a "9" és "150" oldalszámoknál, vagy eltérő számjegyű
+        éveknél helytelen sorrendet eredményezne. Ehelyett a mező típusának
+        megfelelően szám (év, oldalszám, bekerülés éve), méret vagy magyar
+        ábécé szerint (a többi mezőnél, beleértve az évszázad/évtized
+        feliratokat is, amikben a magyar_rendezesi_kulcs a római számokat is
+        helyesen kezeli) rendezünk.
+        """
+        szoveg = str(ertek or "").strip()
+
+        if kulcs in ("ev", "oldalszam", "bekerult"):
+            szam_str = "".join(filter(str.isdigit, szoveg))
+            return (0, int(szam_str)) if szam_str else (1, 0)
+
+        if kulcs == "meretek":
+            magassag_resz = szoveg.split('x')[0].split('X')[0].strip()
+            match = re.search(r'\d+(?:[.,]\d+)?', magassag_resz)
+            return (0, float(match.group(0).replace(',', '.'))) if match else (1, 0.0)
+
+        return (0, magyar_rendezesi_kulcs(szoveg))
+
     def general_kereszttabla(self, kulcs1, kulcs2, szures_kifejezes=""):
         """Kétdimenziós megoszlás listázása név-normalizálással és pontos szűréssel."""
         osszes_konyv = getattr(self.db, "konyvek", [])
@@ -707,7 +757,7 @@ class StatisztikaDialog(wx.Dialog):
         szoveg += "\n"
 
         talalat_van = False
-        for norm_r1 in sorted(matrix.keys()):
+        for norm_r1 in sorted(matrix.keys(), key=lambda v: self._kereszttabla_rendezesi_kulcs(kulcs1, v)):
             # Pontos egyezés vizsgálata a részszöveg-keresés helyett
             if szuro_text and norm_r1 != szuro_text:
                 continue
@@ -717,7 +767,7 @@ class StatisztikaDialog(wx.Dialog):
             osszesen_r1 = sum(matrix[norm_r1].values())
 
             szoveg += f"Találatok száma: {osszesen_r1}\n"
-            for r2, db in sorted(matrix[norm_r1].items(), key=lambda x: str(x[0])):
+            for r2, db in sorted(matrix[norm_r1].items(), key=lambda x: self._kereszttabla_rendezesi_kulcs(kulcs2, x[0])):
                 szoveg += f"    - {r2}: {db}\n"
             szoveg += "\n"
 
@@ -1102,8 +1152,8 @@ class UjdonsagokDialog(wx.Dialog):
         main_sizer.Add(wx.StaticLine(self), 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 15)
         
         ujdonsagok_lista = [
-            "Javítva a Fájlütközés dialog hibája, mely bezáráskor is felülírta a fájlokat.",
-            "Javítva az 1900-as évek toldalékolási hibája az állománystatisztikában.",
+            "Stabilizálva a szűrt lista viselkedése könyv hozzáadása, importálása, szerkesztése és törlése esetén.",
+            "Javítva az állománystatisztika találatainak rendezési hibája a jelentésben.",
             "Újabb kódjavítások."
         ]
 
