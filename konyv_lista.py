@@ -163,8 +163,8 @@ class KonyvListaCtrl(wx.ListCtrl):
             # 1. Elsődleges rendezési érték kiszámítása
             if akt_rendezes in ("oldalszam", "ev"):
                 elso = szam_kulcs(raw_val)
-            elif akt_rendezes in ("meret", "meretek"):
-                ertek = konyv.get("meretek", konyv.get("meret", ""))
+            elif akt_rendezes in ("meretek"):
+                ertek = konyv.get("meretek", "")
                 elso = meret_kulcs(ertek)
             elif akt_rendezes == "bekerult":
                 elso = bekerult_datum_kulcs(raw_val)
