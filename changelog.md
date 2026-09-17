@@ -4,6 +4,12 @@ A projekten végrehajtott lényegi változtatások dokumentációja.
 
 
 
+## [0.24.0] - 2026-09-17
+
+- Kisebb kódjavítások.
+
+
+
 ## [0.23.8] - 2026-09-17
 
 - Felugró ablak hozzáadása sikertelen JSON betöltés esetén.
