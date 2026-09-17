@@ -152,18 +152,3 @@ class KonyvAdatbazis:
             logging.error(f"Hiba az állományjegyzék mentésekor ({target_filepath}): {e}", exc_info=True)
             return False
 
-    def load_from_json(self, source_filepath):
-        try:
-            with open(source_filepath, "r", encoding="utf-8") as f:
-                uj_adatok = json.load(f)
-                if isinstance(uj_adatok, list):
-                    for konyv in uj_adatok:
-                        if isinstance(konyv, dict) and "id" not in konyv:
-                            konyv["id"] = str(uuid.uuid4())
-                    self.konyvek = uj_adatok
-                    self.AdatokMentese()
-                    return True
-            return False
-        except Exception as e:
-            logging.error(f"Hiba az állományjegyzék betöltésekor ({source_filepath}): {e}", exc_info=True)
-            return False

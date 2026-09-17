@@ -50,6 +50,7 @@ class HelpNotebookDialog(wx.Dialog):
             (
                 "Importálás és exportálás",
                 "IMPORTÁLÁS, EXPORTÁLÁS ÉS ADATMENTÉS\n\n"
+                "FONTOS! A pdf fájlok importálási lehetősége hamarosan kivezetésre kerül. A tervek szerint holnap, azaz 2026 Szeptember 18-án érkezik a program első stabil verziója, az 1.0.0, melytől kezdve a funkció már nem lesz támogatott!\n\n"
                 "FIGYELEM! Az állományjegyzékről és a dezideráta-jegyzékről minden esetben készítsen biztonsági mentést JSON fájlba, mert a program által titkosított fájlok csak az adott számítógépen olvashatók be!\nA titkosított JSON állományokat az alkalmazás más gépeken való futtatásakor nem lehet majd beolvasni, az adatok elveszhetnek!\n\n"
                 "1. Könyvadatlap exportálása PDF fájlba:\n"
                 "  A kijelölt könyv(ek)ről nyomtatható PDF adatlapot generálhat a Fájl -> Könyvadatlap(ok) exportálása PDF-ként... menüpontban vagy a Ctrl + Shift + E billentyűkombinációval. Egyetlen könyv esetén egyedi fájlnevet adhat meg, több könyv kijelölése esetén pedig egy kiválasztott mappába tömegesen exportálhatja az adatlapokat.\n\n"

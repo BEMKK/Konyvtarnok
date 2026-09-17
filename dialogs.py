@@ -1152,9 +1152,9 @@ class UjdonsagokDialog(wx.Dialog):
         main_sizer.Add(wx.StaticLine(self), 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 15)
         
         ujdonsagok_lista = [
-            "A program mostantól felugró ablakban jelzi, ha a JSON betöltése mind titkosítva, mind titkosítás nélkül sikertelen.",
-            "JSON importálása esetén a főprogramban, ha már vannak könyvek a listában, csak a hiányzó kötetek kerülnek importálásra.",
-            "A súgó bővítve az új funkció leírásával."
+            "Kisebb kódjavítások.",
+            "2026 Szeptember 18-án érkezik az 1.0.0 stable verzió!",
+            "Ettől a verziótól kezdve a pdf alapú könyvadatlap-importálás támogatása megszűnik!"
         ]
 
         szoveg_box = wx.BoxSizer(wx.VERTICAL)
