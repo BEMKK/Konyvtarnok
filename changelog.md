@@ -4,6 +4,14 @@ A projekten végrehajtott lényegi változtatások dokumentációja.
 
 
 
+## [1.0.0] - 2026-09-18
+
+- Első stabil verzió!
+
+- A könyvadatlapok pdf fájlból történő importálása mostantól nem támogatott.
+
+
+
 ## [0.24.0] - 2026-09-17
 
 - Kisebb kódjavítások.

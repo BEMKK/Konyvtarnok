@@ -10,7 +10,6 @@ class MenuBar(wx.MenuBar):
         self.szerk = fajl_menu.Append(wx.ID_EDIT, '&Könyv szerkesztése\tCtrl+E', 'Kijelölt könyv szerkesztése')
         self.torles = fajl_menu.Append(wx.ID_DELETE, '&Könyv(ek) eltávolítása\tDelete', 'Kijelölt könyvek törlése')
         fajl_menu.AppendSeparator()
-        self.import_elem = fajl_menu.Append(wx.ID_ANY, '&Könyvadatlap(ok) importálása PDF-ből...\tCtrl+Shift+I', 'Könyvek importálása')
         self.export_elem = fajl_menu.Append(wx.ID_ANY, '&Könyvadatlap(ok) exportálása PDF-ként...\tCtrl+Shift+E', 'Kijelöltek exportálása PDF-be')
         fajl_menu.AppendSeparator()
         self.json_import = fajl_menu.Append(wx.ID_ANY, 'Állományjegyzék betöltése JSON fájlból...\tCtrl+Shift+B', 'Teljes állományjegyzék betöltése JSON-ból')

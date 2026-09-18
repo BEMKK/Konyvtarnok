@@ -1152,9 +1152,7 @@ class UjdonsagokDialog(wx.Dialog):
         main_sizer.Add(wx.StaticLine(self), 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 15)
         
         ujdonsagok_lista = [
-            "Kisebb kódjavítások.",
-            "2026 Szeptember 18-án érkezik az 1.0.0 stable verzió!",
-            "Ettől a verziótól kezdve a pdf alapú könyvadatlap-importálás támogatása megszűnik!"
+            "A könyvadatlapok pdf fájlból történő importálása a továbbiakban nem támogatott."
         ]
 
         szoveg_box = wx.BoxSizer(wx.VERTICAL)

@@ -8,7 +8,6 @@ from constants import APP_TITLE
 from dialogs import KonyvReszletekDialog, KonyvSzerkesztoDialog, NevjegyDialog, BeallitasokDialog, KeresoDialog, UjdonsagokDialog, StatisztikaDialog, FajlutkozesDialog
 from help import HelpNotebookDialog
 from export_manager import export_konyv_pdf, tomeges_export_pdf, get_biztonsagos_pdf_fajlnev
-from import_manager import feldolgoz_es_importal
 from config_manager import load_settings, save_settings
 from theme_manager import apply_theme
 from konyvtarnok_kereso import KonyvtarnokKeresoApp
@@ -129,7 +128,6 @@ class Konyvtarnok(wx.Frame):
         self.Bind(wx.EVT_MENU, self.OnKilepes, menusor.kilepes)
         self.Bind(wx.EVT_MENU, lambda e: self.MegnyitReszletek(szerkesztesre=True), menusor.szerk)
         self.Bind(wx.EVT_MENU, self.OnKonyvTorles, menusor.torles)
-        self.Bind(wx.EVT_MENU, self.OnImportalas, menusor.import_elem)
         self.Bind(wx.EVT_MENU, self.OnExportalas, menusor.export_elem)
         self.Bind(wx.EVT_MENU, self.OnJsonImport, menusor.json_import)
         self.Bind(wx.EVT_MENU, self.OnJsonExport, menusor.json_export)
@@ -606,100 +604,6 @@ class Konyvtarnok(wx.Frame):
             except Exception as e:
                 wx.MessageBox(f"Hiba történt a mentés során:\n{e}", "Hiba", wx.OK | wx.ICON_ERROR)
         ment_dlg.Destroy()
-
-    def OnImportalas(self, event):
-        config = load_settings()
-        default_dir = config.get("last_pdf_dir", "")
-
-        megnyit_dlg = wx.FileDialog(
-            self, 
-            "Könyvadatlap(ok) importálása", 
-            defaultDir=default_dir,
-            wildcard="PDF fájl (*.pdf)|*.pdf", 
-            style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST | wx.FD_MULTIPLE
-        )
-        if megnyit_dlg.ShowModal() != wx.ID_OK:
-            megnyit_dlg.Destroy()
-            return
-        
-        fajl_utvonalak = megnyit_dlg.GetPaths()
-        if fajl_utvonalak:
-            config["last_pdf_dir"] = os.path.dirname(fajl_utvonalak[0])
-            save_settings(config)
-        megnyit_dlg.Destroy()
-        try:
-            sikeres, hibas, duplikalt, hozzaadott_cimek = feldolgoz_es_importal(fajl_utvonalak, self.db)
-
-            # Az újonnan felvett könyvek tényleges objektumainak megkeresése
-            # cím alapján, hogy a szűrés-megőrző logika tesztelni tudja őket.
-            uj_konyv_objektumok = []
-            felhasznalt_id_k = set()
-            for cim in hozzaadott_cimek:
-                for konyv in self.db.konyvek:
-                    if konyv.get("cim") == cim and konyv.get("id") not in felhasznalt_id_k:
-                        uj_konyv_objektumok.append(konyv)
-                        felhasznalt_id_k.add(konyv.get("id"))
-                        break
-
-            lathato_uj_konyvek = self._uj_konyvek_utani_frissites(uj_konyv_objektumok)
-            
-            elso_uj_idx = -1
-            if hozzaadott_cimek:
-                elso_cim = hozzaadott_cimek[0]
-                for idx, konyv in enumerate(self.lista.jelenlegi_adatok):
-                    if konyv and konyv.get("cim") == elso_cim:
-                        elso_uj_idx = idx
-                        break
-
-            if elso_uj_idx != -1:
-                def kijeloles_beallitasa(target_idx):
-                    for selected_idx in self.lista.GetKijeloltIndexek():
-                        self.lista.Select(selected_idx, False)
-
-                    self.lista.SetFocus()
-                    self.lista.EnsureVisible(target_idx)
-                    self.lista.Focus(target_idx)
-                    self.lista.Select(target_idx, True)
-
-                wx.CallAfter(kijeloles_beallitasa, elso_uj_idx)
-            else:
-                self.lista.SetFocus()
-
-            if sikeres > 0:
-                uzenet = f"Az importálás sikeresen megtörtént!\n\n"
-                uzenet += f"• Hozzáadva: {sikeres} db új könyv.\n"
-                
-                if duplikalt > 0 or hibas > 0:
-                    uzenet += "\nMegjegyzés:\n"
-                    if duplikalt > 0:
-                        uzenet += f"• {duplikalt} db könyv már állományban van, ezért nem lett újra felvéve.\n"
-                    if hibas > 0:
-                        uzenet += f"• {hibas} db fájlból nem sikerült kiolvasni a címet."
-
-                if self.aktiv_szurt_lista is not None and uj_konyv_objektumok:
-                    if not lathato_uj_konyvek:
-                        uzenet += "\nAz aktív szűrés miatt egyik újonnan felvett könyv sem látható jelenleg a listában."
-                    elif len(lathato_uj_konyvek) < len(uj_konyv_objektumok):
-                        uzenet += f"\nAz aktív szűrés miatt csak {len(lathato_uj_konyvek)}/{len(uj_konyv_objektumok)} új könyv látható jelenleg a listában."
-                
-                wx.MessageBox(uzenet, "Importálás sikeres", wx.OK | wx.ICON_INFORMATION)
-
-            elif duplikalt > 0:
-                wx.MessageBox(
-                    f"Az importálás sikertelen volt, mert a kiválasztott könyv(ek) ({duplikalt} db) már szerepel(nek) az állományban!", 
-                    "Importálás sikertelen", 
-                    wx.OK | wx.ICON_WARNING
-                )
-
-            else:
-                wx.MessageBox(
-                    "Az importálás sikertelen volt!\nA kiválasztott fájl(ok)ból nem sikerült érvényes könyvadatokat kinyerni.", 
-                    "Importálás sikertelen", 
-                    wx.OK | wx.ICON_ERROR
-                )
-
-        except Exception as e:
-            wx.MessageBox(f"Hiba történt: {e}", "Hiba", wx.OK | wx.ICON_ERROR)
 
     def on_kereses_dialógus_megnyitasa(self, event):
         dlg = KeresoDialog(self)

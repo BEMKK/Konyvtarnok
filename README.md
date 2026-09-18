@@ -1,24 +1,24 @@
 # KönyvTárnok
 
-> **Verzió:** 0.24.0 Béta
+> **Verzió:** 1.0.0
 
 ## Leírás
 
-A **KönyvTárnok** egy asztali alkalmazás könyvgyűjtemények nyilvántartására és kezelésére. A program a `wxPython` grafikus felületet használja, és a háttérben **Fernet szimmetrikus titkosítással** védett JSON‑alapú adatbázist kezel. Az alkalmazás elsősorban **Windows** környezetre készült.
+A **KönyvTárnok** egy akadálymentes asztali alkalmazás könyvgyűjtemények nyilvántartására és kezelésére. A program a `wxPython` grafikus felületet használja, és a háttérben **Fernet szimmetrikus titkosítással** védett JSON‑alapú adatbázist kezel. Az alkalmazás elsősorban **Windows** környezetre készült.
 
 ## A program főbb funkciói
 
-- **Könyvállomány kezelése** – könyvek felvétele, szerkesztése, megtekintése és törlése (egyedi és tömeges kijelöléssel).
-- **Titkosított adatbázis** – az állományjegyzék (`allomanyjegyzek.json`) Fernet‑titkosítással védett; a kulcs a felhasználó mappájában tárolódik (`~/.konyvtar_app/secret.key`).
-- **Import / Export** – könyvadatlapok importálása PDF fájlokból (`pdfplumber`) és exportálása PDF formátumba (`reportlab`), egyedi és kötegelt módban.
+- **Könyvállomány kezelése** – könyvek felvétele, szerkesztése, megtekintése és törlése.
+- **Titkosított adatbázis** – az állományjegyzék (`allomanyjegyzek.json`) és a dezideráta-jegyzék (`deziderata.json`) Fernet‑titkosítással védett; a kulcs a felhasználó mappájában tárolódik (`~/.konyvtar_app/secret.key`).
+- **PDF-export** – könyvadatlapok exportálása PDF formátumba (`reportlab`), egyedi és kötegelt módban.
 - **Állományjegyzék mentése / betöltése** – a teljes katalógus titkosítás nélküli JSON fájlba menthető és visszatölthető.
-- **Dezideráta‑kezelő** – beszerzésre javasolt könyvek kívánságlistájának kezelése, saját titkosított adatbázissal (`deziderata.json`), átemelési lehetőséggel a fő állományba.
-- **KönyvTárnok kereső** – külső referencia‑adatbázis (`Enekeskonyvek_adatai.xlsx`) keresése és összevetése a saját állománnyal; a találatok közvetlenül felvehetők a katalógusba vagy a dezideráta‑jegyzékbe.
+- **Dezideráta‑kezelő** – beszerezni kívánt könyvek listájának kezelése, átemelési lehetőséggel a fő állományba.
+- **KönyvTárnok kereső** – egy külső referencia‑adatbázisban (`Enekeskonyvek_adatai.json`) keres, a találatok közvetlenül felvehetők az állományba vagy a dezideráta‑jegyzékbe.
 - **Állománystatisztika** – részletes eloszlások, hiányzó adatok vizsgálata, kereszttáblás elemzés PDF exporttal.
 - **Keresés és szűrés** – valós idejű kereső, részletes szűrés pontos egyezéssel, gépeléses gyorskeresés a listában.
-- **Rendezés** – magyar ábécé szerinti rendezés (ékezetkezeléssel, római szám‑felismeréssel), többféle szempont szerint (cím, szerző, kiadó, év, oldalszám, méret, bekerülés dátuma).
-- **Testreszabható megjelenés** – 4 beépített színtéma: Világos, Sötét, Pasztell kék, Rózsaszín.
-- **Gyorsbillentyűk** – teljes billentyűzetes kezelhetőség (Ctrl+N, Ctrl+E, Delete, Ctrl+F, Ctrl+K, Ctrl+D, Ctrl+T stb.).
+- **Rendezés** – az állomány magyar ábécé szerinti rendezése többféle szempont szerint: cím, szerző, kiadó, év, oldalszám, méret, bekerülés dátuma.
+- **Testreszabható megjelenés** – négy beépített színtéma: Világos, Sötét, Pasztell kék, Rózsaszín, valamint a listában megjelenő oszlopok elrejtése vagy megjelenítése.
+- **Gyorsbillentyűk** – teljes billentyűzetes kezelhetőség (lásd a súgóban a billentyűparancsok listáját).
 - **Kivételkezelés naplózással** – nem kezelt hiba esetén a részletek a `hibanaplo.log` fájlba kerülnek, és felugró ablakban értesíti a felhasználót.
 
 ## Telepítés
@@ -50,7 +50,6 @@ python main.py
 | `wxpython` | 4.2.5 | Grafikus felület (GUI keretrendszer) |
 | `cryptography` | 50.0.0 | Adatbázis és dezideráta Fernet‑titkosítása |
 | `reportlab` | 5.0.0 | PDF adatlapok és statisztikai jelentések generálása |
-| `pdfplumber` | 0.11.10 | PDF könyvadatlapok beolvasása és importálása |
 
 ## Projektstruktúra
 
@@ -63,7 +62,6 @@ python main.py
 ├─ menu_bar.py                 # Menüsor (Fájl, Rendezés, Eszközök)
 ├─ data_manager.py             # Titkosított adatbázis‑kezelő (KonyvAdatbazis)
 ├─ export_manager.py           # PDF export (egyedi, kötegelt, statisztika)
-├─ import_manager.py           # PDF import (kulcsszó-alapú szövegfelismerés)
 ├─ config_manager.py           # Konfigurációkezelő (settings.json)
 ├─ theme_manager.py            # Téma‑kezelő (4 beépített színtéma)
 ├─ dialogs.py                  # Párbeszédablakok (szerkesztő, statisztika, keresés, beállítások, névjegy stb.)
@@ -89,7 +87,7 @@ A projekt jelenleg nincs automatizált tesztkerettel ellátva, de a következők
 
 1. Futtasd a `main.py`‑t.
 2. Vegyél fel új könyvet, szerkeszd, majd töröld.
-3. Próbáld ki a PDF importot és exportot (Fájl menü → Könyvadatlapok importálása / exportálása).
+3. Próbáld ki a PDF exportot (Fájl menü → Könyvadatlapok exportálása).
 4. Nyisd meg a KönyvTárnok keresőt (Eszközök → KönyvTárnok-kereső) és keress a referencia‑adatbázisban.
 5. Nyisd meg a Dezideráta‑kezelőt (Eszközök → Dezideráta‑kezelő).
 6. Ellenőrizd, hogy a `hibanaplo.log` akkor jön létre, amikor nem kezelt hiba történik.
@@ -107,4 +105,4 @@ Ez a projekt egy vibecoding kísérlet eredménye: a teljes alkalmazás kódját
 
 ---
 
-*Ez a README a projekt aktuális állapotát tükrözi (v0.24.0 Béta), és a fejlesztés előrehaladtával frissíthető.*
+*Ez a README a projekt aktuális állapotát tükrözi (v1.0.0), és a fejlesztés előrehaladtával frissíthető.*
