@@ -3,6 +3,8 @@ import os as _os
 import json
 import logging
 
+from constants import DEFAULT_LATHATO_OSZLOPOK
+
 if getattr(_sys, 'frozen', False):
     _BASE_DIR = _os.path.dirname(_sys.executable)
 else:
@@ -10,7 +12,7 @@ else:
 
 SETTINGS_FILE = _os.path.join(_BASE_DIR, "settings.json")
 DEFAULT_CONFIG = {
-    "lathato_oszlopok": ["cim", "szerzo", "kiado", "hely", "ev", "status"],
+    "lathato_oszlopok": list(DEFAULT_LATHATO_OSZLOPOK),
     "tema": "vilagos",
     "last_json_dir": "",
     "last_pdf_dir": "",

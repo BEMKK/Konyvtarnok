@@ -1,7 +1,9 @@
 import wx
-import time
 import re
 import datetime
+
+from constants import DEFAULT_LATHATO_OSZLOPOK
+from gyors_kereses import GyorsListaKereso
 
 HONAPOK = {
     "január": 1, "február": 2, "március": 3, "április": 4,
@@ -80,12 +82,10 @@ class KonyvListaCtrl(wx.ListCtrl):
         self.jelenlegi_adatok = []
         self.rendezes_kulcs = "cim"
 
-        self.beepitett_kereses_buffer = ""
-        self.utolso_leutes_ideje = 0
-        self.IDO_KUSZOB = 1.2
+        self.gyors_kereses = GyorsListaKereso()
 
         if aktiv_oszlopok is None:
-            self.aktiv_oszlopok = ["cim", "szerzo", "kiado", "hely", "ev", "forras", "status"]
+            self.aktiv_oszlopok = list(DEFAULT_LATHATO_OSZLOPOK)
         else:
             self.aktiv_oszlopok = aktiv_oszlopok
 
@@ -215,76 +215,26 @@ class KonyvListaCtrl(wx.ListCtrl):
         return None
 
     def FeldolgozKarakter(self, karakter):
-        if not karakter:
-            return
-
-        aktualis_ido = time.time()
-        elozo_buffer = self.beepitett_kereses_buffer
-
-        if aktualis_ido - self.utolso_leutes_ideje > self.IDO_KUSZOB:
-            self.beepitett_kereses_buffer = ""
-            elozo_buffer = ""
-
-        is_single_char_repeat = (
-            len(elozo_buffer) == 1 and
-            karakter == elozo_buffer
-        )
-
-        if karakter == ' ':
-            if not self.beepitett_kereses_buffer:
-                return
-            self.beepitett_kereses_buffer += ' '
-        elif karakter.strip():
-            if not is_single_char_repeat:
-                self.beepitett_kereses_buffer += karakter
-        else:
-            return
-
-        self.utolso_leutes_ideje = aktualis_ido
-
-        cel_mezo = "cim"
-        keresett = self.beepitett_kereses_buffer
-        total = len(self.jelenlegi_adatok)
-        if total == 0:
-            return
-
-        current_idx = self.GetFirstSelected()
-        if is_single_char_repeat and current_idx != -1:
-            start_idx = (current_idx + 1) % total
-        else:
-            start_idx = 0
-
-        def keres_elo_tag(keresendo, tol, korokre=False):
-            for i in range(tol, total):
-                ertek = str(self.jelenlegi_adatok[i].get(cel_mezo, "")).lower().strip()
-                if ertek.startswith(keresendo):
-                    return i
-            if korokre:
-                for i in range(0, tol):
-                    ertek = str(self.jelenlegi_adatok[i].get(cel_mezo, "")).lower().strip()
-                    if ertek.startswith(keresendo):
-                        return i
-            return -1
-
-        talalt = keres_elo_tag(keresett.lower(), start_idx, korokre=is_single_char_repeat)
-
-        if talalt == -1 and not is_single_char_repeat:
-            talalt = keres_elo_tag(keresett.lower(), 0)
-
-
-        if talalt != -1:
+        def kijeloles_beallitasa(talalt_idx):
             for sel_idx in self.GetKijeloltIndexek():
                 self.Select(sel_idx, False)
-            self.Select(talalt, True)
-            self.Focus(talalt)
-            self.EnsureVisible(talalt)
+            self.Select(talalt_idx, True)
+            self.Focus(talalt_idx)
+            self.EnsureVisible(talalt_idx)
+
+        self.gyors_kereses.feldolgoz(
+            karakter,
+            total_lekero=lambda: len(self.jelenlegi_adatok),
+            szoveg_lekero=lambda i: self.jelenlegi_adatok[i].get("cim", ""),
+            kivalasztott_lekero=self.GetFirstSelected,
+            kivalasztas_beallito=kijeloles_beallitasa,
+        )
 
     def OnChar(self, event):
         key_code = event.GetKeyCode()
         
         if key_code == wx.WXK_BACK:
-            if len(self.beepitett_kereses_buffer) > 0:
-                self.beepitett_kereses_buffer = self.beepitett_kereses_buffer[:-1]
+            self.gyors_kereses.torol_egy_karaktert()
             return
 
         karakter = ""

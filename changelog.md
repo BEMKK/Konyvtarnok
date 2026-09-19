@@ -8,6 +8,7 @@ A projekten végrehajtott lényegi változtatások dokumentációja.
 
 - Mostantól lehetőség van a hibanapló megnyitására vagy másolására közvetlenül a felugró ablakból.
 - Javítások a Deziderátából és KönyvTárnok-keresőből való átemelés folyamatában.
+- Kisebb kódjavítások és refaktorálás.
 
 
 

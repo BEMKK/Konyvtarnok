@@ -70,7 +70,8 @@ python main.py
 ├─ konyvtarnok_kereso.py                # KönyvTárnok kereső – külső referencia‑adatbázis kereső és átemelő modul
 ├─ deziderata.py               # Dezideráta‑kezelő – beszerzési kívánságlista modul
 ├─ update.py                   # Új verzió ellenőrzése a GitHub-on.
-├─ constants.py                # Alkalmazás‑állandók (név, verzió, állapot)
+├─ constants.py                # Alkalmazás‑állandók (név, verzió, állapot, alapértelmezett oszlopok)
+├─ gyors_kereses.py                # A lista gépelés közbeni szűrése mindhárom modulban
 ├─ ikon.ico                    # Alkalmazásikon
 ├─ Enekeskonyvek_adatai.json   # KönyvTárnok kereső referencia‑adatbázisa
 ├─ Futtatas.bat                # Indító script

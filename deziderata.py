@@ -3,13 +3,13 @@ import locale
 import logging
 import os
 import sys
-import time
 import unicodedata
 import webbrowser
 import wx
 from config_manager import load_settings, save_settings
 from theme_manager import apply_theme
 from data_manager import load_hmac_json_with_migration, save_hmac_json, tetelek_egyeznek
+from gyors_kereses import GyorsListaKereso
 
 # Magyar locale beállítása
 try:
@@ -280,7 +280,14 @@ class BaseItemDialog(wx.Dialog):
         self.txt_location.Enable(available)
         self.txt_price.Enable(available)
         self.txt_link.Enable(available)
-        if not available:
+        # A mezőket csak akkor ürítjük, ha a felhasználó ténylegesen most
+        # váltott státuszt (event nem None). Az __init__ végén az enable/
+        # disable állapot beállításához is meghívott self.on_status_change(None)
+        # NEM törölheti a mezőket, különben egy már meglévő - pl. JSON-
+        # importból származó, nem pontosan "Jelenleg kapható" státuszú, de
+        # kitöltött lelőhely/ár/link adattal rendelkező - tétel szerkesztő
+        # dialógusának megnyitásakor ezek az adatok némán elvesznének.
+        if event is not None and not available:
             self.txt_location.Clear()
             self.txt_price.Clear()
             self.txt_link.Clear()
@@ -426,10 +433,8 @@ class Deziderata(wx.Frame):
         self.btn_allomany.Bind(wx.EVT_BUTTON, self.on_atemeles_allomanyba)
         self.btn_delete.Bind(wx.EVT_BUTTON, self.on_delete)
         
-        # Gyorskeresés pufferek
-        self.beepitett_kereses_buffer = ""
-        self.utolso_leutes_ideje = 0
-        self.IDO_KUSZOB = 1.2
+        # Gyorskeresés (gépeléssel ugrás a listában)
+        self.gyors_kereses = GyorsListaKereso()
 
         # Dupla kattintásra és Enter-re részletes nézet
         self.list.Bind(wx.EVT_LIST_ITEM_ACTIVATED, self.on_reszletek)
@@ -847,90 +852,27 @@ class Deziderata(wx.Frame):
             )
 
     def feldolgoz_kereso_karakter(self, karakter):
-        """Kezeli a karakter hozzáadását a keresési pufferhez és a megfelelő sorra ugrást.
-        
-        Ha egyetlen betűt nyom le ismételten, a lista körkörösen lép a következő egyező elemre.
-        """
-        if not karakter:
-            return
-
-        aktualis_ido = time.time()
-        elozo_buffer = self.beepitett_kereses_buffer
-
-        if aktualis_ido - self.utolso_leutes_ideje > self.IDO_KUSZOB:
-            self.beepitett_kereses_buffer = ""
-            elozo_buffer = ""
-
-        if karakter == ' ':
-            if not self.beepitett_kereses_buffer:
-                return
-            self.beepitett_kereses_buffer += ' '
-        elif karakter.strip():
-            # Ismételt egykarakteres leütés detektálása (MIELŐTT a pufferhez adnánk)
-            is_single_char_repeat = (
-                len(elozo_buffer) == 1 and
-                karakter.lower() == elozo_buffer.lower()
-            )
-            if is_single_char_repeat:
-                # Nem bővítjük a puffert, marad az 1 karakteres állapot
-                pass
-            else:
-                self.beepitett_kereses_buffer += karakter
-        else:
-            return
-
-        self.utolso_leutes_ideje = aktualis_ido
-        keresett = self.beepitett_kereses_buffer.lower()
-        total = self.list.GetItemCount()
-        if total == 0:
-            return
-
-        # Ciklikus keresés: ha 1 karakteres puffer és ugyanazt nyomták le,
-        # a jelenlegi kijelöléstől kezdve keresünk tovább (körkörösen)
-        is_single_char_repeat = (
-            len(keresett) == 1 and
-            len(elozo_buffer) == 1 and
-            keresett == elozo_buffer.lower()
-        )
-
-        current_idx = self.list.GetFirstSelected()
-        if is_single_char_repeat and current_idx != -1:
-            start_idx = (current_idx + 1) % total
-        else:
-            start_idx = 0
-
-        def keres_elo_tag(keresendo, tol, korokre=False):
-            for i in range(tol, total):
-                ertek = str(self.list.GetItemText(i)).lower().strip()
-                if ertek.startswith(keresendo):
-                    return i
-            if korokre:
-                for i in range(0, tol):
-                    ertek = str(self.list.GetItemText(i)).lower().strip()
-                    if ertek.startswith(keresendo):
-                        return i
-            return -1
-
-        # 1. Pontos előtag egyezés keresése
-        talalt = keres_elo_tag(keresett, start_idx, korokre=is_single_char_repeat)
-
-        # 2. Ha nincs találat és nem körkörösen kerestünk, próbáljuk az elejéről
-        if talalt == -1 and not is_single_char_repeat:
-            talalt = keres_elo_tag(keresett, 0)
-
-
-        if talalt != -1:
-            for i in range(total):
+        """Kezeli a karakter hozzáadását a keresési pufferhez és a megfelelő
+        sorra ugrást (lásd gyors_kereses.GyorsListaKereso)."""
+        def kijeloles_beallitasa(talalt_idx):
+            for i in range(self.list.GetItemCount()):
                 self.list.Select(i, False)
-            self.list.Select(talalt, True)
-            self.list.Focus(talalt)
-            self.list.EnsureVisible(talalt)
+            self.list.Select(talalt_idx, True)
+            self.list.Focus(talalt_idx)
+            self.list.EnsureVisible(talalt_idx)
+
+        self.gyors_kereses.feldolgoz(
+            karakter,
+            total_lekero=self.list.GetItemCount,
+            szoveg_lekero=self.list.GetItemText,
+            kivalasztott_lekero=self.list.GetFirstSelected,
+            kivalasztas_beallito=kijeloles_beallitasa,
+        )
 
     def on_char(self, event):
         key_code = event.GetKeyCode()
         if key_code == wx.WXK_BACK:
-            if len(self.beepitett_kereses_buffer) > 0:
-                self.beepitett_kereses_buffer = self.beepitett_kereses_buffer[:-1]
+            self.gyors_kereses.torol_egy_karaktert()
             return
 
         karakter = ""

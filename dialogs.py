@@ -3,7 +3,7 @@ import os
 import sys
 import logging
 import wx
-from constants import APP_NAME, APP_VERSION, APP_STAGE
+from constants import APP_NAME, APP_VERSION, APP_STAGE, DEFAULT_LATHATO_OSZLOPOK
 from theme_manager import get_theme_names, apply_theme
 from config_manager import load_settings, save_settings
 from export_manager import export_statisztika_pdf
@@ -214,7 +214,7 @@ class KonyvSzerkesztoDialog(wx.Dialog):
                     sikeres = self.db.uj_konyv_hozzaadasa(uj_adatok)
                     if not sikeres:
                         wx.MessageBox(
-                            "A könyv mentése nem sikerült, mert a megadott adatok alapján már szerepel az állományban!).",
+                            "A könyv mentése nem sikerült, mert a megadott adatok alapján már szerepel az állományban!",
                             "Figyelmeztetés",
                             wx.OK | wx.ICON_WARNING,
                         )
@@ -726,6 +726,7 @@ class StatisztikaDialog(wx.Dialog):
 
         matrix = defaultdict(lambda: defaultdict(int))
         megjelenített_nevek = {}
+        megjelenített_nevek2 = {}
 
         # Virtuális mezők (évszázad, évtized) esetén az 'ev' mezőt kell lekérni a könyvből
         f_kulcs1 = "ev" if kulcs1 in ["evszazad", "evtized"] else kulcs1
@@ -736,17 +737,24 @@ class StatisztikaDialog(wx.Dialog):
                 self.ertek_feldolgoz(kulcs1, konyv.get(f_kulcs1, ""))
                 or "(Nincs megadva)"
             )
-            v2 = (
+            v2_raw = (
                 self.ertek_feldolgoz(kulcs2, konyv.get(f_kulcs2, ""))
                 or "(Nincs megadva)"
             )
 
             norm_v1 = v1_raw.lower().strip()
+            # A másodlagos szempontot (v2) is normalizáljuk, ugyanúgy mint
+            # az elsődlegeset (v1) - enélkül pl. "Budapest" és "budapest"
+            # két külön sorként szerepelt volna a kereszttábla belső
+            # bontásában, feleslegesen szétdarabolva az összesítést.
+            norm_v2 = v2_raw.lower().strip()
 
             if norm_v1 not in megjelenített_nevek:
                 megjelenített_nevek[norm_v1] = v1_raw
+            if norm_v2 not in megjelenített_nevek2:
+                megjelenített_nevek2[norm_v2] = v2_raw
 
-            matrix[norm_v1][v2] += 1
+            matrix[norm_v1][norm_v2] += 1
 
         szoveg = "ÁLLOMÁNYSTATISZTIKAI JELENTÉS – KERESZTTÁBLÁS ELEMZÉS\n"
         szoveg += "────────────────────────────────────────────\n"
@@ -767,8 +775,9 @@ class StatisztikaDialog(wx.Dialog):
             osszesen_r1 = sum(matrix[norm_r1].values())
 
             szoveg += f"Találatok száma: {osszesen_r1}\n"
-            for r2, db in sorted(matrix[norm_r1].items(), key=lambda x: self._kereszttabla_rendezesi_kulcs(kulcs2, x[0])):
-                szoveg += f"    - {r2}: {db}\n"
+            for norm_r2, db in sorted(matrix[norm_r1].items(), key=lambda x: self._kereszttabla_rendezesi_kulcs(kulcs2, x[0])):
+                r2_nev = megjelenített_nevek2.get(norm_r2, norm_r2)
+                szoveg += f"    - {r2_nev}: {db}\n"
             szoveg += "\n"
 
         if not talalat_van:
@@ -1034,9 +1043,8 @@ class BeallitasokDialog(wx.Dialog):
             cb.SetValue(True)
 
     def on_alapértelmezett_oszlopok(self, event):
-        alap_oszlopok = ["cim", "szerzo", "kiado", "hely", "ev", "status"]
         for kulcs, cb in self.jelolo_negyzetek.items():
-            cb.SetValue(kulcs in alap_oszlopok)
+            cb.SetValue(kulcs in DEFAULT_LATHATO_OSZLOPOK)
 
     def on_manual_update_check(self, event):
         from update import check_for_updates_async

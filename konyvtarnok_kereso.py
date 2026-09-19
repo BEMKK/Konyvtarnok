@@ -1,6 +1,5 @@
 import os
 import sys
-import time
 import json
 import wx
 import logging
@@ -8,6 +7,7 @@ from config_manager import load_settings
 from theme_manager import apply_theme
 from deziderata import DATA_FILE as DEZIDERATA_DATA_FILE, is_same_book
 from data_manager import load_hmac_json_with_migration, save_hmac_json, tetelek_egyeznek
+from gyors_kereses import GyorsListaKereso
 
 # A külső (JSON) forrásadatok mezőnevei nem mindig egyeznek meg az állomány
 # kanonikus mezőneveivel (előfordulhat rövid, ékezet nélküli 'cim' VAGY a
@@ -44,10 +44,8 @@ class KonyvtarnokKeresoApp(wx.Frame):
         self.oszlopok = []
         self.adatok = self.adatok_betoltese()
 
-        # Gyorskeresés pufferek
-        self.beepitett_kereses_buffer = ""
-        self.utolso_leutes_ideje = 0
-        self.IDO_KUSZOB = 1.2
+        # Gyorskeresés (gépeléssel ugrás a listában)
+        self.gyors_kereses = GyorsListaKereso()
 
         # UI elemek létrehozása
         self.init_ui()
@@ -434,90 +432,27 @@ class KonyvtarnokKeresoApp(wx.Frame):
         self.tablazat.Refresh()
 
     def feldolgoz_kereso_karakter(self, karakter):
-        """Kezeli a karakter hozzáadását a keresési pufferhez és a megfelelő sorra ugrást.
-        
-        Ha egyetlen betűt nyom le ismételten, a lista körkörösen lép a következő egyező elemre.
-        """
-        if not karakter:
-            return
-
-        aktualis_ido = time.time()
-        elozo_buffer = self.beepitett_kereses_buffer
-
-        if aktualis_ido - self.utolso_leutes_ideje > self.IDO_KUSZOB:
-            self.beepitett_kereses_buffer = ""
-            elozo_buffer = ""
-
-        if karakter == ' ':
-            if not self.beepitett_kereses_buffer:
-                return
-            self.beepitett_kereses_buffer += ' '
-        elif karakter.strip():
-            # Ismételt egykarakteres leütés detektálása (MIELŐTT a pufferhez adnánk)
-            is_single_char_repeat = (
-                len(elozo_buffer) == 1 and
-                karakter.lower() == elozo_buffer.lower()
-            )
-            if is_single_char_repeat:
-                # Nem bővítjük a puffert, marad az 1 karakteres állapot
-                pass
-            else:
-                self.beepitett_kereses_buffer += karakter
-        else:
-            return
-
-        self.utolso_leutes_ideje = aktualis_ido
-        keresett = self.beepitett_kereses_buffer.lower()
-        total = self.tablazat.GetItemCount()
-        if total == 0:
-            return
-
-        # Ciklikus keresés: ha 1 karakteres puffer és ugyanazt nyomták le,
-        # a jelenlegi kijelöléstől kezdve keresünk tovább (körkörösen)
-        is_single_char_repeat = (
-            len(keresett) == 1 and
-            len(elozo_buffer) == 1 and
-            keresett == elozo_buffer.lower()
-        )
-
-        current_idx = self.tablazat.GetFirstSelected()
-        if is_single_char_repeat and current_idx != -1:
-            start_idx = (current_idx + 1) % total
-        else:
-            start_idx = 0
-
-        def keres_elo_tag(keresendo, tol, korokre=False):
-            for i in range(tol, total):
-                ertek = str(self.tablazat.GetItemText(i)).lower().strip()
-                if ertek.startswith(keresendo):
-                    return i
-            if korokre:
-                for i in range(0, tol):
-                    ertek = str(self.tablazat.GetItemText(i)).lower().strip()
-                    if ertek.startswith(keresendo):
-                        return i
-            return -1
-
-        # 1. Pontos előtag egyezés keresése
-        talalt = keres_elo_tag(keresett, start_idx, korokre=is_single_char_repeat)
-
-        # 2. Ha nincs találat és nem körkörösen kerestünk, próbáljuk az elejéről
-        if talalt == -1 and not is_single_char_repeat:
-            talalt = keres_elo_tag(keresett, 0)
-
-
-        if talalt != -1:
-            for i in range(total):
+        """Kezeli a karakter hozzáadását a keresési pufferhez és a megfelelő
+        sorra ugrást (lásd gyors_kereses.GyorsListaKereso)."""
+        def kijeloles_beallitasa(talalt_idx):
+            for i in range(self.tablazat.GetItemCount()):
                 self.tablazat.Select(i, False)
-            self.tablazat.Select(talalt, True)
-            self.tablazat.Focus(talalt)
-            self.tablazat.EnsureVisible(talalt)
+            self.tablazat.Select(talalt_idx, True)
+            self.tablazat.Focus(talalt_idx)
+            self.tablazat.EnsureVisible(talalt_idx)
+
+        self.gyors_kereses.feldolgoz(
+            karakter,
+            total_lekero=self.tablazat.GetItemCount,
+            szoveg_lekero=self.tablazat.GetItemText,
+            kivalasztott_lekero=self.tablazat.GetFirstSelected,
+            kivalasztas_beallito=kijeloles_beallitasa,
+        )
 
     def on_char(self, event):
         key_code = event.GetKeyCode()
         if key_code == wx.WXK_BACK:
-            if len(self.beepitett_kereses_buffer) > 0:
-                self.beepitett_kereses_buffer = self.beepitett_kereses_buffer[:-1]
+            self.gyors_kereses.torol_egy_karaktert()
             return
 
         karakter = ""
