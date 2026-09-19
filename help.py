@@ -50,11 +50,10 @@ class HelpNotebookDialog(wx.Dialog):
                 (
                 "Adatmentés",
                 "PDF ÉS JSON FÁJLOK KEZELÉSE\n\n"
-                "FIGYELEM! Az állományjegyzékről és a dezideráta-jegyzékről minden esetben készítsen biztonsági mentést JSON fájlba, mert a program által titkosított fájlok csak az adott számítógépen olvashatók be!\nA titkosított JSON állományokat az alkalmazás más gépeken való futtatásakor nem lehet majd beolvasni, az adatok elveszhetnek!\n\n"
                 "1. Könyvadatlap exportálása PDF fájlba:\n"
                 "  A kijelölt könyv(ek)ről nyomtatható PDF adatlapot generálhat a Fájl -> Könyvadatlap(ok) exportálása PDF-ként... menüpontban vagy a Ctrl + Shift + E billentyűkombinációval. Egyetlen könyv esetén egyedi fájlnevet adhat meg, több könyv kijelölése esetén pedig egy kiválasztott mappába tömegesen exportálhatja az adatlapokat. A program alapértelmezetten a könyv címét és kiadásának évét használja a pdf fájlneveként egyedi és tömeges exportnál is. Ha a könyv kiadási éve nincs kitöltve, a zárójelben a \"nincs_ev_megadva\" felirat szerepel.\n\n"
                 "2. Állományjegyzék mentése JSON-ba (Biztonsági mentés):\n"
-                "  A teljes könyvkatalógus kimenthető titkosítás nélküli JSON fájlba a Fájl -> Állományjegyzék mentése JSON fájlba... menüpontban (Ctrl + Shift + M). Ez kiválóan alkalmas biztonsági mentésre vagy adatok másik gépre történő átvitelére. A JSON fájl az \"allomanyjegyzek.json\" nevet kapja alapértelmezetten.\n\n"
+                "  A teljes állományjegyzék exportálható szerkeszthető, SHA integritásvédelem nélküli JSON fájlba a Fájl -> Állományjegyzék mentése JSON fájlba... menüpontban (Ctrl + Shift + M). Ez kiválóan alkalmas biztonsági mentésre. A JSON fájl alapértelmezetten az \"allomanyjegyzek.json\" nevet kapja.\n\n"
                 "3. Állományjegyzék betöltése JSON-ból:\n"
                 "  Egy korábban elmentett JSON állományjegyzék beolvasásához használja a Fájl -> Állományjegyzék betöltése JSON fájlból... menüpontot (Ctrl + Shift + B). A mentett JSON fájlból csak azok a könyvek kerülnek felvételre, amelyek még nem szerepelnek a listában.\n"
             ),
@@ -72,7 +71,7 @@ class HelpNotebookDialog(wx.Dialog):
                 "5. Tétel felvétele a fő könyvállományba:\n"
                 "  Ha egy beszerzendő könyvet sikerült megvásárolni/megszerezni, a kijelölt tételt a Ctrl + F billentyűkombinációval vagy a 'Felvétel az állományba' gombbal közvetlenül átemelheti a fő katalógusba. Átemeléskor a program megkérdezi, hogy biztosan át szeretné e emelni a tételt. Amennyiben ezt szeretné, kattintson az Igen gombra.\n\n"
                 "6. Dezideráta adatok mentése és betöltése:\n"
-                "  A dezideráta jegyzék titkosítás nélküli JSON fájlba menthető (Ctrl + Shift + M) és bármikor visszatölthető (Ctrl + Shift + B) a fájlmenüből. JSON fájl betöltése esetén csak azok a kötetek kerülnek importálásra, amelyek még nem szerepelnek a jegyzékben. Mentéskor a fájl neve alapértelmezetten \"deziderata.json\"\n"
+                "  A dezideráta jegyzék exportálhstó szerkeszthető, azaz SHA integritásvédelem nélküli JSON fájlba (Ctrl + Shift + M) és bármikor visszatölthető (Ctrl + Shift + B) a Tételek menüből. JSON fájl betöltése esetén csak azok a kötetek kerülnek importálásra, amelyek még nem szerepelnek a jegyzékben. Mentéskor a fájl neve alapértelmezetten \"deziderata.json\"\n"
             ),
             (
                 "KönyvTárnok kereső",

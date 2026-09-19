@@ -9,7 +9,7 @@ import webbrowser
 import wx
 from config_manager import load_settings, save_settings
 from theme_manager import apply_theme
-from data_manager import load_hmac_json_with_migration, save_hmac_json
+from data_manager import load_hmac_json_with_migration, save_hmac_json, tetelek_egyeznek
 
 # Magyar locale beállítása
 try:
@@ -43,9 +43,22 @@ DEZIDERATA_MEZO_DEFINICIOK = [
     ("link", "Link:"),
 ]
 
+# A dezideráta-tételek forrástól függően vagy magyar (cim, szerzo, ...),
+# vagy angol (title, author, ...) mezőneveket használhatnak - ugyanaz a
+# közös data_manager.tetelek_egyeznek végzi az összehasonlítást, csak a
+# mezőnév-aliasokat adjuk meg neki.
+DEZIDERATA_MEZO_ALIASOK = {
+    "cim": ("cim", "title"),
+    "szerzo": ("szerzo", "author"),
+    "kiado": ("kiado", "publisher"),
+    "hely": ("hely", "place"),
+    "ev": ("ev", "year"),
+}
+
+
 def is_same_book(item1, item2):
     """
-    Két könyv/tétel egyezőségét vizsgálja.
+    Két könyv/tétel egyezőségét vizsgálja (lásd data_manager.tetelek_egyeznek).
 
     A Cím mindig kötelező és pontosan egyeznie kell. A többi mezőnél
     (Szerző, Kiadó, Kiadás helye, Kiadás éve) csak akkor számít
@@ -54,27 +67,7 @@ def is_same_book(item1, item2):
     zárja ki az egyezést), hogy egy hiányosan kitöltött dezideráta-tétel
     is felismerhető legyen duplikátumként.
     """
-    def norm(val):
-        return str(val or "").strip().lower()
-
-    cim1 = norm(item1.get("cim", item1.get("title", "")))
-    cim2 = norm(item2.get("cim", item2.get("title", "")))
-    if not cim1 or not cim2 or cim1 != cim2:
-        return False
-
-    tovabbi_mezo_parok = [
-        (item1.get("szerzo", item1.get("author", "")), item2.get("szerzo", item2.get("author", ""))),
-        (item1.get("kiado", item1.get("publisher", "")), item2.get("kiado", item2.get("publisher", ""))),
-        (item1.get("hely", item1.get("place", "")), item2.get("hely", item2.get("place", ""))),
-        (str(item1.get("ev", item1.get("year", ""))), str(item2.get("ev", item2.get("year", "")))),
-    ]
-
-    for ertek1, ertek2 in tovabbi_mezo_parok:
-        n1, n2 = norm(ertek1), norm(ertek2)
-        if n1 and n2 and n1 != n2:
-            return False
-
-    return True
+    return tetelek_egyeznek(item1, item2, DEZIDERATA_MEZO_ALIASOK)
 
 # ==============================================================================
 # DIALÓGUSOK
@@ -777,6 +770,9 @@ class Deziderata(wx.Frame):
         sikeres = 0
         visszautasitott = 0
         sikeres_indexek = []
+        uj_konyv_objektumok = []
+        parent_frame = self.GetParent()
+
         for idx in kijelolt_indexek:
             item = self.items[idx]
 
@@ -798,17 +794,32 @@ class Deziderata(wx.Frame):
             }
 
             if konyv_adat["cim"].strip():
-                siker = self.GetParent().db.uj_konyv_hozzaadasa(konyv_adat)
+                siker = parent_frame.db.uj_konyv_hozzaadasa(konyv_adat)
                 if siker:
                     sikeres += 1
                     sikeres_indexek.append(idx)
+                    # Megjegyezzük a ténylegesen felvett könyv objektumát (a
+                    # db végére került), hogy egy esetlegesen aktív
+                    # szűrés/keresés esetén a főablak el tudja dönteni,
+                    # illeszkedik-e rá.
+                    uj_konyv_objektumok.append(parent_frame.db.konyvek[-1])
                 else:
                     visszautasitott += 1
 
-        parent_frame = self.GetParent()
-        if hasattr(parent_frame, "lista"):
+        # A lista frissítését a főablak szűrés-megőrző segédmetódusára
+        # bízzuk (ugyanaz, mint kézi felvitelnél, JSON importnál vagy a
+        # KönyvTárnok-kereső átemelésénél), hogy egy esetlegesen aktív
+        # szűrés/keresés ne sérüljön az átemelés után - egy sima
+        # FeltoltLista() ugyanis figyelmen kívül hagyná az aktív szűrést, és
+        # megtévesztő állapotot hagyna maga után (a szűrő-felirat és a
+        # "Szűrés törlése" gomb aktív maradna, miközben a teljes, szűretlen
+        # lista jelenne meg).
+        if hasattr(parent_frame, "_uj_konyvek_utani_frissites"):
+            parent_frame._uj_konyvek_utani_frissites(uj_konyv_objektumok)
+        elif hasattr(parent_frame, "lista"):
             parent_frame.lista.FeltoltLista()
-            parent_frame.FrissitStatusBar()
+            if hasattr(parent_frame, "FrissitStatusBar"):
+                parent_frame.FrissitStatusBar()
         if sikeres > 0:
             for idx in sorted(sikeres_indexek, reverse=True):
                 del self.items[idx]

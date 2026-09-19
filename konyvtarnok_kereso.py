@@ -7,7 +7,24 @@ import logging
 from config_manager import load_settings
 from theme_manager import apply_theme
 from deziderata import DATA_FILE as DEZIDERATA_DATA_FILE, is_same_book
-from data_manager import load_hmac_json_with_migration, save_hmac_json
+from data_manager import load_hmac_json_with_migration, save_hmac_json, tetelek_egyeznek
+
+# A külső (JSON) forrásadatok mezőnevei nem mindig egyeznek meg az állomány
+# kanonikus mezőneveivel (előfordulhat rövid, ékezet nélküli 'cim' VAGY a
+# kijelzéshez használt, ékezetes 'Cím' alak is). Ez a leképezés mindhárom
+# helyen (az 'Állományban' jelzés, az állományba és a dezideráta-jegyzékbe
+# történő átemelés) ugyanazt az egy forrást használja, hogy egységes legyen,
+# mi számít 'ugyanannak a könyvnek'.
+KERESO_MEZO_ALIASOK = {
+    "cim": ("cim", "Cím"),
+    "alcim": ("alcim", "Alcím"),
+    "szerzo": ("szerzo", "Összeállító"),
+    "egyeb_szemelyek": ("egyeb_szemelyek", "Egyéb személyek"),
+    "kiado": ("kiado", "Kiadó"),
+    "hely": ("hely", "Kiadás helye"),
+    "ev": ("ev", "Kiadás éve"),
+}
+
 
 class KonyvtarnokKeresoApp(wx.Frame):
 
@@ -100,6 +117,26 @@ class KonyvtarnokKeresoApp(wx.Frame):
                 wx.OK | wx.ICON_WARNING,
             )
             return None
+
+    def _sor_alap_adatta_alakitasa(self, forras_dict):
+        """Egy nyers sor (a keresési JSON-ból vagy a táblázatból kiolvasott
+        dict) leképezése az állomány kanonikus (cim, szerzo, kiado, hely,
+        ev, ...) mezőneveire.
+
+        Ugyanezt a leképezést használja az 'Állományban' jelzés
+        (on_kereses) és mindkét átemelés (atemeles_allomanyba,
+        atemeles_deziderataba) is, hogy egységesen döntsünk arról, mi
+        számít 'ugyanannak a könyvnek' a program egészében.
+        """
+        alap_adat = {}
+        for kulcs, aliasok in KERESO_MEZO_ALIASOK.items():
+            ertek = ""
+            for alias in aliasok:
+                if forras_dict.get(alias):
+                    ertek = forras_dict.get(alias)
+                    break
+            alap_adat[kulcs] = ertek
+        return alap_adat
 
     def init_ui(self):
         fő_sizer = wx.BoxSizer(wx.VERTICAL)
@@ -241,14 +278,19 @@ class KonyvtarnokKeresoApp(wx.Frame):
             )
             return
 
-        # Meglévő könyvek címeinek összegyűjtése a főablaktól
-        meglevo_cimek = set()
+        # Meglévő könyvek csoportosítása cím szerint a főablak állományából.
+        # A teljes, több mezőt (szerző, kiadó, hely, év) is figyelembe vevő
+        # egyezés-vizsgálatot (tetelek_egyeznek) csak az azonos című könyvek
+        # között kell elvégezni, így ez a csoportosítás gyors marad nagy
+        # állomány esetén is, miközben azonos című, de más kiadású/szerzőjű
+        # könyveket helyesen nem jelöl "Állományban"-ként.
+        konyvek_cim_szerint = {}
         if self.parent and hasattr(self.parent, "db"):
             if hasattr(self.parent.db, "konyvek") and self.parent.db.konyvek:
                 for k in self.parent.db.konyvek:
                     cim = str(k.get("cim", "")).strip().lower()
                     if cim:
-                        meglevo_cimek.add(cim)
+                        konyvek_cim_szerint.setdefault(cim, []).append(k)
 
         # Szűrés tisztán Python listával (Pandas DataFrame helyett)
         szurt_adatok = []
@@ -288,10 +330,16 @@ class KonyvtarnokKeresoApp(wx.Frame):
 
                 sor_cime = str(sor.get(cim_oszlop_neve, "")).strip().lower()
 
-                # Státusz ellenőrzése
+                # Státusz ellenőrzése: a cím szerint azonos című könyvek
+                # között a teljes (szerző/kiadó/hely/év is figyelembe vevő)
+                # egyezés-vizsgálattal döntünk, nem csak a cím alapján.
                 megvan = False
-                if sor_cime and meglevo_cimek:
-                    megvan = sor_cime in meglevo_cimek
+                if sor_cime and sor_cime in konyvek_cim_szerint:
+                    sor_alap_adat = self._sor_alap_adatta_alakitasa(sor)
+                    megvan = any(
+                        tetelek_egyeznek(sor_alap_adat, konyv)
+                        for konyv in konyvek_cim_szerint[sor_cime]
+                    )
 
                 # UTOLSÓ OSZLOP: Státusz beírása
                 if megvan:
@@ -313,6 +361,77 @@ class KonyvtarnokKeresoApp(wx.Frame):
                 self.tablazat.Select(i, on=False)
 
         self.tablazat.SetFocus()
+
+    def frissit_allomany_statuszokat(self):
+        """Újraszámolja és frissíti a táblázatban JELENLEG megjelenő (már
+        korábbi kereséskor betöltött) találatok 'Állományban' státuszát, a
+        főablak aktuális állománya alapján - anélkül, hogy új keresést
+        kellene indítani.
+
+        Ezt hívja meg a főablak minden olyan művelet (könyv törlése,
+        szerkesztése, felvétele) után, amely megváltoztathatja, mely
+        tételek szerepelnek már az állományban. E hívás nélkül a kereső
+        ablak - ha nyitva marad - téves "Állományban" jelzést mutathat
+        például egy időközben törölt tételre, egészen a következő kereső
+        gomb megnyomásáig.
+
+        Az egyezés-vizsgálat logikája szándékosan megegyezik az
+        on_kereses-ben használttal (cím szerinti csoportosítás +
+        tetelek_egyeznek), hogy a két hely soha ne térjen el egymástól.
+        """
+        if not self.oszlopok:
+            return
+
+        sorok_szama = self.tablazat.GetItemCount()
+        if sorok_szama == 0:
+            return
+
+        statusz_col_idx = len(self.oszlopok)
+
+        konyvek_cim_szerint = {}
+        if self.parent and hasattr(self.parent, "db"):
+            if hasattr(self.parent.db, "konyvek") and self.parent.db.konyvek:
+                for k in self.parent.db.konyvek:
+                    cim = str(k.get("cim", "")).strip().lower()
+                    if cim:
+                        konyvek_cim_szerint.setdefault(cim, []).append(k)
+
+        cim_oszlop_neve = None
+        for col in self.oszlopok:
+            if str(col).strip().lower() in ["cím", "cim"]:
+                cim_oszlop_neve = col
+                break
+        if not cim_oszlop_neve:
+            cim_oszlop_neve = self.oszlopok[0]
+
+        for sor_index in range(sorok_szama):
+            # A sor adatait magából a táblázatból olvassuk vissza (nem a
+            # self.adatok eredeti listájából), hogy pontosan azt a
+            # tartalmat vizsgáljuk, ami a felhasználó előtt látszik.
+            sor_adat = {
+                oszlop: self.tablazat.GetItemText(sor_index, col_idx)
+                for col_idx, oszlop in enumerate(self.oszlopok)
+            }
+            sor_cime = str(sor_adat.get(cim_oszlop_neve, "")).strip().lower()
+
+            megvan = False
+            if sor_cime and sor_cime in konyvek_cim_szerint:
+                sor_alap_adat = self._sor_alap_adatta_alakitasa(sor_adat)
+                megvan = any(
+                    tetelek_egyeznek(sor_alap_adat, konyv)
+                    for konyv in konyvek_cim_szerint[sor_cime]
+                )
+
+            if megvan:
+                self.tablazat.SetItem(sor_index, statusz_col_idx, "Állományban")
+                self.tablazat.SetItemBackgroundColour(
+                    sor_index, wx.Colour(220, 245, 220)
+                )
+            else:
+                self.tablazat.SetItem(sor_index, statusz_col_idx, "")
+                self.tablazat.SetItemBackgroundColour(sor_index, wx.NullColour)
+
+        self.tablazat.Refresh()
 
     def feldolgoz_kereso_karakter(self, karakter):
         """Kezeli a karakter hozzáadását a keresési pufferhez és a megfelelő sorra ugrást.
@@ -573,6 +692,7 @@ class KonyvtarnokKeresoApp(wx.Frame):
         sikeres = 0
         visszautasitott = 0
         sikeres_sor_indexek = []
+        uj_konyv_objektumok = []
 
         for sor_idx in kijelolt_indexek:
             konyv_adat = {}
@@ -581,18 +701,8 @@ class KonyvtarnokKeresoApp(wx.Frame):
                 ertek = self.tablazat.GetItemText(sor_idx, col_idx)
                 konyv_adat[kulcs] = ertek
 
-            alap_adat = {
-                "cim": konyv_adat.get("cim", konyv_adat.get("Cím", "")),
-                "alcim": konyv_adat.get("alcim", konyv_adat.get("Alcím", "")),
-                "szerzo": konyv_adat.get(
-                    "szerzo", konyv_adat.get("Összeállító", "")
-                ),
-                "egyeb_szemelyek": konyv_adat.get("egyeb_szemelyek", konyv_adat.get("Egyéb személyek", "")),
-                "kiado": konyv_adat.get("kiado", konyv_adat.get("Kiadó", "")),
-                "hely": konyv_adat.get(
-                    "hely", konyv_adat.get("Kiadás helye", "")
-                ),
-                "ev": konyv_adat.get("ev", konyv_adat.get("Kiadás éve", "")),
+            alap_adat = self._sor_alap_adatta_alakitasa(konyv_adat)
+            alap_adat.update({
                 "oldalszam": konyv_adat.get("oldalszam", ""),
                 "meretek": konyv_adat.get("meretek", ""),
                 "kotes": konyv_adat.get("kotes", ""),
@@ -600,18 +710,33 @@ class KonyvtarnokKeresoApp(wx.Frame):
                 "forras": konyv_adat.get("forras", ""),
                 "status": konyv_adat.get("status", ""),
                 "rovid_leiras": konyv_adat.get("rovid_leiras", ""),
-            }
+            })
 
             if alap_adat["cim"].strip():
                 if self.parent.db.uj_konyv_hozzaadasa(alap_adat):
                     sikeres += 1
                     sikeres_sor_indexek.append(sor_idx)
+                    # Megjegyezzük a ténylegesen felvett könyv objektumát (a
+                    # db végére került), hogy egy esetlegesen aktív
+                    # szűrés/keresés esetén a főablak el tudja dönteni,
+                    # illeszkedik-e rá.
+                    uj_konyv_objektumok.append(self.parent.db.konyvek[-1])
                 else:
                     visszautasitott += 1
 
-        if hasattr(self.parent, "lista"):
+        # A lista frissítését a főablak szűrés-megőrző segédmetódusára
+        # bízzuk (ugyanaz, mint kézi felvitelnél vagy JSON importnál), hogy
+        # egy esetlegesen aktív szűrés/keresés ne sérüljön az átemelés
+        # után - egy sima FeltoltLista() ugyanis figyelmen kívül hagyná az
+        # aktív szűrést, és megtévesztő állapotot hagyna maga után (a
+        # szűrő-felirat és a "Szűrés törlése" gomb aktív maradna, miközben
+        # a teljes, szűretlen lista jelenne meg).
+        if hasattr(self.parent, "_uj_konyvek_utani_frissites"):
+            self.parent._uj_konyvek_utani_frissites(uj_konyv_objektumok)
+        elif hasattr(self.parent, "lista"):
             self.parent.lista.FeltoltLista()
-            self.parent.FrissitStatusBar()
+            if hasattr(self.parent, "FrissitStatusBar"):
+                self.parent.FrissitStatusBar()
 
         # A sikeresen átemelt sorok "Státusz" oszlopát azonnal frissítjük,
         # hogy ne kelljen új keresést indítani az "Állományban" jelzés
@@ -711,18 +836,13 @@ class KonyvtarnokKeresoApp(wx.Frame):
                 ertek = self.tablazat.GetItemText(sor_idx, col_idx)
                 konyv_adat[kulcs] = ertek
 
-            alap_adat = {
-                "cim": konyv_adat.get("cim", konyv_adat.get("Cím", "")),
-                "szerzo": konyv_adat.get("szerzo", konyv_adat.get("Összeállító", "")),
-                "egyeb_szemelyek": konyv_adat.get("egyeb_szemelyek", konyv_adat.get("Egyéb személyek", "")),
-                "kiado": konyv_adat.get("kiado", konyv_adat.get("Kiadó", "")),
-                "hely": konyv_adat.get("hely", konyv_adat.get("Kiadás helye", "")),
-                "ev": konyv_adat.get("ev", konyv_adat.get("Kiadás éve", "")),
+            alap_adat = self._sor_alap_adatta_alakitasa(konyv_adat)
+            alap_adat.update({
                 "priority": "Másodlagos",
                 "status": "Jelenleg nem kapható",
                 "location": "",
                 "price": ""
-            }
+            })
 
             if alap_adat["cim"].strip():
                 mar_letezik = any(is_same_book(alap_adat, item) for item in deziderata_lista)

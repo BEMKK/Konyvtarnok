@@ -208,6 +208,21 @@ class Konyvtarnok(wx.Frame):
         db_szam = self.lista.GetItemCount()
         self.statusbar.SetStatusText(f"Állományban lévő kötetek száma: {db_szam}.")
 
+        # Ha a "KönyvTárnok kereső" ablak épp nyitva van, az ottani
+        # találati táblázat "Állományban" jelzése egy korábbi keresés
+        # pillanatában lett kiszámolva. Mivel FrissitStatusBar minden
+        # olyan művelet (törlés, szerkesztés, felvétel) után lefut, ami
+        # megváltoztathatja az állományt, ez a legmegbízhatóbb pont arra,
+        # hogy a kereső ablakot is naprakészen tartsuk - új keresés
+        # indítása nélkül is.
+        if self.konyvtarnok_kereso_frame is not None:
+            try:
+                self.konyvtarnok_kereso_frame.frissit_allomany_statuszokat()
+            except RuntimeError:
+                # A wx ablakobjektum már megsemmisült (pl. bezárás közben
+                # futott le ez a hívás) - jelöljük referenciamentesnek.
+                self.konyvtarnok_kereso_frame = None
+
     def MegnyitReszletek(self, szerkesztesre=False):
         indexek = self.lista.GetKijeloltIndexek()
         if not indexek:

@@ -167,6 +167,71 @@ def load_hmac_json_with_migration(fajlnev):
     save_hmac_json(fajlnev, migralt)
     return migralt, True, True
 
+# ==============================================================================
+# KÖZÖS EGYEZÉS-/DUPLIKÁTUM-VIZSGÁLAT
+# ==============================================================================
+# Ezt a logikát korábban három helyen (KonyvAdatbazis.is_duplikalat,
+# deziderata.is_same_book, konyvtarnok_kereso.py "Állományban" jelzése)
+# külön-külön, egymástól kicsit eltérő formában valósítottuk meg. Innentől
+# ez az egyetlen, közös implementáció, amit mindenhonnan importálva
+# használunk, hogy a "mi számít ugyanannak a könyvnek" szabály mindenhol
+# ugyanaz legyen.
+DEFAULT_MEZO_ALIASOK = {
+    "cim": ("cim",),
+    "szerzo": ("szerzo",),
+    "kiado": ("kiado",),
+    "hely": ("hely",),
+    "ev": ("ev",),
+}
+
+
+def _norm_ertek(ertek):
+    return str(ertek or "").strip().lower()
+
+
+def _elso_kitoltott_ertek(tetel, kulcsok):
+    """Az első nem üres értéket adja vissza a megadott kulcsok/aliasok közül
+    (pl. hogy a 'cim' és a 'title' mezőnevet egyaránt kezelni tudjuk)."""
+    for kulcs in kulcsok:
+        ertek = tetel.get(kulcs)
+        if ertek:
+            return ertek
+    return ""
+
+
+def tetelek_egyeznek(tetel1, tetel2, mezo_aliasok=None):
+    """
+    Két könyv/tétel (dict) egyezőségét vizsgálja.
+
+    A Cím mindig kötelező és pontosan egyeznie kell. A többi mezőnél
+    (alapesetben szerző, kiadó, hely, kiadás éve) csak akkor számít
+    eltérésnek, ha MINDKÉT oldalon ki van töltve és a tartalmuk különbözik -
+    egy üres mező tehát nem zárja ki az egyezést, ha a többi kitöltött mező
+    megegyezik.
+
+    A mezo_aliasok egy {logikai_mezonev: (lehetseges, kulcsnevek, ...)}
+    szótár, hogy eltérő adatforrások (pl. angol 'title'/'author' mezőnevű
+    dezideráta-import) mezőneveit is kezelni tudjuk anélkül, hogy a hívóknak
+    külön kellene normalizálniuk az adatokat.
+    """
+    aliasok = mezo_aliasok or DEFAULT_MEZO_ALIASOK
+
+    cim1 = _norm_ertek(_elso_kitoltott_ertek(tetel1, aliasok["cim"]))
+    cim2 = _norm_ertek(_elso_kitoltott_ertek(tetel2, aliasok["cim"]))
+    if not cim1 or not cim2 or cim1 != cim2:
+        return False
+
+    for mezo, kulcsok in aliasok.items():
+        if mezo == "cim":
+            continue
+        ertek1 = _norm_ertek(_elso_kitoltott_ertek(tetel1, kulcsok))
+        ertek2 = _norm_ertek(_elso_kitoltott_ertek(tetel2, kulcsok))
+        if ertek1 and ertek2 and ertek1 != ertek2:
+            return False
+
+    return True
+
+
 class KonyvAdatbazis:
     def __init__(self, fajlnev=None):
         self.fajlnev = fajlnev or DEFAULT_ADATBAZIS_FAJL
@@ -175,37 +240,12 @@ class KonyvAdatbazis:
 
     def is_duplikalat(self, uj_adatok):
         """
-        Duplikátum-vizsgálat: a Cím mindig kötelező és pontosan egyeznie
-        kell. A többi kulcsmezőnél (szerző, kiadó, hely, ev) csak akkor
-        számít eltérésnek, ha MINDKÉT oldalon ki van töltve és a
-        tartalmuk különbözik - egy üres mező tehát nem zárja ki az
-        egyezést, ha a többi kitöltött mező megegyezik.
+        Duplikátum-vizsgálat: megegyezik-e uj_adatok az állományban már
+        szereplő valamelyik könyvvel (lásd tetelek_egyeznek).
         """
-        tovabbi_mezok = ["szerzo", "kiado", "hely", "ev"]
-
-        def norm(ertek):
-            return str(ertek or "").strip().lower()
-
-        cim_uj = norm(uj_adatok.get("cim", ""))
-        if not cim_uj:
+        if not _norm_ertek(uj_adatok.get("cim", "")):
             return False
-
-        for konyv in self.konyvek:
-            if norm(konyv.get("cim", "")) != cim_uj:
-                continue
-
-            egyezik = True
-            for mezo in tovabbi_mezok:
-                ertek_uj = norm(uj_adatok.get(mezo, ""))
-                ertek_meglevo = norm(konyv.get(mezo, ""))
-                if ertek_uj and ertek_meglevo and ertek_uj != ertek_meglevo:
-                    egyezik = False
-                    break
-
-            if egyezik:
-                return True
-
-        return False
+        return any(tetelek_egyeznek(uj_adatok, konyv) for konyv in self.konyvek)
 
     def AdatokBetoltese(self):
         try:

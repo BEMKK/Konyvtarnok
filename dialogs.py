@@ -1152,9 +1152,8 @@ class UjdonsagokDialog(wx.Dialog):
         main_sizer.Add(wx.StaticLine(self), 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 15)
         
         ujdonsagok_lista = [
-            "Kivezettük az adatbázisok Fernet titkosítását. A fájlokat mostantól SHA256 aláírás védi a külső módosítástól.",
-            "Javítottunk egy hibát a duplikátumellenőrzésben, mely megengedte már létező kötet újbóli rögzítését, ha a vizsgált mezők egyike nem volt kitöltve.",
-            "Újabb kódszintű javítások és stabilizáció."
+            "Megújult a hibajelző ablak, így lehetőség van a hiba szövegét közvetlenül vágólapra másolni vagy a hibanaplót megnyitni.",
+            "Javítások a Deziderátából és KönyvTárnok-keresőből való állománybavétel folyamatában."
         ]
 
         szoveg_box = wx.BoxSizer(wx.VERTICAL)
