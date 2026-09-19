@@ -586,7 +586,7 @@ class Konyvtarnok(wx.Frame):
         default_dir = config.get("last_json_dir", "")
 
         ment_dlg = wx.FileDialog(
-            self, "Állományjegyzék mentése titkosítás nélkül", 
+            self, "Állományjegyzék exportálása nyers JSON fájlba", 
             defaultDir=default_dir,
             defaultFile="allomanyjegyzek.json", 
             wildcard="JSON fájl (*.json)|*.json", 
@@ -761,7 +761,7 @@ class Konyvtarnok(wx.Frame):
 
     def on_deziderata(self, event):
         if self.deziderata_frame is None:
-            self.deziderata_frame = Deziderata(parent=self, cipher=self.db.cipher)
+            self.deziderata_frame = Deziderata(parent=self)
             self.deziderata_frame.Bind(wx.EVT_CLOSE, self.on_deziderata_close)
         else:
             self.deziderata_frame.Raise()

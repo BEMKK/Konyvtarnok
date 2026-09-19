@@ -1,17 +1,17 @@
 # KönyvTárnok
 
-> **Verzió:** 1.0.0
+> **Verzió:** 2.0.0
 
 ## Leírás
 
-A **KönyvTárnok** egy akadálymentes asztali alkalmazás könyvgyűjtemények nyilvántartására és kezelésére. A program a `wxPython` grafikus felületet használja, és a háttérben **Fernet szimmetrikus titkosítással** védett JSON‑alapú adatbázist kezel. Az alkalmazás elsősorban **Windows** környezetre készült.
+A **KönyvTárnok** egy akadálymentes asztali alkalmazás könyvgyűjtemények nyilvántartására és kezelésére. A program a `wxPython` grafikus felületet használja, az adatokat pedig Hmac integritásvédelemmel ellátott JSON‑alapú adatbázisokban tárolja. Az alkalmazás elsősorban **Windows** környezetre készült.
 
 ## A program főbb funkciói
 
 - **Könyvállomány kezelése** – könyvek felvétele, szerkesztése, megtekintése és törlése.
-- **Titkosított adatbázis** – az állományjegyzék (`allomanyjegyzek.json`) és a dezideráta-jegyzék (`deziderata.json`) Fernet‑titkosítással védett; a kulcs a felhasználó mappájában tárolódik (`~/.konyvtar_app/secret.key`).
+- **Védett adatbázis** – az állományjegyzék (`allomanyjegyzek.json`) és a dezideráta-jegyzék (`deziderata.json`) Hmac adatintegritásvédelemmel van ellátva.
 - **PDF-export** – könyvadatlapok exportálása PDF formátumba (`reportlab`), egyedi és kötegelt módban.
-- **Állományjegyzék mentése / betöltése** – a teljes katalógus titkosítás nélküli JSON fájlba menthető és visszatölthető.
+- **Állományjegyzék mentése / betöltése** – a teljes katalógus védelem nélküli JSON fájlba menthető és visszatölthető.
 - **Dezideráta‑kezelő** – beszerezni kívánt könyvek listájának kezelése, átemelési lehetőséggel a fő állományba.
 - **KönyvTárnok kereső** – egy külső referencia‑adatbázisban (`Enekeskonyvek_adatai.json`) keres, a találatok közvetlenül felvehetők az állományba vagy a dezideráta‑jegyzékbe.
 - **Állománystatisztika** – részletes eloszlások, hiányzó adatok vizsgálata, kereszttáblás elemzés PDF exporttal.
@@ -48,7 +48,7 @@ python main.py
 | Csomag | Verzió | Funkció |
 |--------|--------|---------|
 | `wxpython` | 4.2.5 | Grafikus felület (GUI keretrendszer) |
-| `cryptography` | 50.0.0 | Adatbázis és dezideráta Fernet‑titkosítása |
+| `cryptography` (opcionális) | 50.0.0 | A régi, 1.x verziójú JSON fájlok egyszeri beolvasásához. Hamarosan kivezetésre kerül! |
 | `reportlab` | 5.0.0 | PDF adatlapok és statisztikai jelentések generálása |
 
 ## Projektstruktúra
@@ -60,7 +60,7 @@ python main.py
 ├─ main.py                     # Belépési pont – alkalmazásindítás, hibakezelő
 ├─ main_frame.py               # Főablak (eszközsáv, keresés, lista, állapotsor)
 ├─ menu_bar.py                 # Menüsor (Fájl, Rendezés, Eszközök)
-├─ data_manager.py             # Titkosított adatbázis‑kezelő (KonyvAdatbazis)
+├─ data_manager.py             # Adatbázis‑kezelő (KonyvAdatbazis)
 ├─ export_manager.py           # PDF export (egyedi, kötegelt, statisztika)
 ├─ config_manager.py           # Konfigurációkezelő (settings.json)
 ├─ theme_manager.py            # Téma‑kezelő (4 beépített színtéma)
@@ -97,7 +97,7 @@ A projekt jelenleg nincs automatizált tesztkerettel ellátva, de a következők
 1. Forkold a repót.
 2. Hozz létre egy új ágat (`git checkout -b feature/új-funkció`).
 3. Készíts változtatásokat, majd nyújts be `pull request`‑et.
-4. A referencia-adatbázis bővítéséhez bővítsd az excel fájlt a projekt Convert mappájában, majd a mellékelt segédprogrammal alakítsd json fájllá, és tedd a program gyökérmappájába.
+4. A referencia-adatbázis bővítéséhez bővítsd az excel fájlt a projekt Convert mappájában, majd a mellékelt segédprogrammal alakítsd json fájllá, és tedd a program gyökérmappájába. **Figyelem!** Az excel_to_json konvertáló használatához Openpyxl telepítése szükséges!
 
 ## A projektről
 
@@ -105,4 +105,4 @@ Ez a projekt egy vibecoding kísérlet eredménye: a teljes alkalmazás kódját
 
 ---
 
-*Ez a README a projekt aktuális állapotát tükrözi (v1.0.0), és a fejlesztés előrehaladtával frissíthető.*
+*Ez a README a projekt aktuális állapotát tükrözi (v2.0.0), és a fejlesztés előrehaladtával frissíthető.*

@@ -1,5 +1,6 @@
 import json
 import locale
+import logging
 import os
 import sys
 import time
@@ -8,6 +9,7 @@ import webbrowser
 import wx
 from config_manager import load_settings, save_settings
 from theme_manager import apply_theme
+from data_manager import load_hmac_json_with_migration, save_hmac_json
 
 # Magyar locale beállítása
 try:
@@ -44,18 +46,35 @@ DEZIDERATA_MEZO_DEFINICIOK = [
 def is_same_book(item1, item2):
     """
     Két könyv/tétel egyezőségét vizsgálja.
-    True, ha Cím ÉS Szerző ÉS Kiadó ÉS Kiadás helye ÉS Kiadás éve IS megegyezik.
+
+    A Cím mindig kötelező és pontosan egyeznie kell. A többi mezőnél
+    (Szerző, Kiadó, Kiadás helye, Kiadás éve) csak akkor számít
+    eltérésnek, ha MINDKÉT oldalon ki van töltve és a tartalmuk különbözik.
+    Ha valamelyik oldalon üres a mező, azt figyelmen kívül hagyjuk (nem
+    zárja ki az egyezést), hogy egy hiányosan kitöltött dezideráta-tétel
+    is felismerhető legyen duplikátumként.
     """
     def norm(val):
         return str(val or "").strip().lower()
 
-    return (
-        norm(item1.get("cim", item1.get("title", ""))) == norm(item2.get("cim", item2.get("title", ""))) and
-        norm(item1.get("szerzo", item1.get("author", ""))) == norm(item2.get("szerzo", item2.get("author", ""))) and
-        norm(item1.get("kiado", item1.get("publisher", ""))) == norm(item2.get("kiado", item2.get("publisher", ""))) and
-        norm(item1.get("hely", item1.get("place", ""))) == norm(item2.get("hely", item2.get("place", ""))) and
-        norm(str(item1.get("ev", item1.get("year", "")))) == norm(str(item2.get("ev", item2.get("year", ""))))
-    )
+    cim1 = norm(item1.get("cim", item1.get("title", "")))
+    cim2 = norm(item2.get("cim", item2.get("title", "")))
+    if not cim1 or not cim2 or cim1 != cim2:
+        return False
+
+    tovabbi_mezo_parok = [
+        (item1.get("szerzo", item1.get("author", "")), item2.get("szerzo", item2.get("author", ""))),
+        (item1.get("kiado", item1.get("publisher", "")), item2.get("kiado", item2.get("publisher", ""))),
+        (item1.get("hely", item1.get("place", "")), item2.get("hely", item2.get("place", ""))),
+        (str(item1.get("ev", item1.get("year", ""))), str(item2.get("ev", item2.get("year", "")))),
+    ]
+
+    for ertek1, ertek2 in tovabbi_mezo_parok:
+        n1, n2 = norm(ertek1), norm(ertek2)
+        if n1 and n2 and n1 != n2:
+            return False
+
+    return True
 
 # ==============================================================================
 # DIALÓGUSOK
@@ -324,7 +343,16 @@ class Deziderata(wx.Frame):
     def __init__(self, parent=None, cipher=None):
         super().__init__(parent, title=f"{APP_NAME}", size=(900, 500))
         self.parent = parent
-        self.cipher = cipher  # <-- Eltároljuk az ablak példányában
+        # A 'cipher' paramétert csak visszafelé kompatibilitás miatt fogadjuk el
+        # (ha egy hívó modul még átadja) - a mentés/betöltés mostantól a
+        # data_manager.py HMAC-alapú, beépített kulcsos logikáját használja,
+        # ezért itt nincs rá szükség. Ha más modul még Fernet-cipher-t ad át
+        # ide, azt ellenőrizd/töröld a hívó helyen is.
+        if cipher is not None:
+            logging.warning(
+                "A Deziderata 'cipher' paramétere elavult és figyelmen kívül "
+                "marad; az adatvédelem most a data_manager HMAC-logikájával történik."
+            )
 
         # Adatmodell: a tételek listája (szótárakból álló listaként)
         self.items = []
@@ -383,7 +411,7 @@ class Deziderata(wx.Frame):
         item_delete = menu_items.Append(wx.ID_DELETE, "Tétel eltávolítása\tDelete")
         menu_items.AppendSeparator()
         item_import = menu_items.Append(wx.ID_ANY, "Dezideráta betöltése...\tCtrl+SHIFT+B")
-        item_export = menu_items.Append(wx.ID_ANY, "Dezideráta mentése titkosítás nélküli JSON fájlba...\tCtrl+SHIFT+M")
+        item_export = menu_items.Append(wx.ID_ANY, "Dezideráta mentése szerkeszthető JSON fájlba...\tCtrl+SHIFT+M")
         item_exit = menu_items.Append(wx.ID_EXIT, "Kilépés\tCtrl+W")
 
         menubar.Append(menu_items, "Tételek")
@@ -457,63 +485,44 @@ class Deziderata(wx.Frame):
     # --- JSON KEZELŐ FÜGGVÉNYEK ---
 
     def load_data(self):
-        if os.path.exists(DATA_FILE):
-            try:
-                with open(DATA_FILE, "rb") as f:
-                    nyers_adat = f.read()
-
-                if self.cipher:
-                    try:
-                        # 1. Próbálkozás: visszafejtés
-                        decrypted_bytes = self.cipher.decrypt(nyers_adat)
-                        betoltott_adat = json.loads(decrypted_bytes.decode("utf-8"))
-                    except Exception:
-                        # 2. Próbálkozás: ha nem sikerül, akkor régi sima JSON
-                        betoltott_adat = json.loads(nyers_adat.decode("utf-8"))
-                        # Automatikus konvertálás titkosítottra a jövőre nézve
-                else:
-                    betoltott_adat = json.loads(nyers_adat.decode("utf-8"))
-
-                # Ellenőrizzük, hogy listát kaptunk-e, és rendeljük hozzá a self.items-hez!
-                if isinstance(betoltott_adat, list):
-                    self.items = betoltott_adat
-                else:
-                    self.items = []
-
-                # Ha titkosított környezetben futunk és nyers JSON-t olvastunk be, elmentjük
-                if self.cipher:
-                    self.save_data()
-
-                # Lista frissítése a GUI-ban
-                self.refresh_list()
-
-            except Exception as e:
-                wx.MessageBox(
-                    f"Hiba az adatok betöltésekor: {e}",
-                    "Hiba",
-                    wx.OK | wx.ICON_ERROR,
-                )
-                self.items = []
-        else:
-            self.items = []
-            self.FrissitStatusBar()
-
-    def save_data(self):
         try:
-            json_str = json.dumps(self.items, ensure_ascii=False, indent=4)
-            
-            if self.cipher:
-                # Titkosítás bájtokká
-                mentendo_adat = self.cipher.encrypt(json_str.encode("utf-8"))
-            else:
-                mentendo_adat = json_str.encode("utf-8")
-
-            with open(DATA_FILE, "wb") as f:
-                f.write(mentendo_adat)
-
+            betoltott_adat, ervenyes, _migralt = load_hmac_json_with_migration(DATA_FILE)
         except Exception as e:
             wx.MessageBox(
-                f"Hiba az adatok mentésekor: {e}",
+                f"Hiba az adatok betöltésekor: {e}",
+                "Hiba",
+                wx.OK | wx.ICON_ERROR,
+            )
+            self.items = []
+            self.FrissitStatusBar()
+            return
+
+        if not ervenyes:
+            logging.error(
+                f"A dezideráta-lista ({DATA_FILE}) HMAC-aláírása érvénytelen: "
+                "a fájl megsérült vagy jogosulatlanul módosították."
+            )
+            wx.MessageBox(
+                "Az adatfájl integritás-ellenőrzése sikertelen: a fájl "
+                "megsérülhetett, vagy valaki módosította a programon kívül.\n\n"
+                "Az adatok betöltése biztonsági okból megszakadt.",
+                "Integritási hiba",
+                wx.OK | wx.ICON_ERROR,
+            )
+            self.items = []
+            self.FrissitStatusBar()
+            return
+
+        # Ellenőrizzük, hogy listát kaptunk-e, és rendeljük hozzá a self.items-hez!
+        self.items = betoltott_adat if isinstance(betoltott_adat, list) else []
+
+        # Lista frissítése a GUI-ban
+        self.refresh_list()
+
+    def save_data(self):
+        if not save_hmac_json(DATA_FILE, self.items):
+            wx.MessageBox(
+                "Hiba az adatok mentésekor.",
                 "Hiba",
                 wx.OK | wx.ICON_ERROR,
             )
@@ -665,7 +674,7 @@ class Deziderata(wx.Frame):
 
         fileDialog = wx.FileDialog(
             self,
-            message="Jegyzék exportálása titkosítás nélkül",
+            message="Jegyzék exportálása nyers JSON fájlba",
             defaultDir=default_dir,
             defaultFile="deziderata.json",
             wildcard="JSON fájlok (*.json)|*.json",

@@ -6,7 +6,8 @@ import wx
 import logging
 from config_manager import load_settings
 from theme_manager import apply_theme
-from deziderata import DATA_FILE as DEZIDERATA_DATA_FILE
+from deziderata import DATA_FILE as DEZIDERATA_DATA_FILE, is_same_book
+from data_manager import load_hmac_json_with_migration, save_hmac_json
 
 class KonyvtarnokKeresoApp(wx.Frame):
 
@@ -451,13 +452,13 @@ class KonyvtarnokKeresoApp(wx.Frame):
         atemeles_item = menu.Append(wx.ID_ANY, "Felvétel az állományba\tCTRL+F")
         deziderata_item = menu.Append(wx.ID_ANY, "Felvétel a dezideráta-jegyzékbe\tCTRL+D")
 
-        self.Bind(
+        menu.Bind(
             wx.EVT_MENU, lambda e: self.masolas_vagolapra(), masolas_item
         )
-        self.Bind(
+        menu.Bind(
             wx.EVT_MENU, lambda e: self.atemeles_allomanyba(), atemeles_item
         )
-        self.Bind(
+        menu.Bind(
             wx.EVT_MENU, lambda e: self.atemeles_deziderataba(), deziderata_item
         )
 
@@ -567,8 +568,11 @@ class KonyvtarnokKeresoApp(wx.Frame):
             for i in range(excel_oszlopok_szama)
         ]
 
+        statusz_col_idx = excel_oszlopok_szama
+
         sikeres = 0
         visszautasitott = 0
+        sikeres_sor_indexek = []
 
         for sor_idx in kijelolt_indexek:
             konyv_adat = {}
@@ -601,12 +605,23 @@ class KonyvtarnokKeresoApp(wx.Frame):
             if alap_adat["cim"].strip():
                 if self.parent.db.uj_konyv_hozzaadasa(alap_adat):
                     sikeres += 1
+                    sikeres_sor_indexek.append(sor_idx)
                 else:
                     visszautasitott += 1
 
         if hasattr(self.parent, "lista"):
             self.parent.lista.FeltoltLista()
             self.parent.FrissitStatusBar()
+
+        # A sikeresen átemelt sorok "Státusz" oszlopát azonnal frissítjük,
+        # hogy ne kelljen új keresést indítani az "Állományban" jelzés
+        # megjelenéséhez.
+        if self.oszlopok:
+            for sor_idx in sikeres_sor_indexek:
+                self.tablazat.SetItem(sor_idx, statusz_col_idx, "Állományban")
+                self.tablazat.SetItemBackgroundColour(
+                    sor_idx, wx.Colour(220, 245, 220)
+                )
 
         if sikeres > 0:
             uzenet = "Az átemelés sikeresen megtörtént!\n\n"
@@ -630,27 +645,7 @@ class KonyvtarnokKeresoApp(wx.Frame):
                 wx.OK | wx.ICON_ERROR,
             )
 
-    def _get_cipher(self):
-        """Meghatározza és visszaadja a Fernet cipher objektumot a titkosításhoz."""
-        if self.parent and hasattr(self.parent, "db") and hasattr(self.parent.db, "cipher") and self.parent.db.cipher:
-            return self.parent.db.cipher
-        elif self.parent and hasattr(self.parent, "cipher") and self.parent.cipher:
-            return self.parent.cipher
-
-        try:
-            from cryptography.fernet import Fernet
-            appdata_dir = os.path.join(os.path.expanduser("~"), ".konyvtar_app")
-            key_file_path = os.path.join(appdata_dir, "secret.key")
-            if os.path.exists(key_file_path):
-                with open(key_file_path, "rb") as kf:
-                    key = kf.read()
-                return Fernet(key)
-        except Exception as e:
-            logging.error(f"Nem sikerült betölteni a titkosítási kulcsot: {e}")
-        return None
-
     def atemeles_deziderataba(self):
-        import uuid
         if not self.parent:
             wx.MessageBox(
                 "Az átemelés nem lehetséges, mert a kereső önállóan fut!",
@@ -676,7 +671,7 @@ class KonyvtarnokKeresoApp(wx.Frame):
 
         db = len(kijelolt_indexek)
         uzenet = f"Biztosan át szeretnéd emelni a kijelölt {db} db találatot a deziderátába?" if db > 1 else "Biztosan át szeretnéd emelni a kijelölt találatot a deziderátába?"
-        
+
         confirm = wx.MessageBox(uzenet, "Átemelés megerősítése", wx.YES_NO | wx.ICON_QUESTION)
         if confirm != wx.YES:
             return
@@ -687,44 +682,24 @@ class KonyvtarnokKeresoApp(wx.Frame):
             for i in range(excel_oszlopok_szama)
         ]
 
-        cipher = self._get_cipher()
         json_fajl = DEZIDERATA_DATA_FILE
-        deziderata_lista = []
 
-        if os.path.exists(json_fajl):
-            try:
-                with open(json_fajl, "rb") as f:
-                    nyers_adat = f.read()
+        try:
+            adat, ervenyes, _migralt = load_hmac_json_with_migration(json_fajl)
+        except Exception as e:
+            logging.error(f"Hiba a dezideráta adatbázis beolvasásakor: {e}", exc_info=True)
+            wx.MessageBox(f"Hiba a dezideráta beolvasásakor:\n{e}", "Hiba", wx.OK | wx.ICON_ERROR)
+            return
 
-                if cipher:
-                    try:
-                        decrypted_bytes = cipher.decrypt(nyers_adat)
-                        betoltott = json.loads(decrypted_bytes.decode("utf-8"))
-                    except Exception:
-                        betoltott = json.loads(nyers_adat.decode("utf-8"))
-                else:
-                    betoltott = json.loads(nyers_adat.decode("utf-8"))
+        if not ervenyes:
+            wx.MessageBox(
+                "A dezideráta-jegyzék integritás-ellenőrzése sikertelen: a fájl megsérülhetett "
+                "vagy jogosulatlanul módosították.\n\nAz átemelés emiatt megszakadt.",
+                "Integritási hiba", wx.OK | wx.ICON_ERROR
+            )
+            return
 
-                if isinstance(betoltott, list):
-                    deziderata_lista = [x for x in betoltott if isinstance(x, dict)]
-            except Exception as e:
-                logging.error(f"Hiba a dezideráta adatbázis beolvasásakor: {e}", exc_info=True)
-                deziderata_lista = []
-
-        def norm(val):
-            return str(val or "").strip().lower()
-
-        def is_duplicate(candidate, target_list):
-            for item in target_list:
-                if (
-                    norm(candidate.get("cim")) == norm(item.get("cim", item.get("title", ""))) and
-                    norm(candidate.get("szerzo")) == norm(item.get("szerzo", item.get("author", ""))) and
-                    norm(candidate.get("kiado")) == norm(item.get("kiado", item.get("publisher", ""))) and
-                    norm(candidate.get("hely")) == norm(item.get("hely", item.get("place", ""))) and
-                    norm(candidate.get("ev")) == norm(str(item.get("ev", item.get("year", ""))))
-                ):
-                    return True
-            return False
+        deziderata_lista = [x for x in adat if isinstance(x, dict)] if isinstance(adat, list) else []
 
         sikeres = 0
         visszautasitott = 0
@@ -737,7 +712,6 @@ class KonyvtarnokKeresoApp(wx.Frame):
                 konyv_adat[kulcs] = ertek
 
             alap_adat = {
-                "id": str(uuid.uuid4()),
                 "cim": konyv_adat.get("cim", konyv_adat.get("Cím", "")),
                 "szerzo": konyv_adat.get("szerzo", konyv_adat.get("Összeállító", "")),
                 "egyeb_szemelyek": konyv_adat.get("egyeb_szemelyek", konyv_adat.get("Egyéb személyek", "")),
@@ -751,25 +725,16 @@ class KonyvtarnokKeresoApp(wx.Frame):
             }
 
             if alap_adat["cim"].strip():
-                if not is_duplicate(alap_adat, deziderata_lista):
+                mar_letezik = any(is_same_book(alap_adat, item) for item in deziderata_lista)
+                if not mar_letezik:
                     deziderata_lista.append(alap_adat)
                     sikeres += 1
                 else:
                     visszautasitott += 1
 
-        try:
-            json_str = json.dumps(deziderata_lista, ensure_ascii=False, indent=4)
-            if cipher:
-                mentendo_bajtok = cipher.encrypt(json_str.encode("utf-8"))
-            else:
-                mentendo_bajtok = json_str.encode("utf-8")
-
-            with open(json_fajl, "wb") as f:
-                f.write(mentendo_bajtok)
-        except Exception as e:
-            logging.error(f"Hiba a dezideráta mentése közben: {e}", exc_info=True)
+        if not save_hmac_json(json_fajl, deziderata_lista):
             wx.MessageBox(
-                f"Hiba történt a dezideráta mentése közben:\n{e}",
+                "Hiba történt a dezideráta mentése közben.",
                 "Hiba",
                 wx.OK | wx.ICON_ERROR,
             )

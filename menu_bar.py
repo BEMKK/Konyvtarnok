@@ -13,7 +13,7 @@ class MenuBar(wx.MenuBar):
         self.export_elem = fajl_menu.Append(wx.ID_ANY, '&Könyvadatlap(ok) exportálása PDF-ként...\tCtrl+Shift+E', 'Kijelöltek exportálása PDF-be')
         fajl_menu.AppendSeparator()
         self.json_import = fajl_menu.Append(wx.ID_ANY, 'Állományjegyzék betöltése JSON fájlból...\tCtrl+Shift+B', 'Teljes állományjegyzék betöltése JSON-ból')
-        self.json_export = fajl_menu.Append(wx.ID_ANY, 'Állományjegyzék mentése titkosítás nélküli JSON fájlba...\tCtrl+Shift+M', 'Teljes állományjegyzék kimentése JSON-ba')
+        self.json_export = fajl_menu.Append(wx.ID_ANY, 'Állományjegyzék mentése szerkeszthető JSON fájlba...\tCtrl+Shift+M', 'Teljes állományjegyzék kimentése JSON-ba')
         fajl_menu.AppendSeparator()
         self.kilepes = fajl_menu.Append(wx.ID_EXIT, '&Kilépés\tCtrl+W', 'Program bezárása')
         
