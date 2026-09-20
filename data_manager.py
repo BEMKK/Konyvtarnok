@@ -168,6 +168,94 @@ def load_hmac_json_with_migration(fajlnev):
     return migralt, True, True
 
 # ==============================================================================
+# KÖZÖS "ADDITÍV JSON IMPORT" SEGÉDFÜGGVÉNY
+# ==============================================================================
+# Ezt a mintát (JSON fájl beolvasása, lista-e ellenőrzés, majd tételenkénti,
+# duplikátum-szűrt hozzáadás egy már meglévő listához/adatbázishoz) korábban
+# a főablak ("Állományjegyzék betöltése JSON fájlból") és a Dezideráta-kezelő
+# ("Dezideráta betöltése") egymástól függetlenül, majdnem szó szerint
+# megegyező formában valósította meg.
+def additiv_lista_import(fajlnev, hozzaad_fv):
+    """Beolvas egy JSON fájlt (listát vár), és a benne szereplő minden dict
+    elemet átad a hozzaad_fv(elem) -> bool függvénynek, amely eldönti és
+    végre is hajtja a tényleges hozzáadást (pl. duplikátum-ellenőrzéssel),
+    majd True-val tér vissza, ha ténylegesen hozzáadta az elemet, egyébként
+    False-szal (pl. mert már szerepelt duplikátumként).
+
+    A nem dict típusú listaelemeket szó nélkül kihagyja.
+
+    Visszatérési érték: (hozzaadva, kihagyva) számpár.
+
+    ValueError-t dob, ha a fájl tartalma nem lista, hogy a hívó egységes
+    hibaüzenetet tudjon megjeleníteni. Minden egyéb hibát (fájl-I/O, JSON
+    dekódolási hiba) a hívóra bíz.
+    """
+    with open(fajlnev, "r", encoding="utf-8") as f:
+        importalt_adatok = json.load(f)
+
+    if not isinstance(importalt_adatok, list):
+        raise ValueError("A kiválasztott JSON fájl formátuma nem megfelelő!")
+
+    hozzaadva = 0
+    kihagyva = 0
+    for elem in importalt_adatok:
+        if not isinstance(elem, dict):
+            continue
+        if hozzaad_fv(elem):
+            hozzaadva += 1
+        else:
+            kihagyva += 1
+
+    return hozzaadva, kihagyva
+
+
+# ==============================================================================
+# KÖZÖS "TÖMEGES FELVÉTEL AZ ÁLLOMÁNYBA" SEGÉDFÜGGVÉNY
+# ==============================================================================
+# Ezt a ciklust (kijelölt sorokból/tételekből épített könyvadat-dict-ek
+# egymás utáni felvétele az adatbázisba, a sikeres/elutasított darabszám és
+# az újonnan felvett könyvobjektumok gyűjtése, majd a nézet frissítése)
+# korábban a Dezideráta-kezelő ("Felvétel az állományba") és a KönyvTárnok-
+# kereső ("Felvétel az állományba") egymástól függetlenül, szinte szó
+# szerint megegyező formában valósította meg.
+def konyvek_tomeges_felvetele(db, konyv_adatok_listaja, utani_frissites_fv=None):
+    """Több könyvadat-dict egymás utáni felvétele az adatbázisba.
+
+    A duplikátum-szűrést a db.uj_konyv_hozzaadasa végzi. A cím nélküli
+    (üres "cim" mezőjű) tételeket kihagyja. A sikeresen felvett tételek
+    esetén a hívó által (opcionálisan) átadott utani_frissites_fv-et hívja
+    meg az újonnan felvett könyvobjektumok listájával, hogy a hívó a saját
+    (pl. főablak) nézetét ennek megfelelően frissíthesse - ugyanúgy, mint
+    a kézi felvitel vagy a JSON import után.
+
+    Visszatérési érték: (sikeres_db, elutasitott_db, sikeres_indexek,
+    uj_konyv_objektumok), ahol a sikeres_indexek a konyv_adatok_listaja-beli
+    indexei azoknak az elemeknek, amelyeket ténylegesen felvettünk - ez
+    teszi lehetővé, hogy a hívó a saját listájában/táblázatában meg tudja
+    jelölni, mely sorok kerültek át az állományba.
+    """
+    sikeres = 0
+    elutasitott = 0
+    sikeres_indexek = []
+    uj_konyv_objektumok = []
+
+    for idx, konyv_adat in enumerate(konyv_adatok_listaja):
+        if not str(konyv_adat.get("cim", "")).strip():
+            continue
+        if db.uj_konyv_hozzaadasa(konyv_adat):
+            sikeres += 1
+            sikeres_indexek.append(idx)
+            uj_konyv_objektumok.append(db.konyvek[-1])
+        else:
+            elutasitott += 1
+
+    if utani_frissites_fv is not None:
+        utani_frissites_fv(uj_konyv_objektumok)
+
+    return sikeres, elutasitott, sikeres_indexek, uj_konyv_objektumok
+
+
+# ==============================================================================
 # KÖZÖS EGYEZÉS-/DUPLIKÁTUM-VIZSGÁLAT
 # ==============================================================================
 # Ezt a logikát korábban három helyen (KonyvAdatbazis.is_duplikalat,

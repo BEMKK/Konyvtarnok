@@ -3,11 +3,15 @@ import sys
 import json
 import wx
 import logging
-from config_manager import load_settings
-from theme_manager import apply_theme
+from theme_manager import apply_theme_from_settings
 from deziderata import DATA_FILE as DEZIDERATA_DATA_FILE, is_same_book
-from data_manager import load_hmac_json_with_migration, save_hmac_json, tetelek_egyeznek
-from gyors_kereses import GyorsListaKereso
+from data_manager import (
+    load_hmac_json_with_migration,
+    save_hmac_json,
+    tetelek_egyeznek,
+    konyvek_tomeges_felvetele,
+)
+from gyors_kereses import GyorsListaKereso, osszes_kijelolt_index
 
 # A külső (JSON) forrásadatok mezőnevei nem mindig egyeznek meg az állomány
 # kanonikus mezőneveivel (előfordulhat rövid, ékezet nélküli 'cim' VAGY a
@@ -59,9 +63,8 @@ class KonyvtarnokKeresoApp(wx.Frame):
         self.init_shortcuts()
 
         # Téma alkalmazása
-        config = load_settings()
+        config = apply_theme_from_settings(self)
         self.current_theme = config.get("tema", "vilagos")
-        apply_theme(self, self.current_theme)
 
     def adatok_betoltese(self):
         """Beolvassa a JSON fájlt a megfelelő mappából."""
@@ -450,29 +453,7 @@ class KonyvtarnokKeresoApp(wx.Frame):
         )
 
     def on_char(self, event):
-        key_code = event.GetKeyCode()
-        if key_code == wx.WXK_BACK:
-            self.gyors_kereses.torol_egy_karaktert()
-            return
-
-        karakter = ""
-        unicode_key = event.GetUnicodeKey()
-        if unicode_key != wx.WXK_NONE:
-            try:
-                karakter = chr(unicode_key).lower()
-            except Exception:
-                pass
-        
-        if not karakter and 32 <= key_code <= 255:
-            try:
-                karakter = chr(key_code).lower()
-            except Exception:
-                pass
-
-        if karakter:
-            self.feldolgoz_kereso_karakter(karakter)
-        else:
-            event.Skip()
+        self.gyors_kereses.kezel_char_esemeny(event, self.feldolgoz_kereso_karakter)
 
     def on_billentyu_leutve(self, event):
         """Kezeli a táblázatban leütött gyorsbillentyűket (Ctrl+C, Ctrl+A, Ctrl+F, Ctrl+D)."""
@@ -521,12 +502,7 @@ class KonyvtarnokKeresoApp(wx.Frame):
 
     def masolas_vagolapra(self):
         """Kiolvassa az összes kijelölt sort és a vágólapra helyezi őket (bezárás után is megmarad)."""
-        kijelolt_indexek = []
-        item = self.tablazat.GetFirstSelected()
-
-        while item != -1:
-            kijelolt_indexek.append(item)
-            item = self.tablazat.GetNextSelected(item)
+        kijelolt_indexek = osszes_kijelolt_index(self.tablazat)
 
         if not kijelolt_indexek:
             return
@@ -594,12 +570,7 @@ class KonyvtarnokKeresoApp(wx.Frame):
             )
             return
 
-        kijelolt_indexek = []
-        item = self.tablazat.GetFirstSelected()
-
-        while item != -1:
-            kijelolt_indexek.append(item)
-            item = self.tablazat.GetNextSelected(item)
+        kijelolt_indexek = osszes_kijelolt_index(self.tablazat)
 
         if not kijelolt_indexek:
             wx.MessageBox(
@@ -624,11 +595,7 @@ class KonyvtarnokKeresoApp(wx.Frame):
 
         statusz_col_idx = excel_oszlopok_szama
 
-        sikeres = 0
-        visszautasitott = 0
-        sikeres_sor_indexek = []
-        uj_konyv_objektumok = []
-
+        konyv_adatok = []
         for sor_idx in kijelolt_indexek:
             konyv_adat = {}
             for col_idx in range(excel_oszlopok_szama):
@@ -646,18 +613,7 @@ class KonyvtarnokKeresoApp(wx.Frame):
                 "status": konyv_adat.get("status", ""),
                 "rovid_leiras": konyv_adat.get("rovid_leiras", ""),
             })
-
-            if alap_adat["cim"].strip():
-                if self.parent.db.uj_konyv_hozzaadasa(alap_adat):
-                    sikeres += 1
-                    sikeres_sor_indexek.append(sor_idx)
-                    # Megjegyezzük a ténylegesen felvett könyv objektumát (a
-                    # db végére került), hogy egy esetlegesen aktív
-                    # szűrés/keresés esetén a főablak el tudja dönteni,
-                    # illeszkedik-e rá.
-                    uj_konyv_objektumok.append(self.parent.db.konyvek[-1])
-                else:
-                    visszautasitott += 1
+            konyv_adatok.append(alap_adat)
 
         # A lista frissítését a főablak szűrés-megőrző segédmetódusára
         # bízzuk (ugyanaz, mint kézi felvitelnél vagy JSON importnál), hogy
@@ -666,17 +622,26 @@ class KonyvtarnokKeresoApp(wx.Frame):
         # aktív szűrést, és megtévesztő állapotot hagyna maga után (a
         # szűrő-felirat és a "Szűrés törlése" gomb aktív maradna, miközben
         # a teljes, szűretlen lista jelenne meg).
-        if hasattr(self.parent, "_uj_konyvek_utani_frissites"):
-            self.parent._uj_konyvek_utani_frissites(uj_konyv_objektumok)
-        elif hasattr(self.parent, "lista"):
-            self.parent.lista.FeltoltLista()
-            if hasattr(self.parent, "FrissitStatusBar"):
-                self.parent.FrissitStatusBar()
+        def _frissites(uj_konyv_objektumok):
+            if hasattr(self.parent, "_uj_konyvek_utani_frissites"):
+                self.parent._uj_konyvek_utani_frissites(uj_konyv_objektumok)
+            elif hasattr(self.parent, "lista"):
+                self.parent.lista.FeltoltLista()
+                if hasattr(self.parent, "FrissitStatusBar"):
+                    self.parent.FrissitStatusBar()
+
+        # A tényleges felvételi ciklust a data_manager.konyvek_tomeges_felvetele
+        # közös segédfüggvénye végzi (ugyanaz, mint a Dezideráta-kezelő
+        # "Felvétel az állományba" műveleténél).
+        sikeres, visszautasitott, sikeres_relativ_indexek, _ = konyvek_tomeges_felvetele(
+            self.parent.db, konyv_adatok, utani_frissites_fv=_frissites
+        )
 
         # A sikeresen átemelt sorok "Státusz" oszlopát azonnal frissítjük,
         # hogy ne kelljen új keresést indítani az "Állományban" jelzés
         # megjelenéséhez.
         if self.oszlopok:
+            sikeres_sor_indexek = [kijelolt_indexek[i] for i in sikeres_relativ_indexek]
             for sor_idx in sikeres_sor_indexek:
                 self.tablazat.SetItem(sor_idx, statusz_col_idx, "Állományban")
                 self.tablazat.SetItemBackgroundColour(
@@ -714,12 +679,7 @@ class KonyvtarnokKeresoApp(wx.Frame):
             )
             return
 
-        kijelolt_indexek = []
-        item = self.tablazat.GetFirstSelected()
-
-        while item != -1:
-            kijelolt_indexek.append(item)
-            item = self.tablazat.GetNextSelected(item)
+        kijelolt_indexek = osszes_kijelolt_index(self.tablazat)
 
         if not kijelolt_indexek:
             wx.MessageBox(

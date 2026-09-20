@@ -1,5 +1,7 @@
 import time
 
+import wx
+
 
 class GyorsListaKereso:
     """Újrafelhasználható 'gépeléssel ugrás a listában' (type-ahead) logika.
@@ -12,6 +14,11 @@ class GyorsListaKereso:
     találati táblázata) egymástól függetlenül, szinte szó szerint
     megegyező formában volt megírva. Innentől mindhárom hely ezt a közös
     osztályt használja.
+
+    Az EVT_CHAR eseményből a karakter kinyerése (Backspace felismerése,
+    unicode/kódpont alapú kisbetűs karakter előállítása) korábban szintén
+    ugyanezen a három helyen, egymástól függetlenül, szó szerint megegyező
+    formában volt megírva - lásd a `kezel_char_esemeny` metódust lent.
 
     Az osztály semmit nem tud a konkrét GUI-elemről (wx.ListCtrl vagy
     virtuális lista), ezért a hívó félnek kell megadnia (a `feldolgoz`
@@ -37,6 +44,43 @@ class GyorsListaKereso:
         """A Backspace billentyű kezeléséhez: törli a puffer utolsó karakterét."""
         if self.puffer:
             self.puffer = self.puffer[:-1]
+
+    def kezel_char_esemeny(self, event, feldolgozo_fv):
+        """Egységesen kezeli egy wx.EVT_CHAR esemény kiértékelését.
+
+        Backspace-re törli a puffer utolsó karakterét. Egyébként megpróbálja
+        kinyerni a leütött, kisbetűssé alakított karaktert (előbb az unicode
+        kódpontból, ha az nem elérhető, a nyers billentyűkódból), és ha ez
+        sikerül, átadja a `feldolgozo_fv(karakter)` hívónak megadott
+        callback-nek (jellemzően a `feldolgoz` metódusnak egy már
+        előkészített lekérő/beállító készlettel). Ha nem nyerhető ki
+        használható karakter, `event.Skip()`-et hív, hogy a widget
+        alapértelmezett billentyűkezelése lefusson.
+        """
+        key_code = event.GetKeyCode()
+
+        if key_code == wx.WXK_BACK:
+            self.torol_egy_karaktert()
+            return
+
+        karakter = ""
+        unicode_key = event.GetUnicodeKey()
+        if unicode_key != wx.WXK_NONE:
+            try:
+                karakter = chr(unicode_key).lower()
+            except Exception:
+                pass
+
+        if not karakter and 32 <= key_code <= 255:
+            try:
+                karakter = chr(key_code).lower()
+            except Exception:
+                pass
+
+        if karakter:
+            feldolgozo_fv(karakter)
+        else:
+            event.Skip()
 
     def feldolgoz(self, karakter, total_lekero, szoveg_lekero, kivalasztott_lekero, kivalasztas_beallito):
         """Feldolgoz egy beütött karaktert, és ha talál egyező sort, kijelöli azt.
@@ -119,3 +163,22 @@ class GyorsListaKereso:
 
         if talalt != -1:
             kivalasztas_beallito(talalt)
+
+
+def osszes_kijelolt_index(list_ctrl):
+    """Visszaadja egy wx.ListCtrl (vagy azzal kompatibilis, GetFirstSelected/
+    GetNextSelected metódusokkal rendelkező) vezérlőelem összes kijelölt
+    sorindexét listaként, a megjelenés sorrendjében.
+
+    Ezt a bejárást (a kijelölés végigolvasása GetFirstSelected/
+    GetNextSelected hívásokkal egy while-cikluson keresztül) korábban a
+    Dezideráta-kezelő és a KönyvTárnok-kereső több helyen (törlés,
+    átemelés az állományba/dezideratába, vágólapra másolás) is, egymástól
+    függetlenül, kézzel megismételve valósította meg.
+    """
+    indexek = []
+    idx = list_ctrl.GetFirstSelected()
+    while idx != -1:
+        indexek.append(idx)
+        idx = list_ctrl.GetNextSelected(idx)
+    return indexek

@@ -1,5 +1,7 @@
 import wx
 
+from config_manager import load_settings
+
 # A témák szótára és definíciói
 THEMES = {
     "vilagos": {
@@ -95,3 +97,28 @@ def apply_theme(window, theme_name="vilagos"):
             
     window.Refresh()
     window.Layout()
+
+
+def apply_theme_from_settings(window):
+    """Betölti a mentett beállításokat, és alkalmazza a bennük tárolt témát
+    az ablakra/dialógusra.
+
+    Kényelmi függvény azoknak a - jellemzően dialógus - hívóknak, akiknek
+    nincs már betöltött beállítás-szótáruk, és a témát a mentett
+    beállításokból kell alkalmazniuk. Korábban ezt a két sort:
+
+        config = load_settings()
+        apply_theme(self, config.get("tema", "vilagos"))
+
+    számos dialógus (KonyvReszletekDialog, KonyvSzerkesztoDialog,
+    StatisztikaDialog, KeresoDialog, NevjegyDialog, UjdonsagokDialog,
+    FajlutkozesDialog, DeziderataReszletekDialog, BaseItemDialog stb.)
+    egymástól függetlenül megismételte.
+
+    A betöltött beállítás-szótárral tér vissza, hogy azok a hívók is
+    használhassák, akiknek a témán kívül más beállításra (pl. a téma
+    kulcsának későbbi eltárolására) is szükségük van.
+    """
+    config = load_settings()
+    apply_theme(window, config.get("tema", "vilagos"))
+    return config

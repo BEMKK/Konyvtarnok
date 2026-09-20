@@ -4,6 +4,12 @@ A projekten végrehajtott lényegi változtatások dokumentációja.
 
 
 
+## [2.1.1] - 2026-09-20
+
+- Újabb kódjavítások és refaktorálás
+
+
+
 ## [2.1.0] - 2026-09-19
 
 - Mostantól lehetőség van a hibanapló megnyitására vagy másolására közvetlenül a felugró ablakból.

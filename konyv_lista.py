@@ -3,7 +3,7 @@ import re
 import datetime
 
 from constants import DEFAULT_LATHATO_OSZLOPOK
-from gyors_kereses import GyorsListaKereso
+from gyors_kereses import GyorsListaKereso, osszes_kijelolt_index
 
 HONAPOK = {
     "január": 1, "február": 2, "március": 3, "április": 4,
@@ -108,12 +108,7 @@ class KonyvListaCtrl(wx.ListCtrl):
         self.FeltoltLista()
 
     def GetKijeloltIndexek(self):
-        indexek = []
-        idx = self.GetFirstSelected()
-        while idx != -1:
-            indexek.append(idx)
-            idx = self.GetNextSelected(idx)
-        return indexek
+        return osszes_kijelolt_index(self)
 
     def GetKonyvByRowIndex(self, index):
         if 0 <= index < len(self.jelenlegi_adatok):
@@ -231,30 +226,7 @@ class KonyvListaCtrl(wx.ListCtrl):
         )
 
     def OnChar(self, event):
-        key_code = event.GetKeyCode()
-        
-        if key_code == wx.WXK_BACK:
-            self.gyors_kereses.torol_egy_karaktert()
-            return
-
-        karakter = ""
-        unicode_key = event.GetUnicodeKey()
-        if unicode_key != wx.WXK_NONE:
-            try:
-                karakter = chr(unicode_key).lower()
-            except Exception:
-                pass
-        
-        if not karakter and 32 <= key_code <= 255:
-            try:
-                karakter = chr(key_code).lower()
-            except Exception:
-                pass
-
-        if karakter:
-            self.FeldolgozKarakter(karakter)
-        else:
-            event.Skip()
+        self.gyors_kereses.kezel_char_esemeny(event, self.FeldolgozKarakter)
 
     def OnSize(self, event):
         event.Skip()

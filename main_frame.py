@@ -2,10 +2,13 @@ import wx
 import os
 import sys
 import re
-import json
 import logging
 from constants import APP_TITLE
-from dialogs import KonyvReszletekDialog, KonyvSzerkesztoDialog, NevjegyDialog, BeallitasokDialog, KeresoDialog, UjdonsagokDialog, StatisztikaDialog, FajlutkozesDialog
+from dialogs import NevjegyDialog, UjdonsagokDialog, FajlutkozesDialog
+from kereso import KeresoDialog
+from settings import BeallitasokDialog
+from konyvdialogs import KonyvReszletekDialog, KonyvSzerkesztoDialog
+from statisztika import StatisztikaDialog
 from help import HelpNotebookDialog
 from export_manager import export_konyv_pdf, tomeges_export_pdf, get_biztonsagos_pdf_fajlnev
 from config_manager import load_settings, save_settings
@@ -14,6 +17,7 @@ from konyvtarnok_kereso import KonyvtarnokKeresoApp
 from menu_bar import MenuBar
 from konyv_lista import KonyvListaCtrl
 from deziderata import Deziderata
+from data_manager import additiv_lista_import
 from update import check_for_updates_async
 
 class Konyvtarnok(wx.Frame):
@@ -560,41 +564,39 @@ class Konyvtarnok(wx.Frame):
         config["last_json_dir"] = os.path.dirname(kivalasztott_utvonal)
         save_settings(config)
 
+        # Additív import: minden tételt a meglévő állományhoz adunk hozzá, a
+        # duplikátumellenőrzést a KonyvAdatbazis végzi el (uj_konyv_hozzaadasa).
+        # A fájl beolvasását és a tételenkénti hozzáadás ciklusát a
+        # data_manager.additiv_lista_import közös segédfüggvénye végzi (ezt a
+        # mintát korábban itt és a Dezideráta-kezelő JSON importjában is
+        # egymástól függetlenül, kézzel írtuk meg).
+        uj_konyv_objektumok = []
+
+        def _hozzaad(konyv):
+            if hasattr(self.db, 'uj_konyv_hozzaadasa') and self.db.uj_konyv_hozzaadasa(konyv):
+                uj_konyv_objektumok.append(self.db.konyvek[-1])
+                return True
+            return False
+
         try:
-            with open(kivalasztott_utvonal, "r", encoding="utf-8") as f:
-                importalt_adatok = json.load(f)
-
-            if not isinstance(importalt_adatok, list):
-                wx.MessageBox("A kiválasztott JSON fájl formátuma nem megfelelő!", "Hiba", wx.OK | wx.ICON_ERROR)
-                return
-
-            # Additív import: minden tételt a meglévő állományhoz adunk hozzá,
-            # a duplikátumellenőrzést a KonyvAdatbazis végzi el (uj_konyv_hozzaadasa).
-            hozzaadva = 0
-            kihagyva = 0
-            uj_konyv_objektumok = []
-
-            for konyv in importalt_adatok:
-                if not isinstance(konyv, dict):
-                    continue
-                if hasattr(self.db, 'uj_konyv_hozzaadasa') and self.db.uj_konyv_hozzaadasa(konyv):
-                    hozzaadva += 1
-                    uj_konyv_objektumok.append(self.db.konyvek[-1])
-                else:
-                    kihagyva += 1
-
-            lathato_uj_konyvek = self._uj_konyvek_utani_frissites(uj_konyv_objektumok)
-
-            uzenet = f"Importálás befejeződött!\n\nHozzáadva: {hozzaadva} db\nKihagyva (már létező duplikátum): {kihagyva} db"
-            if self.aktiv_szurt_lista is not None and uj_konyv_objektumok and not lathato_uj_konyvek:
-                uzenet += "\n\nAz aktív szűrés miatt egyik újonnan felvett könyv sem látható jelenleg a listában."
-            elif self.aktiv_szurt_lista is not None and len(lathato_uj_konyvek) < len(uj_konyv_objektumok):
-                uzenet += f"\n\nAz aktív szűrés miatt csak {len(lathato_uj_konyvek)}/{len(uj_konyv_objektumok)} új könyv látható jelenleg a listában."
-
-            wx.MessageBox(uzenet, "Siker", wx.OK | wx.ICON_INFORMATION)
+            hozzaadva, kihagyva = additiv_lista_import(kivalasztott_utvonal, _hozzaad)
+        except ValueError as e:
+            wx.MessageBox(str(e), "Hiba", wx.OK | wx.ICON_ERROR)
+            return
         except Exception as e:
             logging.error(f"Hiba történt az importálás közben: {e}")
             wx.MessageBox(f"Hiba történt az importálás során:\n{e}", "Hiba", wx.OK | wx.ICON_ERROR)
+            return
+
+        lathato_uj_konyvek = self._uj_konyvek_utani_frissites(uj_konyv_objektumok)
+
+        uzenet = f"Importálás befejeződött!\n\nHozzáadva: {hozzaadva} db\nKihagyva (már létező duplikátum): {kihagyva} db"
+        if self.aktiv_szurt_lista is not None and uj_konyv_objektumok and not lathato_uj_konyvek:
+            uzenet += "\n\nAz aktív szűrés miatt egyik újonnan felvett könyv sem látható jelenleg a listában."
+        elif self.aktiv_szurt_lista is not None and len(lathato_uj_konyvek) < len(uj_konyv_objektumok):
+            uzenet += f"\n\nAz aktív szűrés miatt csak {len(lathato_uj_konyvek)}/{len(uj_konyv_objektumok)} új könyv látható jelenleg a listában."
+
+        wx.MessageBox(uzenet, "Siker", wx.OK | wx.ICON_INFORMATION)
 
     def OnJsonExport(self, event):
         config = load_settings()

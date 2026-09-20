@@ -7,9 +7,15 @@ import unicodedata
 import webbrowser
 import wx
 from config_manager import load_settings, save_settings
-from theme_manager import apply_theme
-from data_manager import load_hmac_json_with_migration, save_hmac_json, tetelek_egyeznek
-from gyors_kereses import GyorsListaKereso
+from theme_manager import apply_theme_from_settings
+from data_manager import (
+    load_hmac_json_with_migration,
+    save_hmac_json,
+    tetelek_egyeznek,
+    additiv_lista_import,
+    konyvek_tomeges_felvetele,
+)
+from gyors_kereses import GyorsListaKereso, osszes_kijelolt_index
 
 # Magyar locale beállítása
 try:
@@ -89,8 +95,7 @@ class DeziderataReszletekDialog(wx.Dialog):
         self.init_ui()
         self.CentreOnParent()
 
-        config = load_settings()
-        apply_theme(self, config.get("tema", "vilagos"))
+        apply_theme_from_settings(self)
 
     def general_szoveg(self):
         """Összeállítja a tétel adatait egy tiszta, jól olvasható szöveggé."""
@@ -272,8 +277,7 @@ class BaseItemDialog(wx.Dialog):
 
         self.txt_cim.SetFocus()
 
-        config = load_settings()
-        apply_theme(self, config.get("tema", "vilagos"))
+        apply_theme_from_settings(self)
 
     def on_status_change(self, event):
         available = self.status_available.GetValue()
@@ -447,9 +451,8 @@ class Deziderata(wx.Frame):
         self.load_data()
 
         # Téma alkalmazása
-        config = load_settings()
+        config = apply_theme_from_settings(self)
         self.current_theme = config.get("tema", "vilagos")
-        apply_theme(self, self.current_theme)
 
         self.Centre()
         self.Show()
@@ -626,11 +629,7 @@ class Deziderata(wx.Frame):
 
     def on_delete(self, event):
         """Kijelölt tétel(ek) törlése (tömeges törlés támogatásával)."""
-        selected_indices = []
-        item = self.list.GetFirstSelected()
-        while item != -1:
-            selected_indices.append(item)
-            item = self.list.GetNextSelected(item)
+        selected_indices = osszes_kijelolt_index(self.list)
 
         if not selected_indices:
             wx.MessageBox(
@@ -712,31 +711,28 @@ class Deziderata(wx.Frame):
             config["last_json_dir"] = os.path.dirname(pathname)
             save_settings(config)
 
+            def _hozzaad(item):
+                if not self.is_duplicate(item):
+                    self.items.append(item)
+                    return True
+                return False
+
             try:
-                with open(pathname, "r", encoding="utf-8") as f:
-                    imported_data = json.load(f)
-                
-                if isinstance(imported_data, list):
-                    hozzaadva = 0
-                    kihagyva = 0
-                    for item in imported_data:
-                        if isinstance(item, dict):
-                            if not self.is_duplicate(item):
-                                self.items.append(item)
-                                hozzaadva += 1
-                            else:
-                                kihagyva += 1
-                    self.save_data()
-                    self.refresh_list()
-                    wx.MessageBox(
-                        f"Importálás befejeződött!\n\nHozzáadva: {hozzaadva} db\nKihagyva (már létező duplikátum): {kihagyva} db",
-                        "Siker",
-                        wx.OK | wx.ICON_INFORMATION
-                    )
-                else:
-                    wx.MessageBox("A kiválasztott JSON fájl formátuma nem megfelelő!", "Hiba", wx.OK | wx.ICON_ERROR)
+                hozzaadva, kihagyva = additiv_lista_import(pathname, _hozzaad)
+            except ValueError as e:
+                wx.MessageBox(str(e), "Hiba", wx.OK | wx.ICON_ERROR)
+                return
             except Exception as e:
                 wx.MessageBox(f"Hiba történt az importálás során: {e}", "Hiba", wx.OK | wx.ICON_ERROR)
+                return
+
+            self.save_data()
+            self.refresh_list()
+            wx.MessageBox(
+                f"Importálás befejeződött!\n\nHozzáadva: {hozzaadva} db\nKihagyva (már létező duplikátum): {kihagyva} db",
+                "Siker",
+                wx.OK | wx.ICON_INFORMATION
+            )
 
     def on_exit(self, event):
         self.Close()
@@ -750,12 +746,7 @@ class Deziderata(wx.Frame):
             )
             return
 
-        kijelolt_indexek = []
-        item = self.list.GetFirstSelected()
-
-        while item != -1:
-            kijelolt_indexek.append(item)
-            item = self.list.GetNextSelected(item)
+        kijelolt_indexek = osszes_kijelolt_index(self.list)
 
         if not kijelolt_indexek:
             wx.MessageBox(
@@ -772,16 +763,12 @@ class Deziderata(wx.Frame):
         if confirm != wx.YES:
             return
 
-        sikeres = 0
-        visszautasitott = 0
-        sikeres_indexek = []
-        uj_konyv_objektumok = []
         parent_frame = self.GetParent()
 
+        konyv_adatok = []
         for idx in kijelolt_indexek:
             item = self.items[idx]
-
-            konyv_adat = {
+            konyv_adatok.append({
                 "cim": item.get("cim", item.get("title", "")),
                 "alcim": "",
                 "szerzo": item.get("szerzo", item.get("author", "")),
@@ -796,20 +783,7 @@ class Deziderata(wx.Frame):
                 "forras": item.get("location", ""),
                 "status": "",
                 "rovid_leiras": "",
-            }
-
-            if konyv_adat["cim"].strip():
-                siker = parent_frame.db.uj_konyv_hozzaadasa(konyv_adat)
-                if siker:
-                    sikeres += 1
-                    sikeres_indexek.append(idx)
-                    # Megjegyezzük a ténylegesen felvett könyv objektumát (a
-                    # db végére került), hogy egy esetlegesen aktív
-                    # szűrés/keresés esetén a főablak el tudja dönteni,
-                    # illeszkedik-e rá.
-                    uj_konyv_objektumok.append(parent_frame.db.konyvek[-1])
-                else:
-                    visszautasitott += 1
+            })
 
         # A lista frissítését a főablak szűrés-megőrző segédmetódusára
         # bízzuk (ugyanaz, mint kézi felvitelnél, JSON importnál vagy a
@@ -819,13 +793,23 @@ class Deziderata(wx.Frame):
         # megtévesztő állapotot hagyna maga után (a szűrő-felirat és a
         # "Szűrés törlése" gomb aktív maradna, miközben a teljes, szűretlen
         # lista jelenne meg).
-        if hasattr(parent_frame, "_uj_konyvek_utani_frissites"):
-            parent_frame._uj_konyvek_utani_frissites(uj_konyv_objektumok)
-        elif hasattr(parent_frame, "lista"):
-            parent_frame.lista.FeltoltLista()
-            if hasattr(parent_frame, "FrissitStatusBar"):
-                parent_frame.FrissitStatusBar()
+        def _frissites(uj_konyv_objektumok):
+            if hasattr(parent_frame, "_uj_konyvek_utani_frissites"):
+                parent_frame._uj_konyvek_utani_frissites(uj_konyv_objektumok)
+            elif hasattr(parent_frame, "lista"):
+                parent_frame.lista.FeltoltLista()
+                if hasattr(parent_frame, "FrissitStatusBar"):
+                    parent_frame.FrissitStatusBar()
+
+        # A tényleges felvételi ciklust a data_manager.konyvek_tomeges_felvetele
+        # közös segédfüggvénye végzi (ugyanaz, mint a KönyvTárnok-kereső
+        # "Felvétel az állományba" műveleténél).
+        sikeres, visszautasitott, sikeres_relativ_indexek, _ = konyvek_tomeges_felvetele(
+            parent_frame.db, konyv_adatok, utani_frissites_fv=_frissites
+        )
+
         if sikeres > 0:
+            sikeres_indexek = [kijelolt_indexek[i] for i in sikeres_relativ_indexek]
             for idx in sorted(sikeres_indexek, reverse=True):
                 del self.items[idx]
             self.save_data()
@@ -870,29 +854,7 @@ class Deziderata(wx.Frame):
         )
 
     def on_char(self, event):
-        key_code = event.GetKeyCode()
-        if key_code == wx.WXK_BACK:
-            self.gyors_kereses.torol_egy_karaktert()
-            return
-
-        karakter = ""
-        unicode_key = event.GetUnicodeKey()
-        if unicode_key != wx.WXK_NONE:
-            try:
-                karakter = chr(unicode_key).lower()
-            except Exception:
-                pass
-        
-        if not karakter and 32 <= key_code <= 255:
-            try:
-                karakter = chr(key_code).lower()
-            except Exception:
-                pass
-
-        if karakter:
-            self.feldolgoz_kereso_karakter(karakter)
-        else:
-            event.Skip()
+        self.gyors_kereses.kezel_char_esemeny(event, self.feldolgoz_kereso_karakter)
 
     def on_key_down(self, event):
         keycode = event.GetKeyCode()
