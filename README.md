@@ -64,13 +64,17 @@ python main.py
 ├─ export_manager.py           # PDF export (egyedi, kötegelt, statisztika)
 ├─ config_manager.py           # Konfigurációkezelő (settings.json)
 ├─ theme_manager.py            # Téma‑kezelő (4 beépített színtéma)
-├─ dialogs.py                  # Párbeszédablakok (szerkesztő, statisztika, keresés, beállítások, névjegy stb.)
+├─ dialogs.py                  # Névjegy, újdonságok és fájlütközés párbeszédablak.
+├─ konyvdialogs.py                  # Könyv szerkesztése és adatlap megjelenítő párbeszédablakok.
+├─ settings.py                  # Beállítások ablak.
+├─ kereso.py                  # Keresés és szűrés dialog.
+├─ statisztika.py                  # Állománystatisztika párbeszédablak.
 ├─ help.py              # Súgó és billentyűparancsok
 ├─ konyv_lista.py              # Virtuális könyvlista UI (rendezés, gyorskeresés)
 ├─ konyvtarnok_kereso.py                # KönyvTárnok kereső – külső referencia‑adatbázis kereső és átemelő modul
 ├─ deziderata.py               # Dezideráta‑kezelő – beszerzési kívánságlista modul
 ├─ update.py                   # Új verzió ellenőrzése a GitHub-on.
-├─ constants.py                # Alkalmazás‑állandók (név, verzió, állapot, alapértelmezett oszlopok)
+├─ constants.py                # Alkalmazás‑állandók (név, verzió, állapot, alapértelmezett oszlopok, stb.)
 ├─ gyors_kereses.py                # A lista gépelés közbeni szűrése mindhárom modulban
 ├─ ikon.ico                    # Alkalmazásikon
 ├─ Enekeskonyvek_adatai.json   # KönyvTárnok kereső referencia‑adatbázisa
