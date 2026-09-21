@@ -9,11 +9,13 @@ import wx
 from config_manager import load_settings, save_settings
 from theme_manager import apply_theme_from_settings
 from data_manager import (
-    load_hmac_json_with_migration,
+    load_hmac_json,
     save_hmac_json,
     tetelek_egyeznek,
     additiv_lista_import,
     konyvek_tomeges_felvetele,
+    kerj_tomeges_atemeles_megerositest,
+    mutass_tomeges_atemeles_eredmenyt,
 )
 from gyors_kereses import GyorsListaKereso, osszes_kijelolt_index
 
@@ -270,10 +272,12 @@ class BaseItemDialog(wx.Dialog):
         btn_ok.Bind(wx.EVT_BUTTON, self.on_ok)
         self.on_status_change(None)
 
+        id_mentes_gyors = wx.NewIdRef()
         accel_tbl = wx.AcceleratorTable([
-            (wx.ACCEL_CTRL, ord('S'), wx.ID_OK)
+            (wx.ACCEL_CTRL, ord('S'), id_mentes_gyors)
         ])
         self.SetAcceleratorTable(accel_tbl)
+        self.Bind(wx.EVT_MENU, self.on_ok, id=id_mentes_gyors)
 
         self.txt_cim.SetFocus()
 
@@ -308,7 +312,7 @@ class BaseItemDialog(wx.Dialog):
                     parent=self
                 )
                 return
-        event.Skip()
+        self.EndModal(wx.ID_OK)
 
     def get_data(self):
         return {
@@ -344,19 +348,9 @@ class EditItemDialog(BaseItemDialog):
 # ==============================================================================
 
 class Deziderata(wx.Frame):
-    def __init__(self, parent=None, cipher=None):
+    def __init__(self, parent=None):
         super().__init__(parent, title=f"{APP_NAME}", size=(900, 500))
         self.parent = parent
-        # A 'cipher' paramétert csak visszafelé kompatibilitás miatt fogadjuk el
-        # (ha egy hívó modul még átadja) - a mentés/betöltés mostantól a
-        # data_manager.py HMAC-alapú, beépített kulcsos logikáját használja,
-        # ezért itt nincs rá szükség. Ha más modul még Fernet-cipher-t ad át
-        # ide, azt ellenőrizd/töröld a hívó helyen is.
-        if cipher is not None:
-            logging.warning(
-                "A Deziderata 'cipher' paramétere elavult és figyelmen kívül "
-                "marad; az adatvédelem most a data_manager HMAC-logikájával történik."
-            )
 
         # Adatmodell: a tételek listája (szótárakból álló listaként)
         self.items = []
@@ -444,6 +438,7 @@ class Deziderata(wx.Frame):
         self.list.Bind(wx.EVT_LIST_ITEM_ACTIVATED, self.on_reszletek)
         self.list.Bind(wx.EVT_KEY_DOWN, self.on_key_down)
         self.list.Bind(wx.EVT_CHAR, self.on_char)
+        self.list.Bind(wx.EVT_LIST_ITEM_RIGHT_CLICK, self.OnListaJobbKlikk)
 
         self.list.SetFocus()
 
@@ -487,7 +482,7 @@ class Deziderata(wx.Frame):
 
     def load_data(self):
         try:
-            betoltott_adat, ervenyes, _migralt = load_hmac_json_with_migration(DATA_FILE)
+            betoltott_adat, ervenyes = load_hmac_json(DATA_FILE)
         except Exception as e:
             wx.MessageBox(
                 f"Hiba az adatok betöltésekor: {e}",
@@ -560,13 +555,37 @@ class Deziderata(wx.Frame):
 
     # --- ESEMÉNYKEZELŐK ---
 
+    def _MegjelenitPopUpMenut(self):
+        indexek = osszes_kijelolt_index(self.list)
+        if not indexek:
+            return
+
+        popup_menu = wx.Menu()
+        megtekint_item = popup_menu.Append(wx.ID_ANY, "Tétel részletei")
+        szerkeszt_item = popup_menu.Append(wx.ID_ANY, "Tétel szerkesztése")
+        popup_menu.AppendSeparator()
+        torol_item = popup_menu.Append(wx.ID_ANY, f"Kijelölt tételek eltávolítása ({len(indexek)} db)")
+
+        self.Bind(wx.EVT_MENU, self.on_reszletek, megtekint_item)
+        self.Bind(wx.EVT_MENU, self.on_edit, szerkeszt_item)
+        self.Bind(wx.EVT_MENU, self.on_delete, torol_item)
+
+        self.PopupMenu(popup_menu)
+        popup_menu.Destroy()
+
+    def OnListaJobbKlikk(self, event):
+        idx = event.GetIndex()
+        if idx not in osszes_kijelolt_index(self.list):
+            self.list.Select(idx)
+        self._MegjelenitPopUpMenut()
+
     def on_reszletek(self, event):
         """Megnyitja a kijelölt tétel részletes adatlapját."""
         selected_idx = self.list.GetFirstSelected()
         if selected_idx == -1:
             wx.MessageBox(
-                "Kérlek, válassz ki egy tételt a részletek megtekintéséhez!",
-                "Nincs kijelölve tétel",
+                "Kérjük, válasszon ki egy tételt a listából!",
+                "Nincs kijelölés",
                 wx.OK | wx.ICON_INFORMATION
             )
             return
@@ -757,10 +776,7 @@ class Deziderata(wx.Frame):
             return
 
         db = len(kijelolt_indexek)
-        uzenet = f"Biztosan át szeretnéd emelni a kijelölt {db} db tételt az állományba?" if db > 1 else "Biztosan át szeretnéd emelni a kijelölt tételt az állományba?"
-        
-        confirm = wx.MessageBox(uzenet, "Átemelés megerősítése", wx.YES_NO | wx.ICON_QUESTION)
-        if confirm != wx.YES:
+        if not kerj_tomeges_atemeles_megerositest(self, db, "tételt", "az állományba"):
             return
 
         parent_frame = self.GetParent()
@@ -814,26 +830,10 @@ class Deziderata(wx.Frame):
                 del self.items[idx]
             self.save_data()
             self.refresh_list()
-            uzenet = "Az átemelés sikeresen megtörtént!\n\n"
-            uzenet += f"• Hozzáadva az állományhoz: {sikeres} db könyv.\n"
-            if visszautasitott > 0:
-                uzenet += "\nMegjegyzés:\n"
-                uzenet += f"• {visszautasitott} db könyv már szerepel az állományban (duplikátum), így nem került újra felvételre."
-            
-            wx.MessageBox(uzenet, "Átemelés sikeres", wx.OK | wx.ICON_INFORMATION)
 
-        elif visszautasitott > 0:
-            wx.MessageBox(
-                f"Az átemelés nem történt meg!\n\nA kiválasztott könyv(ek) ({visszautasitott} db) már szerepel(nek) az állományban.",
-                "Átemelés sikertelen",
-                wx.OK | wx.ICON_WARNING,
-            )
-        else:
-            wx.MessageBox(
-                "Nem sikerült átemelni a kiválasztott elemeket.",
-                "Átemelés sikertelen",
-                wx.OK | wx.ICON_ERROR,
-            )
+        mutass_tomeges_atemeles_eredmenyt(
+            self, sikeres, visszautasitott, "az állományhoz", "az állományban"
+        )
 
     def feldolgoz_kereso_karakter(self, karakter):
         """Kezeli a karakter hozzáadását a keresési pufferhez és a megfelelő
@@ -868,6 +868,8 @@ class Deziderata(wx.Frame):
         elif keycode == wx.WXK_SPACE:
             # A szóköz billentyű ne nyissa meg a részleteket, de adja hozzá a keresési pufferhez
             self.feldolgoz_kereso_karakter(' ')
+        elif keycode == wx.WXK_WINDOWS_MENU or (keycode == wx.WXK_F10 and event.ShiftDown()):
+            self._MegjelenitPopUpMenut()
         else:
             event.Skip()
 

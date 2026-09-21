@@ -6,10 +6,12 @@ import logging
 from theme_manager import apply_theme_from_settings
 from deziderata import DATA_FILE as DEZIDERATA_DATA_FILE, is_same_book
 from data_manager import (
-    load_hmac_json_with_migration,
+    load_hmac_json,
     save_hmac_json,
     tetelek_egyeznek,
     konyvek_tomeges_felvetele,
+    kerj_tomeges_atemeles_megerositest,
+    mutass_tomeges_atemeles_eredmenyt,
 )
 from gyors_kereses import GyorsListaKereso, osszes_kijelolt_index
 
@@ -581,10 +583,7 @@ class KonyvtarnokKeresoApp(wx.Frame):
             return
 
         db = len(kijelolt_indexek)
-        uzenet = f"Biztosan át szeretnéd emelni a kijelölt {db} db találatot az állományba?" if db > 1 else "Biztosan át szeretnéd emelni a kijelölt találatot az állományba?"
-        
-        confirm = wx.MessageBox(uzenet, "Átemelés megerősítése", wx.YES_NO | wx.ICON_QUESTION)
-        if confirm != wx.YES:
+        if not kerj_tomeges_atemeles_megerositest(self, db, "találatot", "az állományba"):
             return
 
         excel_oszlopok_szama = len(self.oszlopok) if self.oszlopok else 0
@@ -648,27 +647,9 @@ class KonyvtarnokKeresoApp(wx.Frame):
                     sor_idx, wx.Colour(220, 245, 220)
                 )
 
-        if sikeres > 0:
-            uzenet = "Az átemelés sikeresen megtörtént!\n\n"
-            uzenet += f"• Hozzáadva az állományhoz: {sikeres} db könyv.\n"
-            if visszautasitott > 0:
-                uzenet += "\nMegjegyzés:\n"
-                uzenet += f"• {visszautasitott} db könyv már szerepel az állományban (duplikátum), így nem került újra felvételre."
-
-            wx.MessageBox(uzenet, "Átemelés sikeres", wx.OK | wx.ICON_INFORMATION)
-
-        elif visszautasitott > 0:
-            wx.MessageBox(
-                f"Az átemelés nem történt meg!\n\nA kiválasztott könyv(ek) ({visszautasitott} db) már szerepel(nek) az állományban.",
-                "Átemelés sikertelen",
-                wx.OK | wx.ICON_WARNING,
-            )
-        else:
-            wx.MessageBox(
-                "Nem sikerült átemelni a kiválasztott elemeket.",
-                "Átemelés sikertelen",
-                wx.OK | wx.ICON_ERROR,
-            )
+        mutass_tomeges_atemeles_eredmenyt(
+            self, sikeres, visszautasitott, "az állományhoz", "az állományban"
+        )
 
     def atemeles_deziderataba(self):
         if not self.parent:
@@ -690,10 +671,7 @@ class KonyvtarnokKeresoApp(wx.Frame):
             return
 
         db = len(kijelolt_indexek)
-        uzenet = f"Biztosan át szeretnéd emelni a kijelölt {db} db találatot a deziderátába?" if db > 1 else "Biztosan át szeretnéd emelni a kijelölt találatot a deziderátába?"
-
-        confirm = wx.MessageBox(uzenet, "Átemelés megerősítése", wx.YES_NO | wx.ICON_QUESTION)
-        if confirm != wx.YES:
+        if not kerj_tomeges_atemeles_megerositest(self, db, "találatot", "a deziderátába"):
             return
 
         excel_oszlopok_szama = len(self.oszlopok) if self.oszlopok else 0
@@ -705,7 +683,7 @@ class KonyvtarnokKeresoApp(wx.Frame):
         json_fajl = DEZIDERATA_DATA_FILE
 
         try:
-            adat, ervenyes, _migralt = load_hmac_json_with_migration(json_fajl)
+            adat, ervenyes = load_hmac_json(json_fajl)
         except Exception as e:
             logging.error(f"Hiba a dezideráta adatbázis beolvasásakor: {e}", exc_info=True)
             wx.MessageBox(f"Hiba a dezideráta beolvasásakor:\n{e}", "Hiba", wx.OK | wx.ICON_ERROR)
@@ -759,27 +737,9 @@ class KonyvtarnokKeresoApp(wx.Frame):
             self.parent.deziderata_frame.items = deziderata_lista
             self.parent.deziderata_frame.refresh_list()
 
-        if sikeres > 0:
-            uzenet = "Az átemelés sikeresen megtörtént!\n\n"
-            uzenet += f"• Felvéve a dezideráta-jegyzékbe: {sikeres} db könyv.\n"
-            if visszautasitott > 0:
-                uzenet += "\nMegjegyzés:\n"
-                uzenet += f"• {visszautasitott} db könyv már szerepel a kívánságlistán (duplikátum), így nem került újra felvételre."
-
-            wx.MessageBox(uzenet, "Átemelés sikeres", wx.OK | wx.ICON_INFORMATION)
-
-        elif visszautasitott > 0:
-            wx.MessageBox(
-                f"Az átemelés nem történt meg!\n\nA kiválasztott könyv(ek) ({visszautasitott} db) már szerepel(nek) a dezideráta-jegyzékben.",
-                "Átemelés sikertelen",
-                wx.OK | wx.ICON_WARNING,
-            )
-        else:
-            wx.MessageBox(
-                "Nem sikerült átemelni a kiválasztott elemeket.",
-                "Átemelés sikertelen",
-                wx.OK | wx.ICON_ERROR,
-            )
+        mutass_tomeges_atemeles_eredmenyt(
+            self, sikeres, visszautasitott, "a dezideráta-jegyzékbe", "a dezideráta-jegyzékben"
+        )
 
 
 if __name__ == "__main__":

@@ -1,3 +1,2 @@
-cryptography==50.0.0
 reportlab==5.0.0
 wxpython==4.2.5

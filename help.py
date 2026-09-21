@@ -1,6 +1,5 @@
 import wx
-from config_manager import load_settings
-from theme_manager import apply_theme
+from theme_manager import apply_theme_from_settings
 
 class HelpNotebookDialog(wx.Dialog):
     def __init__(self, parent):
@@ -25,7 +24,7 @@ class HelpNotebookDialog(wx.Dialog):
                 "1. Új könyv felvétele:\n"
                 "  Új könyv felvételéhez kattintson az 'Új könyv' gombra a lista feletti eszköztárban, nyomja meg a Ctrl + N billentyűkombinációt, vagy válassza a Fájl menü Új könyv felvétele menüpontját. A megnyíló ablakban töltse ki a könyv adatait (Cím, Alcím, Összeállító, Egyéb személyek, Kiadó, Kiadás helye és éve, Oldalszám, Méret, Kötés típusa, Rövid cím, Bekerülés dátuma, Példány forrása, Státusz és Rövid leírás). A mentéshez kattintson a Mentés gombra vagy nyomja meg a Ctrl + S billentyűket. Fontos: a könyv címét minden esetben kötelező kitölteni!\n\n"
                 "2. Könyv megtekintése és szerkesztése:\n"
-                "  A listában lévő könyv részletes adatlapjának megtekintéséhez nyomja meg az Enter billentyűt a kijelölt elemen, kattintson rá duplán, vagy válassza a helyi menü 'Könyvadatlap megtekintése' pontját. A könyv adatainak módosításához kattintson a 'Kijelölt könyv szerkesztése' gombra, nyomja meg a Ctrl + E billentyűkombinációt, vagy válassza a Fájl -> Könyv szerkesztése menüpontot. Ha végzett a könyv adatainak szerkesztésével, kattintson a Mégse gombra, vagy nyomja meg a Ctrl+S billentyűkombinációt.\n\n"
+                "  A listában lévő könyv részletes adatlapjának megtekintéséhez nyomja meg az Enter billentyűt a kijelölt elemen, kattintson rá duplán, vagy válassza a helyi menü 'Könyvadatlap megtekintése' pontját. A könyv adatainak módosításához kattintson a 'Kijelölt könyv szerkesztése' gombra, nyomja meg a Ctrl + E billentyűkombinációt, vagy válassza a Fájl -> Könyv szerkesztése menüpontot. Ha végzett a könyv adatainak szerkesztésével, kattintson a Mentés gombra, vagy nyomja meg a Ctrl+S billentyűkombinációt.\n\n"
                 "3. Könyvek eltávolítása:\n"
                 "  Egy vagy több könyv állományból való törléséhez jelölje ki a kívánt tételeket a listában, majd nyomja meg a Delete billentyűt, kattintson a 'Kijelöltek törlése' gombra, vagy válassza a Fájl -> Könyv(ek) eltávolítása menüpontot. A rendszer a törlés előtt megerősítést kér.\n\n"
                 "4. Összes elem kijelölése:\n"
@@ -55,7 +54,7 @@ class HelpNotebookDialog(wx.Dialog):
                 "2. Állományjegyzék mentése JSON-ba (Biztonsági mentés):\n"
                 "  A teljes állományjegyzék exportálható szerkeszthető, SHA integritásvédelem nélküli JSON fájlba a Fájl -> Állományjegyzék mentése JSON fájlba... menüpontban (Ctrl + Shift + M). Ez kiválóan alkalmas biztonsági mentésre. A JSON fájl alapértelmezetten az \"allomanyjegyzek.json\" nevet kapja.\n\n"
                 "3. Állományjegyzék betöltése JSON-ból:\n"
-                "  Egy korábban elmentett JSON állományjegyzék beolvasásához használja a Fájl -> Állományjegyzék betöltése JSON fájlból... menüpontot (Ctrl + Shift + B). A mentett JSON fájlból csak azok a könyvek kerülnek felvételre, amelyek még nem szerepelnek a listában.\n"
+                "  Egy korábban elmentett JSON állományjegyzék beolvasásához használja a Fájl -> Állományjegyzék betöltése JSON fájlból... menüpontot (Ctrl + Shift + B). A mentett JSON fájlból csak azok a könyvek kerülnek felvételre, amelyek még nem szerepelnek a listában.\n\nFONTOS: nyers, azaz SHA aláírás nélküli, exportált JSON-t soha ne helyezzen a program mappájába! A program ugyanis az ilyen fájlokat nem tölti be és nem kezeli! Amennyiben az állományjegyzék vagy a dezideráta csak nyers formátumban áll rendelkezésére, használja a megfelelő modul JSON importálás funkcióját a fenti módon.\n"
             ),
                         (
                 "Dezideráta-kezelő",
@@ -187,7 +186,6 @@ class HelpNotebookDialog(wx.Dialog):
         main_sizer.Add(btn_sizer, 0, wx.ALIGN_RIGHT | wx.RIGHT | wx.BOTTOM, 10)
         
         # Téma beállítása
-        config = load_settings()
-        apply_theme(self, config.get("tema", "vilagos"))
-        
+        apply_theme_from_settings(self)
+
         self.SetSizer(main_sizer)

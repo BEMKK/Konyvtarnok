@@ -46,6 +46,14 @@ def should_check_for_updates(config=None):
             return diff_days >= 7
         elif freq == "monthly":
             return diff_days >= 30
+        else:
+            # Ismeretlen/érvénytelen gyakoriság-érték (pl. kézzel vagy
+            # hibásan szerkesztett settings.json) esetén biztonságosan
+            # engedélyezzük az ellenőrzést, ugyanúgy, ahogy a lenti
+            # dátumértelmezési hiba esetén is True-val térünk vissza -
+            # így egy sérült beállítás nem kapcsolja ki némán, örökre a
+            # frissítés-keresést.
+            return True
     except Exception as e:
         logging.warning(f"Dátum értelmezési hiba a frissítés ellenőrzésékor: {e}")
         return True

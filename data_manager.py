@@ -1,5 +1,3 @@
-# data_manager.py
-
 import hashlib
 import hmac
 import json
@@ -28,10 +26,7 @@ DEFAULT_ADATBAZIS_FAJL = os.path.join(_BASE_DIR, "allomanyjegyzek.json")
 # alkalmazásba van beépítve (nem gépspecifikusan generált, mint a régi
 # Fernet-kulcs volt), az adatfájl más gépre átmásolva is ellenőrizhető marad.
 #
-# FIGYELEM: cseréld le az alábbi értéket egy saját, hosszú, véletlenszerű
-# bájtsorozatra (pl. `python -c "import secrets;print(secrets.token_hex(32))"`),
-# és utána ne változtasd meg, mert minden korábban mentett fájl aláírása
-# érvénytelenné válna vele.
+# FIGYELEM: az alábbi értéket ne változtasd meg, mert minden korábban mentett fájl aláírása érvénytelenné válik!
 _HMAC_KEY = b"f5b21b90aa5387ee5a6e6bf939bbee8014d0a5133e62b61a5411401b7ca9d6e7"
 
 
@@ -74,7 +69,6 @@ def load_hmac_json(fajlnev):
     Visszatérési érték: (adat_lista, ervenyes_e)
       - Ha a fájl nem létezik: ([], True).
       - ValueError-t dob, ha a fájl JSON, de nem HMAC-boríték formátumú
-        (pl. régi verzió) - ezt a hívó fogja kezelni/migrálni.
     """
     if not os.path.exists(fajlnev):
         return [], True
@@ -88,84 +82,6 @@ def load_hmac_json(fajlnev):
     adat = nyers["data"]
     ervenyes = hmac.compare_digest(_alairas(adat), str(nyers.get("signature", "")))
     return adat, ervenyes
-
-
-def _migracio_regi_fernet_bajtokbol(nyers_bajtok):
-    """
-    Megpróbálja visszafejteni a régi (1.0.0-s) Fernet-titkosítású állományt.
-
-    Csak akkor sikerülhet, ha a 'cryptography' csomag telepítve van ÉS
-    megvan a régi, gépspecifikus ~/.konyvtar_app/secret.key. Ez a modul
-    EGYETLEN olyan pontja, ahol még szükség lehet a cryptography csomagra,
-    és az import szándékosan lokális (lazy) + try/except-be csomagolt, hogy
-    normál (nem migrációs) futás esetén a program enélkül is elinduljon.
-
-    Visszatérési érték: a visszafejtett lista, vagy None, ha nem sikerült.
-    """
-    try:
-        from cryptography.fernet import Fernet
-    except ImportError:
-        return None
-
-    key_file_path = os.path.join(os.path.expanduser("~"), ".konyvtar_app", "secret.key")
-    if not os.path.exists(key_file_path):
-        return None
-
-    try:
-        with open(key_file_path, "rb") as kf:
-            regi_kulcs = kf.read()
-        decrypted_bytes = Fernet(regi_kulcs).decrypt(nyers_bajtok)
-        adat = json.loads(decrypted_bytes.decode("utf-8"))
-        return adat if isinstance(adat, list) else None
-    except Exception:
-        return None
-
-
-def load_hmac_json_with_migration(fajlnev):
-    """
-    Betölti a fájlt, és ha szükséges, automatikusan migrálja HMAC-boríték
-    formátumra (régi Fernet-titkosított VAGY régi sima/titkosítatlan JSON
-    esetén egyaránt), majd azonnal újra is menti az új formátumban.
-
-    Visszatérési érték: (adat_lista, ervenyes_e, migralt_e)
-      - Új formátumú, érvényes fájl esetén: ervenyes_e mindig True.
-      - Sérült/módosított HMAC-boríték esetén: ervenyes_e=False, az adat
-        mégis visszaadva (a hívó dönti el, bízik-e benne).
-    """
-    if not os.path.exists(fajlnev):
-        return [], True, False
-
-    with open(fajlnev, "rb") as f:
-        nyers_bajtok = f.read()
-
-    # 1. próba: már az új HMAC-boríték formátum?
-    try:
-        nyers_json = json.loads(nyers_bajtok.decode("utf-8"))
-        if isinstance(nyers_json, dict) and "data" in nyers_json and "signature" in nyers_json:
-            adat = nyers_json["data"]
-            ervenyes = hmac.compare_digest(_alairas(adat), str(nyers_json.get("signature", "")))
-            return adat, ervenyes, False
-    except Exception:
-        pass
-
-    # 2. próba: régi Fernet-titkosítás
-    migralt = _migracio_regi_fernet_bajtokbol(nyers_bajtok)
-
-    # 3. próba: régi, titkosítatlan sima JSON lista
-    if migralt is None:
-        try:
-            lehetseges = json.loads(nyers_bajtok.decode("utf-8"))
-            migralt = lehetseges if isinstance(lehetseges, list) else None
-        except Exception:
-            migralt = None
-
-    if migralt is None:
-        raise ValueError(f"Ismeretlen vagy sérült fájlformátum, migráció sikertelen: {fajlnev}")
-
-    # Azonnal átírjuk az új HMAC-boríték formátumba, hogy legközelebb már
-    # ne kelljen migrálni.
-    save_hmac_json(fajlnev, migralt)
-    return migralt, True, True
 
 # ==============================================================================
 # KÖZÖS "ADDITÍV JSON IMPORT" SEGÉDFÜGGVÉNY
@@ -207,7 +123,6 @@ def additiv_lista_import(fajlnev, hozzaad_fv):
             kihagyva += 1
 
     return hozzaadva, kihagyva
-
 
 # ==============================================================================
 # KÖZÖS "TÖMEGES FELVÉTEL AZ ÁLLOMÁNYBA" SEGÉDFÜGGVÉNY
@@ -337,7 +252,7 @@ class KonyvAdatbazis:
 
     def AdatokBetoltese(self):
         try:
-            adat, ervenyes, _migralt = load_hmac_json_with_migration(self.fajlnev)
+            adat, ervenyes = load_hmac_json(self.fajlnev)
         except Exception as e:
             logging.error(f"Hiba az állományjegyzék betöltésekor: {e}", exc_info=True)
             wx.MessageBox(
@@ -416,4 +331,64 @@ class KonyvAdatbazis:
         except Exception as e:
             logging.error(f"Hiba az állományjegyzék mentésekor ({target_filepath}): {e}", exc_info=True)
             return False
+
+
+# ==============================================================================
+# KÖZÖS "TÖMEGES ÁTEMELÉS" UI-SEGÉDFÜGGVÉNYEK
+# ==============================================================================
+# A tényleges felvételi ciklust már a konyvek_tomeges_felvetele közös
+# segédfüggvény végzi, de a köré épülő megerősítő kérdést és az eredményt
+# összegző üzenetablakot korábban a Dezideráta-kezelő ("Felvétel az
+# állományba") és a KönyvTárnok-kereső (mindkét átemelési iránya: állományba
+# és dezideráta-jegyzékbe) egymástól függetlenül, szinte szó szerint
+# megegyező formában tartalmazta. Innentől mindhárom hely ezt a két közös
+# függvényt használja.
+def kerj_tomeges_atemeles_megerositest(parent, darab, tetel_nev, cel_nev):
+    """Megerősítő kérdést jelenít meg egy tömeges átemelés (állományba vagy
+    dezideráta-jegyzékbe emelés) előtt.
+
+    tetel_nev: az átemelendő elem(ek) megnevezése ragozott alakban, pl.
+    "tételt" (Dezideráta-kezelő) vagy "találatot" (KönyvTárnok-kereső).
+    cel_nev: az átemelés célja ragozott alakban, pl. "az állományba" vagy
+    "a deziderátába".
+
+    Visszaadja True-t, ha a felhasználó igennel válaszolt.
+    """
+    uzenet = (
+        f"Biztosan át szeretnéd emelni a kijelölt {darab} db {tetel_nev} {cel_nev}?"
+        if darab > 1
+        else f"Biztosan át szeretnéd emelni a kijelölt {tetel_nev} {cel_nev}?"
+    )
+    valasz = wx.MessageBox(uzenet, "Átemelés megerősítése", wx.YES_NO | wx.ICON_QUESTION, parent)
+    return valasz == wx.YES
+
+
+def mutass_tomeges_atemeles_eredmenyt(parent, sikeres, visszautasitott, hozzaadva_hova, mar_szerepel_hol):
+    """Az átemelés eredményét (siker / részben duplikátum miatti elutasítás /
+    teljes elutasítás) összegző üzenetablakot jelenít meg.
+
+    hozzaadva_hova: pl. "az állományhoz" vagy "a dezideráta-jegyzékbe".
+    mar_szerepel_hol: pl. "az állományban" vagy "a dezideráta-jegyzékben".
+    """
+    if sikeres > 0:
+        uzenet = "Az átemelés sikeresen megtörtént!\n\n"
+        uzenet += f"• Hozzáadva {hozzaadva_hova}: {sikeres} db könyv.\n"
+        if visszautasitott > 0:
+            uzenet += "\nMegjegyzés:\n"
+            uzenet += f"• {visszautasitott} db könyv már szerepel {mar_szerepel_hol} (duplikátum), így nem került újra felvételre."
+        wx.MessageBox(uzenet, "Átemelés sikeres", wx.OK | wx.ICON_INFORMATION, parent)
+    elif visszautasitott > 0:
+        wx.MessageBox(
+            f"Az átemelés nem történt meg!\n\nA kiválasztott könyv(ek) ({visszautasitott} db) már szerepel(nek) {mar_szerepel_hol}.",
+            "Átemelés sikertelen",
+            wx.OK | wx.ICON_WARNING,
+            parent,
+        )
+    else:
+        wx.MessageBox(
+            "Nem sikerült átemelni a kiválasztott elemeket.",
+            "Átemelés sikertelen",
+            wx.OK | wx.ICON_ERROR,
+            parent,
+        )
 

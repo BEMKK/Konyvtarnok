@@ -1,5 +1,5 @@
 import wx
-from config_manager import load_settings, save_settings
+from config_manager import load_settings
 from constants import DEFAULT_LATHATO_OSZLOPOK
 from konyv_lista import KonyvListaCtrl
 from theme_manager import get_theme_names, apply_theme, apply_theme_from_settings

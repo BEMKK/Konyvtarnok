@@ -4,6 +4,14 @@ A projekten végrehajtott lényegi változtatások dokumentációja.
 
 
 
+## [3.0.0] - 2026-09-21
+
+- Megszűnt a v1.x verzióval titkosított JSON fájlok támogatása.
+- Hozzáadva a jobbklikkes felugró menü a Dezideráta-kezelőhöz.
+- Javítások a súgóban és a kódban.
+
+
+
 ## [2.1.1] - 2026-09-20
 
 - Újabb kódjavítások és refaktorálás

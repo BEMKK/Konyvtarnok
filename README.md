@@ -1,6 +1,6 @@
 # KönyvTárnok
 
-> **Verzió:** 2.1.1
+> **Verzió:** 3.0.0
 
 ## Leírás
 
@@ -48,7 +48,6 @@ python main.py
 | Csomag | Verzió | Funkció |
 |--------|--------|---------|
 | `wxpython` | 4.2.5 | Grafikus felület (GUI keretrendszer) |
-| `cryptography` (opcionális) | 50.0.0 | A régi, 1.x verziójú JSON fájlok egyszeri beolvasásához. Hamarosan kivezetésre kerül! |
 | `reportlab` | 5.0.0 | PDF adatlapok és statisztikai jelentések generálása |
 
 ## Projektstruktúra
@@ -110,4 +109,4 @@ Ez a projekt egy vibecoding kísérlet eredménye: a teljes alkalmazás kódját
 
 ---
 
-*Ez a README a projekt aktuális állapotát tükrözi (v2.1.1), és a fejlesztés előrehaladtával frissíthető.*
+*Ez a README a projekt aktuális állapotát tükrözi (v3.0.0), és a fejlesztés előrehaladtával frissíthető.*

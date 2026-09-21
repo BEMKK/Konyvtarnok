@@ -117,12 +117,17 @@ class Konyvtarnok(wx.Frame):
 
         # GYORSBILLENTYŰK (Visszaállítva!)
         id_mindent_kijelol = wx.NewIdRef()
-        id_torles = wx.NewIdRef()
         id_kereso_fokusz = wx.NewIdRef()
 
+        # A Delete billentyűt NEM kötjük itt külön is a törléshez: a Fájl
+        # menü 'Könyv(ek) eltávolítása' pontja (menusor.torles) már saját
+        # \tDelete gyorsbillentyűvel rendelkezik, és ugyanerre a
+        # OnKonyvTorles kezelőre mutat. Egy második, ide kötött Delete-
+        # bejegyzés ugyanarra a billentyűre ugyanazt a kezelőt hívná meg
+        # kétszer egyetlen billentyűlenyomásra (pl. a törlés-megerősítő
+        # ablak kétszeri megjelenését okozva).
         accel_tbl = wx.AcceleratorTable([
             (wx.ACCEL_CTRL, ord('A'), id_mindent_kijelol),
-            (wx.ACCEL_NORMAL, wx.WXK_DELETE, id_torles),
             (wx.ACCEL_CTRL, ord('F'), id_kereso_fokusz),
         ])
         self.SetAcceleratorTable(accel_tbl)
@@ -170,7 +175,6 @@ class Konyvtarnok(wx.Frame):
         self.lista.Bind(wx.EVT_KEY_DOWN, self.OnListaEnter)
 
         self.Bind(wx.EVT_MENU, self.OnMindentKijelol, id=id_mindent_kijelol)
-        self.Bind(wx.EVT_MENU, self.OnKonyvTorles, id=id_torles)
 
         # FÓKUSZ ÉS KIJELÖLÉS (Visszaállítva!)
         self.lista.SetFocus()

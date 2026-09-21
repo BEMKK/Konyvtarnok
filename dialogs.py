@@ -76,8 +76,10 @@ class UjdonsagokDialog(wx.Dialog):
         main_sizer.Add(wx.StaticLine(self), 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 15)
         
         ujdonsagok_lista = [
-            "A régi, Fernet-tel titkosított JSON fájlok támogatása hamarosan kivezetésre kerül!",
-            "Újabb kódjavítások és refaktorálás."
+            "A V1.x verzióval készült, titkosított JSON fájlok a továbbiakban nem támogatottak.",
+            "Hozzáadva a főablakból ismert jobbklikkes helyi menü a Dezideráta-kezelőhöz is.",
+            "Kijavítottunk egy hibát a súgóban, mely könyv szerkesztésénél a Mégse gombot javasolta az adatok mentésére.",
+            "Újabb kódszintű javítások."
         ]
 
         szoveg_box = wx.BoxSizer(wx.VERTICAL)
