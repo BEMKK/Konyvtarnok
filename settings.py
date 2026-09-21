@@ -2,7 +2,7 @@ import wx
 from config_manager import load_settings
 from constants import DEFAULT_LATHATO_OSZLOPOK
 from konyv_lista import KonyvListaCtrl
-from theme_manager import get_theme_names, apply_theme, apply_theme_from_settings
+from theme_manager import get_theme_names, apply_theme
 
 class BeallitasokDialog(wx.Dialog):
     """Beállítások ablak az alkalmazás testreszabásához."""

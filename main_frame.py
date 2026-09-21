@@ -17,7 +17,7 @@ from konyvtarnok_kereso import KonyvtarnokKeresoApp
 from menu_bar import MenuBar
 from konyv_lista import KonyvListaCtrl
 from deziderata import Deziderata
-from data_manager import additiv_lista_import
+from data_manager import additiv_lista_import, szoveg_szuro_egyezik, szuresi_talalatok
 from update import check_for_updates_async
 
 class Konyvtarnok(wx.Frame):
@@ -636,32 +636,6 @@ class Konyvtarnok(wx.Frame):
                 self.kereses_az_allomanyban(keresett_szoveg, pontos_egyezes)
         dlg.Destroy()
 
-    def _szoveg_szuro_egyezik(self, konyv, keresett, pontos_egyezes):
-        """Egy könyv illeszkedik-e a megadott szöveges keresésre.
-
-        Ugyanaz az egyezés-logika, amit a kereses_az_allomanyban is használ;
-        ide van kiemelve, hogy az aktív szűrés predikátumaként (pl. újonnan
-        felvett könyv esetén) is újra lehessen használni.
-        """
-        if isinstance(konyv, dict):
-            ertekek = konyv.values()
-        elif isinstance(konyv, (list, tuple)):
-            ertekek = konyv
-        else:
-            ertekek = vars(konyv).values() if hasattr(konyv, '__dict__') else []
-
-        for ertek in ertekek:
-            if not ertek:
-                continue
-            ertek_str = str(ertek).lower().strip()
-            if pontos_egyezes:
-                if keresett == ertek_str:
-                    return True
-            else:
-                if keresett in ertek_str:
-                    return True
-        return False
-
     def _frissit_szuro_cimke_darabszamot(self, uj_darabszam):
         """Frissíti a szűrő-felirat végén szereplő találatszámot (pl. törlés
         vagy hozzáadás után), anélkül hogy a szűrés szövegét/típusát
@@ -673,20 +647,20 @@ class Konyvtarnok(wx.Frame):
             self.szuro_kijelzo.GetParent().Layout()
 
     def kereses_az_allomanyban(self, keresett_szoveg, pontos_egyezes=False):
-        keresett = keresett_szoveg.lower().strip()
-        
         if not self.teljes_adatlista:
             if hasattr(self.db, 'konyvek'):
                 self.teljes_adatlista = self.db.konyvek
             elif hasattr(self.db, 'get_osszes_konyv'):
                 self.teljes_adatlista = self.db.get_osszes_konyv()
 
-        leszurt_adatok = [
-            konyv for konyv in self.teljes_adatlista
-            if self._szoveg_szuro_egyezik(konyv, keresett, pontos_egyezes)
-        ]
+        # A tényleges egyezés-vizsgálatot a data_manager.szuresi_talalatok /
+        # szoveg_szuro_egyezik közös (GUI-mentes) függvényei végzik, hogy azt
+        # más ablakok (pl. egy jövőbeli kereső ablak) vagy tesztek is
+        # közvetlenül újra tudják használni.
+        keresett = keresett_szoveg.lower().strip()
+        leszurt_adatok = szuresi_talalatok(self.teljes_adatlista, keresett_szoveg, pontos_egyezes)
 
-        self.aktiv_szuro_predikatum = lambda k, _ker=keresett, _pe=pontos_egyezes: self._szoveg_szuro_egyezik(k, _ker, _pe)
+        self.aktiv_szuro_predikatum = lambda k, _ker=keresett, _pe=pontos_egyezes: szoveg_szuro_egyezik(k, _ker, _pe)
 
         if not leszurt_adatok:
             self.aktiv_szurt_lista = []

@@ -4,6 +4,15 @@ A projekten végrehajtott lényegi változtatások dokumentációja.
 
 
 
+## [3.0.1] - 2026-09-22
+
+- Javítva az ikon hiánya a Névjegy-ablakban.
+- Gépelési hibák javítása a súgóban.
+- Javítva a kimásolt hibaüzenetek törlődése a vágólapról a program bezárásakor.
+- Újabb kódszintű javítások (duplikációk, inkonzisztenciák megszüntetése, stb.)
+
+
+
 ## [3.0.0] - 2026-09-21
 
 - Megszűnt a v1.x verzióval titkosított JSON fájlok támogatása.

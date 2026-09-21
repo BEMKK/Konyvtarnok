@@ -392,3 +392,43 @@ def mutass_tomeges_atemeles_eredmenyt(parent, sikeres, visszautasitott, hozzaadv
             parent,
         )
 
+
+# ==============================================================================
+# KÖZÖS SZÖVEGES KERESÉSI/SZŰRÉSI PREDIKÁTUM
+# ==============================================================================
+# Ezt az egyezés-logikát (egy tétel minden mezőértékét végignézve részszöveg-
+# vagy pontos egyezés vizsgálata) korábban a főablak (main_frame.py) tartotta
+# saját, privát metódusaként, jóllehet nincs benne semmi, ami a GUI-hoz vagy
+# kifejezetten a könyvekhez kötné - bármilyen dict/lista/objektum-alapú
+# tételgyűjteményen (pl. egy jövőbeli kereső ablakon vagy egy teszten)
+# ugyanígy használható.
+def szoveg_szuro_egyezik(tetel, keresett, pontos_egyezes):
+    """Egy tétel (könyv-dict, lista/tuple vagy tetszőleges objektum)
+    illeszkedik-e a megadott (már kisbetűsített, levágott) keresett szövegre,
+    a mezőértékek soronkénti vizsgálatával."""
+    if isinstance(tetel, dict):
+        ertekek = tetel.values()
+    elif isinstance(tetel, (list, tuple)):
+        ertekek = tetel
+    else:
+        ertekek = vars(tetel).values() if hasattr(tetel, '__dict__') else []
+
+    for ertek in ertekek:
+        if not ertek:
+            continue
+        ertek_str = str(ertek).lower().strip()
+        if pontos_egyezes:
+            if keresett == ertek_str:
+                return True
+        else:
+            if keresett in ertek_str:
+                return True
+    return False
+
+
+def szuresi_talalatok(tetelek, keresett_szoveg, pontos_egyezes=False):
+    """Egy tételgyűjtemény (pl. könyvek listája) leszűrése egy szöveges
+    keresésre, a szoveg_szuro_egyezik predikátum alapján."""
+    keresett = keresett_szoveg.lower().strip()
+    return [tetel for tetel in tetelek if szoveg_szuro_egyezik(tetel, keresett, pontos_egyezes)]
+

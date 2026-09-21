@@ -1,0 +1,7 @@
+2026-09-21 17:46:14,950 - ERROR - Váratlan hiba történt.
+Traceback (most recent call last):
+  File "C:\Users\WIN11\Documents\GitHub\KönyvTárnok\main.py", line 161, in <module>
+    1 / 0
+    ~~^~~
+ZeroDivisionError: division by zero
+

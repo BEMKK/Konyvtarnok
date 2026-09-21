@@ -1,4 +1,5 @@
 import wx
+import logging
 
 from config_manager import load_settings
 
@@ -65,7 +66,7 @@ def apply_theme(window, theme_name="vilagos"):
     for child in window.GetChildren():
         if isinstance(child, wx.Panel):
             child.SetBackgroundColour(theme["panel_bg"])
-        elif isinstance(child, (wx.TextCtrl, wx.ComboBox, wx.ListBox)):
+        elif isinstance(child, (wx.TextCtrl, wx.ComboBox, wx.ListBox, wx.Choice, wx.SearchCtrl)):
             child.SetBackgroundColour(theme["ctrl_bg"])
             child.SetForegroundColour(theme["ctrl_fg"])
         elif isinstance(child, wx.ListCtrl):
@@ -82,14 +83,17 @@ def apply_theme(window, theme_name="vilagos"):
                     header.SetBackgroundColour(theme["header_bg"])
                     header.SetForegroundColour(theme["header_fg"])
                     header.Refresh()
-            except Exception:
-                pass
+            except Exception as e:
+                logging.debug(f"Fejléc színezési hiba (nem kritikus): {e}")
                 
         elif isinstance(child, wx.Button):
             child.SetBackgroundColour(theme["btn_bg"])
             child.SetForegroundColour(theme["btn_fg"])
         elif isinstance(child, wx.StaticText):
             child.SetForegroundColour(theme["text_fg"])
+        elif isinstance(child, (wx.CheckBox, wx.RadioButton)):
+            child.SetForegroundColour(theme["text_fg"])
+            child.SetBackgroundColour(theme["panel_bg"])
         
         # Rekurzió a gyermek elemek gyermekeire (pl. sizer-be ágyazott panelek, ablakok)
         if hasattr(child, "GetChildren") and child.GetChildren():

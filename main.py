@@ -51,11 +51,6 @@ class HibaAblak(wx.Dialog):
         )
         vbox.Add(text_ctrl, 1, wx.EXPAND | wx.LEFT | wx.RIGHT, 10)
 
-        # vbox.Add(
-            # wx.StaticText(panel, label=f"A naplófájl helye: {log_path}"),
-            # 0, wx.ALL, 10
-        # )
-
         # Gombsor
         btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
         copy_btn = wx.Button(panel, label="Hibaüzenet másolása")
@@ -80,18 +75,59 @@ class HibaAblak(wx.Dialog):
         ok_btn.SetDefault()
 
     def on_copy(self, event):
+        sikeres = False
         if wx.TheClipboard.Open():
             wx.TheClipboard.SetData(wx.TextDataObject(self.message))
+            wx.TheClipboard.Flush()  # Biztosítja, hogy az adatok a program bezárása után is a rendszer-vágólapon maradjanak
             wx.TheClipboard.Close()
+            sikeres = True
+        else:
+            sikeres = self._masolas_win32_vagolapra(self.message)
+
+        if sikeres:
             copy_btn = event.GetEventObject()
             eredeti = copy_btn.GetLabel()
             copy_btn.SetLabel("Kimásolva a vágólapra")
-            wx.CallLater(1500, lambda: copy_btn.SetLabel(eredeti) if copy_btn else None)
+            
+            def reset_label():
+                try:
+                    if copy_btn and bool(copy_btn):
+                        copy_btn.SetLabel(eredeti)
+                except (RuntimeError, Exception):
+                    pass
+
+            wx.CallLater(1500, reset_label)
         else:
             wx.MessageBox(
-                "Nem sikerült hozzáférni a vágólaphoz.", "Hiba",
-                wx.OK | wx.ICON_WARNING
+                "Nem sikerült megnyitni a vágólapot.",
+                "Hiba",
+                wx.OK | wx.ICON_ERROR,
             )
+
+    def _masolas_win32_vagolapra(self, szoveg):
+        """Windows API segítségével másol a vágólapra (biztonsági tartalék)."""
+        try:
+            import ctypes
+            user32 = ctypes.windll.user32
+            kernel32 = ctypes.windll.kernel32
+            
+            GMEM_MOVEABLE = 0x0002
+            CF_UNICODETEXT = 13
+
+            if user32.OpenClipboard(None):
+                user32.EmptyClipboard()
+                encoded = szoveg.encode('utf-16le') + b'\x00\x00'
+                h_mem = kernel32.GlobalAlloc(GMEM_MOVEABLE, len(encoded))
+                if h_mem:
+                    p_mem = kernel32.GlobalLock(h_mem)
+                    ctypes.memmove(p_mem, encoded, len(encoded))
+                    kernel32.GlobalUnlock(h_mem)
+                    user32.SetClipboardData(CF_UNICODETEXT, h_mem)
+                user32.CloseClipboard()
+                return True
+        except Exception as e:
+            logging.error(f"Win32 vágólap másolási hiba: {e}")
+        return False
 
     def on_open(self, event):
         try:

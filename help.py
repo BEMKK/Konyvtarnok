@@ -62,7 +62,7 @@ class HelpNotebookDialog(wx.Dialog):
                 "1. A Dezideráta-kezelő megnyitása:\n"
                 "  A beszerzendő vagy hiányzó könyvek nyilvántartására szolgáló modult az Eszközök -> Dezideráta-kezelő menüpontból vagy a Ctrl + D billentyűkombinációval nyithatja meg.\n\n"
                 "2. Új tétel hozzáadása:\n"
-                "  Új beszerzendő könyv felvételéhez nyomja meg az 'Új tétel' gombot vagy a Ctrl + N billentyűket. A megnyíló ablakban töltse ki a könyv aadatait. Az alapadatok (cím, összeállító, egyéb személyek, kiadó, kiadás helye és éve) mellett megadhatja a tétel prioritását, státuszát (kapható/nem kapható). Kapható státusz esetén megjelenik három további mező, ahol a megvásárolható tétel lelőhelyét, jelenlegi vagy becsült árát és webes hivatkozását (link) is rögzítheti. Ha a könyv státuszát Nem kapható-ra állítja, az utóbbi három mező eltűnik, és tartalmuk törlődik a könyv adatlapjáról. Amikor végzett az adatok kitöltésével, kattintson a Mentés gombra, vagy nyomja meg a Ctrl+S billentyűt.\n\n"
+                "  Új beszerzendő könyv felvételéhez nyomja meg az 'Új tétel' gombot vagy a Ctrl + N billentyűket. A megnyíló ablakban töltse ki a könyv adatait. Az alapadatok (cím, összeállító, egyéb személyek, kiadó, kiadás helye és éve) mellett megadhatja a tétel prioritását, státuszát (kapható/nem kapható). Kapható státusz esetén megjelenik három további mező, ahol a megvásárolható tétel lelőhelyét, jelenlegi vagy becsült árát és webes hivatkozását (link) is rögzítheti. Ha a könyv státuszát Nem kapható-ra állítja, az utóbbi három mező eltűnik, és tartalmuk törlődik a könyv adatlapjáról. Amikor végzett az adatok kitöltésével, kattintson a Mentés gombra, vagy nyomja meg a Ctrl+S billentyűt.\n\n"
                 "3. Tételek megtekintése és szerkesztése:\n"
                 "  A kijelölt tétel részleteit az Enter billentyűvel vagy dupla kattintással tekintheti meg. Ha a tétel kapható, és van megadva link, az adatlapon rákattintva a program megnyitja a weboldalt az Ön alapértelmezett böngészőjében. Tétel szerkesztéséhez használja a 'Kijelölt tétel szerkesztése' gombot vagy a Ctrl + E billentyűparancsot. Az adatok módosítása után kattintson a Mentés gombra, vagy nyomja meg a Ctrl+S billentyűt.\n\n"
                 "4. Tételek törlése:\n"
@@ -70,7 +70,7 @@ class HelpNotebookDialog(wx.Dialog):
                 "5. Tétel felvétele a fő könyvállományba:\n"
                 "  Ha egy beszerzendő könyvet sikerült megvásárolni/megszerezni, a kijelölt tételt a Ctrl + F billentyűkombinációval vagy a 'Felvétel az állományba' gombbal közvetlenül átemelheti a fő katalógusba. Átemeléskor a program megkérdezi, hogy biztosan át szeretné e emelni a tételt. Amennyiben ezt szeretné, kattintson az Igen gombra.\n\n"
                 "6. Dezideráta adatok mentése és betöltése:\n"
-                "  A dezideráta jegyzék exportálhstó szerkeszthető, azaz SHA integritásvédelem nélküli JSON fájlba (Ctrl + Shift + M) és bármikor visszatölthető (Ctrl + Shift + B) a Tételek menüből. JSON fájl betöltése esetén csak azok a kötetek kerülnek importálásra, amelyek még nem szerepelnek a jegyzékben. Mentéskor a fájl neve alapértelmezetten \"deziderata.json\"\n"
+                "  A dezideráta jegyzék exportálható szerkeszthető, azaz SHA integritásvédelem nélküli JSON fájlba (Ctrl + Shift + M) és bármikor visszatölthető (Ctrl + Shift + B) a Tételek menüből. JSON fájl betöltése esetén csak azok a kötetek kerülnek importálásra, amelyek még nem szerepelnek a jegyzékben. Mentéskor a fájl neve alapértelmezetten \"deziderata.json\"\n"
             ),
             (
                 "KönyvTárnok kereső",
@@ -90,7 +90,7 @@ class HelpNotebookDialog(wx.Dialog):
                 "1. A Beállítások ablak megnyitása:\n"
                 "  Az alkalmazás testreszabásához válassza az Eszközök -> Beállítások menüpontot vagy nyomja meg a Ctrl + B billentyűkombinációt.\n\n"
                 "2. Vizuális téma váltása:\n"
-                "  Beállíthatja az alkalmazás megjelenési témáját (pl. Világos vagy Sötét téma), amely azonnal érvényesül a főablakon, a párbeszédablakokon és a segédmodulokon is. Ehhez vállassza ki a kívánt témát, majd kattintson a mentés gombra.\n\n"
+                "  Beállíthatja az alkalmazás megjelenési témáját (pl. Világos vagy Sötét téma), amely azonnal érvényesül a főablakon, a párbeszédablakokon és a segédmodulokon is. Ehhez válassza ki a kívánt témát, majd kattintson a mentés gombra.\n\n"
                 "3. Alapértelmezett rendezés:\n"
                 "  Kiválaszthatja, hogy a program indításakor a könyvlista milyen mező szerint legyen automatikusan sorba rendezve. A Rendezés-menüben kiválasztott szempont csupán ideiglenesen, a program bezárásáig érvényes.\n\n"
                 "4. Látható oszlopok beállítása:\n"
@@ -98,7 +98,7 @@ class HelpNotebookDialog(wx.Dialog):
                 "5. Mappák automatikus megjegyzése:\n"
                 "  A program automatikusan megjegyzi a legutóbb használt PDF export és JSON mentési/betöltési könyvtárakat, így nem kell minden alkalommal kikeresni azokat. Az alkalmazás első használatakor ezeket manuálisan is megadhatja a beállítások ablak ezen fülén.\n"
                 "6. Frissítések keresése:\n"
-                "  A Beállítások ablak frissítések fülén megadhatja, hogy a program keressen e automatikusan frissítéseket. Ehhez jelölje be a frissítések automatikus ellenőrzése jelölőnégyzetet.\n"
+                "  A Beállítások ablak frissítések fülén megadhatja, hogy a program keressen-e automatikusan frissítéseket. Ehhez jelölje be a frissítések automatikus ellenőrzése jelölőnégyzetet.\n"
                 "  Ha a négyzet be van jelölve, megjelenik egy kombinált listamező, ahol kiválaszthatja a frissítések ellenőrzésének gyakoriságát (minden indításkor, naponta, hetente, havonta).\n"
                 "  A beállítás mentéséhez kattintson a mentés gombra.\n"
             ),

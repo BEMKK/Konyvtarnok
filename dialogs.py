@@ -14,16 +14,17 @@ class NevjegyDialog(wx.Dialog):
 
         base_dir = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
 
-        icon_path = os.path.join(base_dir, "ikon.png")
+        icon_path = os.path.join(base_dir, "ikon.ico")
 
         try:
             if os.path.exists(icon_path):
-                img = wx.Image(icon_path, wx.BITMAP_TYPE_PNG)
-                img = img.Scale(80, 80, wx.IMAGE_QUALITY_HIGH)
-                bitmap = wx.Bitmap(img)
-                
-                icon_bitmap = wx.StaticBitmap(self, bitmap=bitmap)
-                sizer.Add(icon_bitmap, 0, wx.ALIGN_CENTER | wx.TOP, 15)
+                img = wx.Image(icon_path, wx.BITMAP_TYPE_ANY)
+                if img.IsOk():
+                    img = img.Scale(80, 80, wx.IMAGE_QUALITY_HIGH)
+                    bitmap = wx.Bitmap(img)
+                    
+                    icon_bitmap = wx.StaticBitmap(self, bitmap=bitmap)
+                    sizer.Add(icon_bitmap, 0, wx.ALIGN_CENTER | wx.TOP, 15)
             else:
                 logging.warning(f"Névjegy ikon nem található: {icon_path}")
         except Exception as e:
@@ -76,9 +77,9 @@ class UjdonsagokDialog(wx.Dialog):
         main_sizer.Add(wx.StaticLine(self), 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 15)
         
         ujdonsagok_lista = [
-            "A V1.x verzióval készült, titkosított JSON fájlok a továbbiakban nem támogatottak.",
-            "Hozzáadva a főablakból ismert jobbklikkes helyi menü a Dezideráta-kezelőhöz is.",
-            "Kijavítottunk egy hibát a súgóban, mely könyv szerkesztésénél a Mégse gombot javasolta az adatok mentésére.",
+            "Javítva az ikon betöltésének hibája a névjegy dialogban.",
+            "Kijavítottunk egy hibát, mely miatt a vágólapra másolt hibaüzenet a program bezárásakor törlődött a vágólapról.",
+            "Gépelési hibák javítása a súgóban.",
             "Újabb kódszintű javítások."
         ]
 

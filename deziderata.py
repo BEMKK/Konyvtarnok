@@ -3,7 +3,6 @@ import locale
 import logging
 import os
 import sys
-import unicodedata
 import webbrowser
 import wx
 from config_manager import load_settings, save_settings
@@ -18,6 +17,9 @@ from data_manager import (
     mutass_tomeges_atemeles_eredmenyt,
 )
 from gyors_kereses import GyorsListaKereso, osszes_kijelolt_index
+# A magyar_rendezesi_kulcs az utils.py-ba került át: tisztán szövegfeldolgozó
+# logika, semmi köze a konyv_lista.py-beli (GUI) KonyvListaCtrl-hez.
+from utils import magyar_rendezesi_kulcs
 
 # Magyar locale beállítása
 try:
@@ -25,8 +27,8 @@ try:
 except Exception:
     try:
         locale.setlocale(locale.LC_ALL, "hu_HU")
-    except Exception:
-        pass
+    except Exception as e:
+        logging.debug(f"Magyar locale beállítása nem sikerült: {e}")
 
 APP_NAME = "KönyvTárnok Dezideráta-kezelő"
 if getattr(sys, "frozen", False):
@@ -453,17 +455,10 @@ class Deziderata(wx.Frame):
         self.Show()
 
     def rendez_listat(self):
-        """A tételek ábécérendbe rendezése Cím szerint (az ékezetes karaktereket az alapkarakterükhöz illesztve)."""
-        def normalize_str(text):
-            text = str(text or "").lower()
-            # Eltávolítja az ékezeteket a pontos ábécés besoroláshoz (pl. Á -> A)
-            normalized = unicodedata.normalize('NFD', text)
-            clean = ''.join(c for c in normalized if unicodedata.category(c) != 'Mn')
-            return clean, text
-
+        """A tételek ábécérendbe rendezése Cím szerint a magyar ábécé szabályai alapján."""
         def get_sort_key(item):
             val = item.get("cim", item.get("title", ""))
-            return normalize_str(val)
+            return magyar_rendezesi_kulcs(val)
 
         self.items.sort(key=get_sort_key)
 

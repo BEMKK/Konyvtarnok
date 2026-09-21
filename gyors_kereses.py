@@ -35,11 +35,6 @@ class GyorsListaKereso:
         self.puffer = ""
         self.utolso_leutes_ideje = 0
 
-    def visszaallit(self):
-        """Törli a keresési puffert (pl. ha a keresőmezőt kiürítik)."""
-        self.puffer = ""
-        self.utolso_leutes_ideje = 0
-
     def torol_egy_karaktert(self):
         """A Backspace billentyű kezeléséhez: törli a puffer utolsó karakterét."""
         if self.puffer:
@@ -68,13 +63,13 @@ class GyorsListaKereso:
         if unicode_key != wx.WXK_NONE:
             try:
                 karakter = chr(unicode_key).lower()
-            except Exception:
+            except (ValueError, OverflowError):
                 pass
 
         if not karakter and 32 <= key_code <= 255:
             try:
                 karakter = chr(key_code).lower()
-            except Exception:
+            except (ValueError, OverflowError):
                 pass
 
         if karakter:

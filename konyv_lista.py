@@ -1,60 +1,14 @@
 import wx
 import re
-import datetime
 
 from constants import DEFAULT_LATHATO_OSZLOPOK
 from gyors_kereses import GyorsListaKereso, osszes_kijelolt_index
-
-HONAPOK = {
-    "január": 1, "február": 2, "március": 3, "április": 4,
-    "május": 5, "június": 6, "július": 7, "augusztus": 8,
-    "szeptember": 9, "október": 10, "november": 11, "december": 12
-}
-
-def bekerult_datum_kulcs(datum_str):
-    try:
-        reszek = str(datum_str).strip().split()
-        if len(reszek) >= 3:
-            ev = int(reszek[0])
-            honap = HONAPOK.get(reszek[1].lower(), 1)
-            nap = int(reszek[2])
-            return datetime.date(ev, honap, nap)
-    except Exception:
-        pass
-    return datetime.date(1900, 1, 1)
-
-def romai_szam_atlakito(match):
-    romai_terkep = {
-        'I': 1, 'V': 5, 'X': 10, 'L': 50,
-        'C': 100, 'D': 500, 'M': 1000
-    }
-    s = match.group(0).rstrip('.').upper()
-    if not s:
-        return match.group(0)
-
-    ertek = 0
-    prev = 0
-    for c in reversed(s):
-        curr = romai_terkep.get(c, 0)
-        if curr < prev:
-            ertek -= curr
-        else:
-            ertek += curr
-            prev = curr
-    return f"{ertek:04d}"
-
-def magyar_rendezesi_kulcs(szoveg):
-    HU_SORREND = " aábcdeéfghiíjklmnoóöőpqrstuúüűvwxyz0123456789"
-    HU_TERKEP = {karakter: index for index, karakter in enumerate(HU_SORREND)}
-    
-    tisztitott = str(szoveg).lower().strip()
-    tisztitott = re.sub(
-        r'\b(?=[MDCLXVI]+\bM{0,4}(CM|CD|D?C{0,3})(XC|XL|L?X{0,3})(IX|IV|V?I{0,3}))[MDCLXVI]+\.?',
-        romai_szam_atlakito,
-        tisztitott,
-        flags=re.IGNORECASE
-    )
-    return [HU_TERKEP.get(c, ord(c) + 1000) for c in tisztitott]
+# A rendezési/dátumfeldolgozó segédfüggvények (magyar_rendezesi_kulcs,
+# bekerult_datum_kulcs) az utils.py-ba kerültek át, mert tisztán szöveg-/
+# adatfeldolgozó logika, semmi közük a wx-hez - így más, nem-GUI modulok
+# (statisztika.py, deziderata.py) is ezekből, nem pedig ebből a vizuális
+# komponensből (KonyvListaCtrl) importálhatják őket.
+from utils import magyar_rendezesi_kulcs, bekerult_datum_kulcs
 
 
 class KonyvListaCtrl(wx.ListCtrl):
@@ -158,7 +112,7 @@ class KonyvListaCtrl(wx.ListCtrl):
             # 1. Elsődleges rendezési érték kiszámítása
             if akt_rendezes in ("oldalszam", "ev"):
                 elso = szam_kulcs(raw_val)
-            elif akt_rendezes in ("meretek"):
+            if akt_rendezes == "meretek":
                 ertek = konyv.get("meretek", "")
                 elso = meret_kulcs(ertek)
             elif akt_rendezes == "bekerult":

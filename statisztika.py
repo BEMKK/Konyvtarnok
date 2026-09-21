@@ -4,8 +4,13 @@ import wx
 from theme_manager import apply_theme_from_settings
 from export_manager import export_statisztika_pdf
 from config_manager import load_settings, save_settings
-from konyv_lista import bekerult_datum_kulcs, magyar_rendezesi_kulcs
-from collections import defaultdict
+from utils import (
+    bekerult_datum_kulcs,
+    magyar_rendezesi_kulcs,
+    ertek_feldolgoz,
+    egyedi_kitoltetlen_statisztika,
+    kereszttabla_statisztika,
+)
 
 class StatisztikaDialog(wx.Dialog):
     """Állomány statisztikai összesítő dialógus, feltételek szerinti darabszám-számítással."""
@@ -354,53 +359,10 @@ class StatisztikaDialog(wx.Dialog):
         ment_dlg.Destroy()
 
     def ertek_feldolgoz(self, kulcs, ertek_str):
-        val = str(ertek_str or "").strip()
-
-        if kulcs == "bekerult" and val:
-            match = re.search(r'\b(19\d\d|20\d\d)\b', val)
-            if match:
-                return match.group(1)
-
-        if kulcs == "evszazad":
-            return self._get_evszazad(val)
-
-        if kulcs == "evtized":
-            return self._get_evtized(val)
-
-        return val
-
-    def _get_evszazad(self, ev_str):
-        match = re.search(r'\b(\d{3,4})\b', str(ev_str or ""))
-        if not match:
-            return ""
-        ev = int(match.group(1))
-    
-        szazad = (ev - 1) // 100 + 1
-    
-        romai_szamok = {
-            15: "XV.", 16: "XVI.", 17: "XVII.", 18: "XVIII.", 
-            19: "XIX.", 20: "XX.", 21: "XXI."
-        }
-        return f"{romai_szamok.get(szazad, str(szazad) + '.')} század"
-
-    def _get_evtized(self, ev_str):
-        match = re.search(r'\b(\d{4})\b', str(ev_str or ""))
-        if not match:
-            return ""
-        ev = int(match.group(1))
-        evtized = (ev // 10) * 10
-
-        # Helyes toldalékolás meghatározása
-        if evtized % 100 == 0:
-            if evtized % 1000 == 0:
-                toldalek = "-es"  # 1000-es, 2000-es, 3000-es ("ezer" -> magas)
-            else:
-                toldalek = "-as"  # 1500-as, 1800-as, 1900-as ("száz" -> mély)
-        else:
-            tizes = (evtized // 10) % 10
-            toldalek = "-es" if tizes in [1, 4, 5, 7, 9] else "-as"
-        
-        return f"{evtized}{toldalek} évek"
+        """Vékony hívó réteg az utils.ertek_feldolgoz köré - a tényleges
+        számítás (évszázad/évtized-feliratozás, bekerülési év kiszűrése)
+        GUI-független, ezért az utils.py-ban él."""
+        return ertek_feldolgoz(kulcs, ertek_str)
 
     def get_kivalasztott_rendezesi_kulcs(self):
         """Visszaadja a kiválasztott rendezési kulcsot."""
@@ -419,133 +381,24 @@ class StatisztikaDialog(wx.Dialog):
         return "cim"
 
     def general_egyedi_kitoltetlen_statisztika(self, kulcs, megjelenitett_nev):
-        """Kifejezetten az adható mező kitöltetlen sorait listázza ki."""
-        osszes_konyv = getattr(self.db, "konyvek", [])
-        osszes_szam = len(osszes_konyv)
-        if osszes_szam == 0:
-            return "Az adatbázis üres."
+        """Kifejezetten az adott mező kitöltetlen sorait listázza ki.
 
-        hianyos_konyvek = []
-        forras_kulcs = "ev" if kulcs in ["evszazad", "evtized"] else kulcs
-        for konyv in osszes_konyv:
-            val = self.ertek_feldolgoz(kulcs, konyv.get(forras_kulcs, ""))
-            if not val:
-                hianyos_konyvek.append(konyv)
-
-        hiany_szam = len(hianyos_konyvek)
-        szazalek = (hiany_szam / osszes_szam * 100) if osszes_szam > 0 else 0
-
-        szoveg = "ADATMINŐSÉGI JELENTÉS – HIÁNYZÓ ADATOK\n"
-        szoveg += "─" * 44 + "\n"
-        szoveg += f"Mező neve: {megjelenitett_nev}\n"
-        szoveg += f"Hiányzó adatok száma: {hiany_szam} db ({szazalek:.1f}%)\n"
-        szoveg += f"Állomány összesen: {osszes_szam} db kötet\n\n"
-
-        if hiany_szam > 0:
-            szoveg += f"A kötetek listája, ahol a(z) '{megjelenitett_nev}' mező hiányzik:\n"
-            for i, k in enumerate(hianyos_konyvek, 1):
-                cim = k.get("cim", "Nincs cím")
-                szerzo = k.get("szerzo", "")
-                if szerzo:
-                    szoveg += f"  {i}. {szerzo}: {cim}\n"
-                else:
-                    szoveg += f"  {i}. {cim}\n"
-        else:
-            szoveg += "Minden kötetnél ki van töltve ez a mező!"
-
-        return szoveg
-
-    def _kereszttabla_rendezesi_kulcs(self, kulcs, ertek):
-        """A kereszttáblás jelentés sor- és oszlopfejléceinek rendezési kulcsa.
-
-        Alapból a Python sorted() egyszerű szöveges (lexikografikus) sorrendet
-        adna, ami pl. a "9" és "150" oldalszámoknál, vagy eltérő számjegyű
-        éveknél helytelen sorrendet eredményezne. Ehelyett a mező típusának
-        megfelelően szám (év, oldalszám, bekerülés éve), méret vagy magyar
-        ábécé szerint (a többi mezőnél, beleértve az évszázad/évtized
-        feliratokat is, amikben a magyar_rendezesi_kulcs a római számokat is
-        helyesen kezeli) rendezünk.
-        """
-        szoveg = str(ertek or "").strip()
-
-        if kulcs in ("ev", "oldalszam", "bekerult"):
-            szam_str = "".join(filter(str.isdigit, szoveg))
-            return (0, int(szam_str)) if szam_str else (1, 0)
-
-        if kulcs == "meretek":
-            magassag_resz = szoveg.split('x')[0].split('X')[0].strip()
-            match = re.search(r'\d+(?:[.,]\d+)?', magassag_resz)
-            return (0, float(match.group(0).replace(',', '.'))) if match else (1, 0.0)
-
-        return (0, magyar_rendezesi_kulcs(szoveg))
+        A tényleges (GUI-mentes) számítást az utils.egyedi_kitoltetlen_statisztika
+        végzi; ez a metódus csak az adatbázis aktuális könyvlistáját adja át neki."""
+        return egyedi_kitoltetlen_statisztika(
+            getattr(self.db, "konyvek", []), kulcs, megjelenitett_nev
+        )
 
     def general_kereszttabla(self, kulcs1, kulcs2, szures_kifejezes=""):
-        """Kétdimenziós megoszlás listázása név-normalizálással és pontos szűréssel."""
-        osszes_konyv = getattr(self.db, "konyvek", [])
-        nev_map = dict(self.statisztikai_mezok)
+        """Kétdimenziós megoszlás listázása név-normalizálással és pontos szűréssel.
 
-        # Pontos szűrés előkészítése (ha konkrét értéket választottak ki)
-        szuro_text = ""
-        if szures_kifejezes and not szures_kifejezes.startswith("("):
-            szuro_text = szures_kifejezes.lower().strip()
-
-        matrix = defaultdict(lambda: defaultdict(int))
-        megjelenített_nevek = {}
-        megjelenített_nevek2 = {}
-
-        # Virtuális mezők (évszázad, évtized) esetén az 'ev' mezőt kell lekérni a könyvből
-        f_kulcs1 = "ev" if kulcs1 in ["evszazad", "evtized"] else kulcs1
-        f_kulcs2 = "ev" if kulcs2 in ["evszazad", "evtized"] else kulcs2
-
-        for konyv in osszes_konyv:
-            v1_raw = (
-                self.ertek_feldolgoz(kulcs1, konyv.get(f_kulcs1, ""))
-                or "(Nincs megadva)"
-            )
-            v2_raw = (
-                self.ertek_feldolgoz(kulcs2, konyv.get(f_kulcs2, ""))
-                or "(Nincs megadva)"
-            )
-
-            norm_v1 = v1_raw.lower().strip()
-            # A másodlagos szempontot (v2) is normalizáljuk, ugyanúgy mint
-            # az elsődlegeset (v1) - enélkül pl. "Budapest" és "budapest"
-            # két külön sorként szerepelt volna a kereszttábla belső
-            # bontásában, feleslegesen szétdarabolva az összesítést.
-            norm_v2 = v2_raw.lower().strip()
-
-            if norm_v1 not in megjelenített_nevek:
-                megjelenített_nevek[norm_v1] = v1_raw
-            if norm_v2 not in megjelenített_nevek2:
-                megjelenített_nevek2[norm_v2] = v2_raw
-
-            matrix[norm_v1][norm_v2] += 1
-
-        szoveg = "ÁLLOMÁNYSTATISZTIKAI JELENTÉS – KERESZTTÁBLÁS ELEMZÉS\n"
-        szoveg += "────────────────────────────────────────────\n"
-        szoveg += f"Elsődleges szempont: {nev_map.get(kulcs1, kulcs1)}\n"
-        szoveg += f"Másodlagos szempont: {nev_map.get(kulcs2, kulcs2)}\n"
-        if szuro_text:
-            szoveg += f"Keresett érték: '{szures_kifejezes}'\n"
-        szoveg += "\n"
-
-        talalat_van = False
-        for norm_r1 in sorted(matrix.keys(), key=lambda v: self._kereszttabla_rendezesi_kulcs(kulcs1, v)):
-            # Pontos egyezés vizsgálata a részszöveg-keresés helyett
-            if szuro_text and norm_r1 != szuro_text:
-                continue
-
-            talalat_van = True
-            r1_nev = megjelenített_nevek[norm_r1]
-            osszesen_r1 = sum(matrix[norm_r1].values())
-
-            szoveg += f"Találatok száma: {osszesen_r1}\n"
-            for norm_r2, db in sorted(matrix[norm_r1].items(), key=lambda x: self._kereszttabla_rendezesi_kulcs(kulcs2, x[0])):
-                r2_nev = megjelenített_nevek2.get(norm_r2, norm_r2)
-                szoveg += f"    - {r2_nev}: {db}\n"
-            szoveg += "\n"
-
-        if not talalat_van:
-            szoveg += "Nincs a keresési feltételnek megfelelő találat."
-
-        return szoveg
+        A tényleges (GUI-mentes) számítást az utils.kereszttabla_statisztika
+        végzi; ez a metódus csak az adatbázis könyvlistáját és a mezőnevek
+        szótárát adja át neki."""
+        return kereszttabla_statisztika(
+            getattr(self.db, "konyvek", []),
+            dict(self.statisztikai_mezok),
+            kulcs1,
+            kulcs2,
+            szures_kifejezes,
+        )
