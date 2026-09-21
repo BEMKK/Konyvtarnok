@@ -4,268 +4,267 @@ A projekten végrehajtott lényegi változtatások dokumentációja.
 
 
 
-## [3.0.1] - 2026-09-22
+## \[3.0.1] - 2026-09-21
 
-- Javítva az ikon hiánya a Névjegy-ablakban.
-- Gépelési hibák javítása a súgóban.
-- Javítva a kimásolt hibaüzenetek törlődése a vágólapról a program bezárásakor.
-- Újabb kódszintű javítások (duplikációk, inkonzisztenciák megszüntetése, stb.)
+* Javítva az ikon hiánya a Névjegy-ablakban.
+* Gépelési hibák javítása a súgóban.
+* Javítva a kimásolt hibaüzenetek törlődése a vágólapról a program bezárásakor.
+* Újabb kódszintű javítások (duplikációk, inkonzisztenciák megszüntetése, stb.)
 
 
 
-## [3.0.0] - 2026-09-21
+## \[3.0.0] - 2026-09-21
 
-- Megszűnt a v1.x verzióval titkosított JSON fájlok támogatása.
-- Hozzáadva a jobbklikkes felugró menü a Dezideráta-kezelőhöz.
-- Javítások a súgóban és a kódban.
+* Megszűnt a v1.x verzióval titkosított JSON fájlok támogatása.
+* Hozzáadva a jobbklikkes felugró menü a Dezideráta-kezelőhöz.
+* Javítások a súgóban és a kódban.
 
 
 
-## [2.1.1] - 2026-09-20
+## \[2.1.1] - 2026-09-20
 
-- Újabb kódjavítások és refaktorálás
+* Újabb kódjavítások és refaktorálás
 
 
 
-## [2.1.0] - 2026-09-19
+## \[2.1.0] - 2026-09-19
 
-- Mostantól lehetőség van a hibanapló megnyitására vagy másolására közvetlenül a felugró ablakból.
-- Javítások a Deziderátából és KönyvTárnok-keresőből való átemelés folyamatában.
-- Kisebb kódjavítások és refaktorálás.
+* Mostantól lehetőség van a hibanapló megnyitására vagy másolására közvetlenül a felugró ablakból.
+* Javítások a Deziderátából és KönyvTárnok-keresőből való átemelés folyamatában.
+* Kisebb kódjavítások és refaktorálás.
 
 
 
-## [2.0.0] - 2026-09-19
+## \[2.0.0] - 2026-09-19
 
-- Fernet-titkosítás kivezetése az adatbázis-fájlok hordozhatósága érdekében. A JSON fájlokat mostantól HMAC-SHA256 alapú adatintegritásvédelem védi.
+* Fernet-titkosítás kivezetése az adatbázis-fájlok hordozhatósága érdekében. A JSON fájlokat mostantól HMAC-SHA256 alapú adatintegritásvédelem védi.
 
 
 
-## [1.0.0] - 2026-09-18
+## \[1.0.0] - 2026-09-18
 
-- Első stabil verzió!
+* Első stabil verzió!
+* A könyvadatlapok pdf fájlból történő importálása mostantól nem támogatott.
 
-- A könyvadatlapok pdf fájlból történő importálása mostantól nem támogatott.
 
 
+## \[0.24.0] - 2026-09-17
 
-## [0.24.0] - 2026-09-17
+* Kisebb kódjavítások.
 
-- Kisebb kódjavítások.
 
 
+## \[0.23.8] - 2026-09-17
 
-## [0.23.8] - 2026-09-17
+* Felugró ablak hozzáadása sikertelen JSON betöltés esetén.
+* JSON importálása esetén a főprogramban, ha már vannak könyvek a listában, csak a hiányzó kötetek kerülnek felvételre.
+* A súgó bővítve az új funkció leírásával."
 
-- Felugró ablak hozzáadása sikertelen JSON betöltés esetén.
-- JSON importálása esetén a főprogramban, ha már vannak könyvek a listában, csak a hiányzó kötetek kerülnek felvételre.
-- A súgó bővítve az új funkció leírásával."
 
 
+## \[0.23.7] - 2026-09-16
 
-## [0.23.7] - 2026-09-16
+* Javítva az állománystatisztikai jelentésben a találatok rendezésének hibája.
+* Javítva a szűrés viselkedése új könyv hozzáadása, importálása és törlése esetén.
+* Újabb kódjavítások.
 
-- Javítva az állománystatisztikai jelentésben a találatok rendezésének hibája.
-- Javítva a szűrés viselkedése új könyv hozzáadása, importálása és törlése esetén.
-- Újabb kódjavítások.
 
 
+## \[0.23.6] - 2026-09-14
 
-## [0.23.6] - 2026-09-14
+* Javítva a fájlütközés-dialog hibája, mely bezáráskor automatikusan felülírt minden fájlt.
+* Javítva az 1900-as évek toldalékolási hibája az állománystatisztikában.
+* Újabb kódjavítások.
 
-- Javítva a fájlütközés-dialog hibája, mely bezáráskor automatikusan felülírt minden fájlt.
-- Javítva az 1900-as évek toldalékolási hibája az állománystatisztikában.
-- Újabb kódjavítások.
 
 
+## \[0.23.5] - 2026-09-14
 
-## [0.23.5] - 2026-09-14
+* Javítva a frissítési gyakoriság beállításának hibája.
+* Javítva a 2000-es évek toldalékolási hibája az állománystatisztikában.
 
-- Javítva a frissítési gyakoriság beállításának hibája.
-- Javítva a 2000-es évek toldalékolási hibája az állománystatisztikában.
 
 
+## \[0.23.4] - 2026-09-13
 
-## [0.23.4] - 2026-09-13
+* Javítások a súgóban és a menüben.
 
-- Javítások a súgóban és a menüben.
 
 
+## \[0.23.3] - 2026-09-12
 
-## [0.23.3] - 2026-09-12
+* Súgó és GUI szövegek javítása.
 
-- Súgó és GUI szövegek javítása.
 
 
+## \[0.23.2] - 2026-09-11
 
-## [0.23.2] - 2026-09-11
+* Hozzáadva a referencia-adatbázisban lévő kötetek számát mutató status-bar a KönyvTárnok-keresőhöz.
 
-- Hozzáadva a referencia-adatbázisban lévő kötetek számát mutató status-bar a KönyvTárnok-keresőhöz.
 
 
+## \[0.23.1] - 2026-09-09
 
-## [0.23.1] - 2026-09-09
+* Javítva a JSON fájlok alapértelmezett mentési és betöltési útvonalának hibája a Dezideráta-kezelőben.
 
-- Javítva a JSON fájlok alapértelmezett mentési és betöltési útvonalának hibája a Dezideráta-kezelőben.
 
 
+## \[0.23.0] - 2026-09-09
 
-## [0.23.0] - 2026-09-09
+* Hozzáadva a frissítés keresése funkció.
+* Javítva a kezdőbetűvel való keresés hibája, mely hosszú magánhangzóval kezdődő cím hiánya esetén, hosszú magánhangzóra annak rövid párjára ugrott.
 
-- Hozzáadva a frissítés keresése funkció.
-- Javítva a kezdőbetűvel való keresés hibája, mely hosszú magánhangzóval kezdődő cím hiánya esetén, hosszú magánhangzóra annak rövid párjára ugrott.
 
 
+## \[0.22.2] - 2026-09-08
 
-## [0.22.2] - 2026-09-08
+* Jelentősen kibővítve a súgó és a billentyűparancsok listája.
+* A Dezideráta-kezelőből eltávolítva a Ctrl+R billentyűparancs, a tétel részletei dialog immár kizárólag enterrel vagy dupla kattintással nyitható meg.
 
-- Jelentősen kibővítve a súgó és a billentyűparancsok listája.
-- A Dezideráta-kezelőből eltávolítva a Ctrl+R billentyűparancs, a tétel részletei dialog immár kizárólag enterrel vagy dupla kattintással nyitható meg.
 
 
+## \[0.22.1] - 2026-09-06
 
-## [0.22.1] - 2026-09-06
+* Javítva a right click menü billentyűzetes előhívása.
 
-- Javítva a right click menü billentyűzetes előhívása.
 
 
+## \[0.22.0] - 2026-09-05
 
-## [0.22.0] - 2026-09-05
+* A KönyvTárnok kereső excel helyett mostantól json-t kezel.
 
-- A KönyvTárnok kereső excel helyett mostantól json-t kezel.
 
 
+## \[0.21.0] - 2026-09-03
 
-## [0.21.0] - 2026-09-03
+* Az alkalmazás és moduljai új nevet kaptak.
 
-- Az alkalmazás és moduljai új nevet kaptak.
 
 
+\[0.20.0] - 2026-08-30
 
-[0.20.0] - 2026-08-30
+* Hozzáadva a súgó funkció, mely az Újdonságok és Névjegy menüponttal együtt a Súgó menüből érhető el.
 
-- Hozzáadva a súgó funkció, mely az Újdonságok és Névjegy menüponttal együtt a Súgó menüből érhető el.
 
 
+## \[0.19.0] - 2026-08-26
 
-## [0.19.0] - 2026-08-26
+* Hozzáadva az állománystatisztika kereszttáblás szűrése, valamint a beállításokhoz a statisztikai jelentés exportálási célmappájának megadása.
+* A főmenüből végzett listarendezés mostantól csak ideiglenes, alapértelmezett rendezés a beállításokban választható.
 
-- Hozzáadva az állománystatisztika kereszttáblás szűrése, valamint a beállításokhoz a statisztikai jelentés exportálási célmappájának megadása.
-- A főmenüből végzett listarendezés mostantól csak ideiglenes, alapértelmezett rendezés a beállításokban választható.
 
 
+## \[0.18.0] - 2026-08-24
 
-## [0.18.0] - 2026-08-24
+* Hozzáadva az állománystatisztika és elérési utak manuális megadása.
+* Módosítva a rendezés menü szempontjai, a lista cím, összeállító, kiadó, kiadás éve, oldalszám, méret és bekerülés dátuma szerint rendezhető.
 
-- Hozzáadva az állománystatisztika és elérési utak manuális megadása.
-- Módosítva a rendezés menü szempontjai, a lista cím, összeállító, kiadó, kiadás éve, oldalszám, méret és bekerülés dátuma szerint rendezhető.
 
 
+## \[0.17.0] - 2026-08-21
 
-## [0.17.0] - 2026-08-21
+* Új az élő keresősáv a könyvlista azonnali szűrésére.
 
-- Új az élő keresősáv a könyvlista azonnali szűrésére.
 
 
+## \[0.16.0] - 2026-08-18
 
-## [0.16.0] - 2026-08-18
+* Új funkció a felület témájának testreszabása, a világos mellett sötét, kék és rózsaszín téma választható.
 
-- Új funkció a felület témájának testreszabása, a világos mellett sötét, kék és rózsaszín téma választható.
 
 
+## \[0.15.0] - 2026-08-15
 
-## [0.15.0] - 2026-08-15
+* Hozzáadva a kereső dialog az állomány köteteinek keresésére és szűrésére.
 
-- Hozzáadva a kereső dialog az állomány köteteinek keresésére és szűrésére.
 
 
+## \[0.14.0] - 2026-08-14
 
-## [0.14.0] - 2026-08-14
+* Hozzáadva a beállítások dialog a fő lista megjelenítendő oszlopainak testreszabására.
 
-- Hozzáadva a beállítások dialog a fő lista megjelenítendő oszlopainak testreszabására.
 
 
+## \[0.13.0] - 2026-08-11
 
-## [0.13.0] - 2026-08-11
+* Hozzáadva a lista rendezésének lehetősége a főmenüből cím, szerző, kiadó, kiadás helye, kiadás éve és státusz szerint.
 
-- Hozzáadva a lista rendezésének lehetősége a főmenüből cím, szerző, kiadó, kiadás helye, kiadás éve és státusz szerint.
 
 
+## \[0.12.0] - 2026-08-09
 
-## [0.12.0] - 2026-08-09
+* Hozzáadva az "Egyéb személyek" oszlop a Könyvtárnok keresőhöz.
 
-- Hozzáadva az "Egyéb személyek" oszlop a Könyvtárnok keresőhöz.
 
 
+## \[0.11.0] - 2026-08-06
 
-## [0.11.0] - 2026-08-06
+* Eltávolítva az rtf fájlok importálásának lehetősége.
+* A főprogram és a dezideráta kezelő mostantól titkosítva tárolja az adatokat a json-ban a külső módosítás elkerülése érdekében.
 
-- Eltávolítva az rtf fájlok importálásának lehetősége.
-- A főprogram és a dezideráta kezelő mostantól titkosítva tárolja az adatokat a json-ban a külső módosítás elkerülése érdekében.
 
 
+## \[0.10.0] - 2026-08-05
 
-## [0.10.0] - 2026-08-05
+* Hozzáadva a KönyvTárnok kereső a könyvek külső adatbázisból való felvételére és adataik keresésére.
 
-- Hozzáadva a KönyvTárnok kereső a könyvek külső adatbázisból való felvételére és adataik keresésére.
 
 
+## \[0.9.0] - 2026-08-03
 
-## [0.9.0] - 2026-08-03
+* Hozzáadva a Dezideráta-kezelő a beszerezni kívánt kötetek kezelésére.
 
-- Hozzáadva a Dezideráta-kezelő a beszerezni kívánt kötetek kezelésére.
 
 
+## \[0.8.0] - 2026-08-01
 
-## [0.8.0] - 2026-08-01
+* Hozzáadva a json fájlok mentésének és betöltésének lehetősége.
 
-- Hozzáadva a json fájlok mentésének és betöltésének lehetősége.
 
 
+## \[0.7.0] - 2026-07-29
 
-## [0.7.0] - 2026-07-29
+* Hozzáadva az Újdonságok dialog az aktuális verzió változtatásainak megjelenítésére.
 
-- Hozzáadva az Újdonságok dialog az aktuális verzió változtatásainak megjelenítésére.
 
 
+## \[0.6.0] - 2026-07-28
 
-## [0.6.0] - 2026-07-28
+* Hozzáadva a könyvadatlapok exportálásának lehetősége pdf formátumba.
 
-- Hozzáadva a könyvadatlapok exportálásának lehetősége pdf formátumba.
 
 
+## \[0.5.0] - 2026-07-26
 
-## [0.5.0] - 2026-07-26
+* Megjelent a pdf és rtf fájlok importálási lehetősége.
 
-- Megjelent a pdf és rtf fájlok importálási lehetősége.
 
 
+## \[0.4.0] - 2026-07-24
 
-## [0.4.0] - 2026-07-24
+* Gombsor a lista felett új könyv hozzáadására, kijelölt könyv szerkesztésére és törlésére.
 
-- Gombsor a lista felett új könyv hozzáadására, kijelölt könyv szerkesztésére és törlésére.
 
 
+## \[0.3.0] - 2026-07-22
 
-## [0.3.0] - 2026-07-22
+* Kijelölt könyv adatlapjának megtekintésének lehetősége enterrel, annak szerkesztése nélkül.
 
-- Kijelölt könyv adatlapjának megtekintésének lehetősége enterrel, annak szerkesztése nélkül.
 
 
+## \[0.2.0] - 2026-07-20
 
-## [0.2.0] - 2026-07-20
+* Több könyv kijelölésének és egyidejű eltávolításának lehetősége.
 
-- Több könyv kijelölésének és egyidejű eltávolításának lehetősége.
 
 
+## \[0.1.0] - 2026-07-19
 
-## [0.1.0] - 2026-07-19
+* Új, egypaneles nézet. A teljes ablakot a könyvek listája foglalja el.
 
-- Új, egypaneles nézet. A teljes ablakot a könyvek listája foglalja el.
 
 
+## \[0.0.1] - 2026-07-18
 
-## [0.0.1] - 2026-07-18
-
-- Alapverzió.
+* Alapverzió.
 
