@@ -19,8 +19,22 @@ class HelpNotebookDialog(wx.Dialog):
 
         pages_data = [
             (
+                "Áttekintés",
+                "AZ ALKALMAZÁS ÁTTEKINTÉSE ÉS FŐBB FUNKCIÓI\n\n"
+                "1. Főablak:\n"
+                "  A program megnyitásakor az alkalmazás főablaka jelenik meg, melyben a fő könyvállományt, vagyis a jelenleg birtokában lévő kötetek listáját láthatja és kezelheti.\n\n"
+                "2. Eszköztár és státuszsor:\n"
+                "  A főablakban és a dezideráta-kezelőben egyaránt megtalálható a lista feletti eszköztár, melynek gombjai a könyvekkel való műveletek (hozzáadás, szerkesztés, törlés) gyors elvégzésére szolgálnak. A jobb oldalon látható Szűrés törlése gomb alapértelmezetten le van tiltva mindaddig, amíg kereséssel vagy statisztikából nem szűri a listát. Az ablak alsó részén lévő státuszsor az állományban, illetve dezideráta-jegyzékben lévő kötetek számát mutatja.\n\n"
+                "3. Menüsor:\n"
+                "  A főablakban és a Dezideráta-kezelőben is található egy felső menüsor. A főablakban a fájl menüből indíthatók a könyv- és fájlműveletek (új könyv hozzáadása, könyv szerkesztése, törlése, pdf adatlap exportálása, JSON mentése/betöltése). A rendezés menüből ideiglenesen rendezheti a listát cím, szerző, kiadó, kiadás helye és éve, méret, valamint bekerülés dátuma és oldalszám szerint, ám ez a rendezés csak a program bezárásáig érvényes. Az eszközök menüben találja a Dezideráta-kezelő, a KönyvTárnok-kereső és a Keresés és szűrés dialog menüpontokat, valamint az állománystatisztikát és a beállításokat. A súgó menüből az alkalmazás súgóját, névjegyét, a frissítések ellenőrzését, valamint a használt verzió újdonságainak listáját érheti el.\n\n"
+                "4. Dezideráta-kezelő:\n"
+                "  A Dezideráta-kezelőben a beszerezni kívánt könyvek listáját vezetheti. Az alapvető bibliográfiai adatok mellett megadhatja a tétel prioritását (elsődleges vagy másodlagos), valamint státuszát (jelenleg kapható/jelenleg nem kapható). Kapható státusz esetén lehetősége van megadni a tétel lelőhelyét, jelenlegi vagy becsült árát és esetleges linkjét is.\n\n"
+                "5. KönyvTárnok-kereső:\n"
+                "  A KönyvTárnok-keresővel egy, a programba csomagolt JSON adatbázisban kereshet, a találatokat pedig lehetősége van átemelni az állományba vagy a deziderátába, illetve vágólapra másolni.\n"
+            ),
+            (
                 "Állománykezelés",
-                "FŐABLAK ÉS ÁLLOMÁNYKEZELÉS\n\n"
+                "MŰVELETEK KÖNYVEKKEL\n\n"
                 "1. Új könyv felvétele:\n"
                 "  Új könyv felvételéhez kattintson az 'Új könyv' gombra a lista feletti eszköztárban, nyomja meg a Ctrl + N billentyűkombinációt, vagy válassza a Fájl menü Új könyv felvétele menüpontját. A megnyíló ablakban töltse ki a könyv adatait (Cím, Alcím, Összeállító, Egyéb személyek, Kiadó, Kiadás helye és éve, Oldalszám, Méret, Kötés típusa, Rövid cím, Bekerülés dátuma, Példány forrása, Státusz és Rövid leírás). A mentéshez kattintson a Mentés gombra vagy nyomja meg a Ctrl + S billentyűket. Fontos: a könyv címét minden esetben kötelező kitölteni!\n\n"
                 "2. Könyv megtekintése és szerkesztése:\n"

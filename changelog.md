@@ -4,6 +4,12 @@ A projekten végrehajtott lényegi változtatások dokumentációja.
 
 
 
+## [3.1.0] - 2026-09-22
+
+- Új, áttekintés fül a súgóban, mely általános leírást ad az alkalmazásról és annak főbb funkcióiról, kezeléséről.
+
+
+
 ## \[3.0.1] - 2026-09-21
 
 * Javítva az ikon hiánya a Névjegy-ablakban.

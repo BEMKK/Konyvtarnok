@@ -77,10 +77,7 @@ class UjdonsagokDialog(wx.Dialog):
         main_sizer.Add(wx.StaticLine(self), 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 15)
         
         ujdonsagok_lista = [
-            "Javítva az ikon betöltésének hibája a névjegy dialogban.",
-            "Kijavítottunk egy hibát, mely miatt a vágólapra másolt hibaüzenet a program bezárásakor törlődött a vágólapról.",
-            "Gépelési hibák javítása a súgóban.",
-            "Újabb kódszintű javítások."
+            "Új, áttekintés fül a súgóban, mely általános leírást ad az alkalmazás főbb funkcióiról és kezeléséről."
         ]
 
         szoveg_box = wx.BoxSizer(wx.VERTICAL)
