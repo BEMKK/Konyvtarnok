@@ -77,7 +77,7 @@ class UjdonsagokDialog(wx.Dialog):
         main_sizer.Add(wx.StaticLine(self), 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 15)
         
         ujdonsagok_lista = [
-            "Javítva a listafrissítés hibája, mely akkor jelentkezett, ha a könyv szerkesztése dialog a könyvadatlapról lett megnyitva.",
+            "Javítva a listafrissítés hibája a Dezideráta-kezelőben, mely akkor jelentkezett, ha a könyv szerkesztése dialog az adatlapról lett megnyitva.",
             "Újabb kódrefaktorálás és javítások."
         ]
 

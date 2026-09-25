@@ -1,6 +1,6 @@
 # KönyvTárnok
 
-> **Verzió:** 3.1.1
+> **Verzió:** 3.1.2
 
 ## Leírás
 
@@ -110,4 +110,4 @@ Ez a projekt egy vibecoding kísérlet eredménye: a teljes alkalmazás kódját
 
 ---
 
-*Ez a README a projekt aktuális állapotát tükrözi (v3.1.1), és a fejlesztés előrehaladtával frissíthető.*
+*Ez a README a projekt aktuális állapotát tükrözi (v3.1.2), és a fejlesztés előrehaladtával frissíthető.*

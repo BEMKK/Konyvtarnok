@@ -9,6 +9,16 @@ from reportlab.pdfbase.ttfonts import TTFont
 # adatlap/szerkesztő dialógusokét - lásd a constants.py megjegyzését.
 from constants import BIBLIOGRAFIAI_MEZO_DEFINICIOK, PELDANY_MEZO_DEFINICIOK
 
+# A "Példány rövid leírása" mező felirata is a constants.py PELDANY_MEZO_DEFINICIOK
+# listájából származik, nem szabad itt még egyszer, kézzel leírni - korábban ez a
+# felirat szó szerint (kézzel megismételve) szerepelt itt lentebb, az
+# export_konyv_pdf-ben lévő kétsoros-tördelési speciális esetben. Ha valaki a
+# constants.py-ban átnevezné ezt a feliratot, az a duplikált string miatt
+# csendben elszakadt volna tőle, és a "Példány rövid leírása" mező elvesztette
+# volna a kétsoros (felirat/érték külön sorba tördelt) megjelenítését anélkül,
+# hogy bárki észrevette volna.
+ROVID_LEIRAS_FELIRAT = dict(PELDANY_MEZO_DEFINICIOK).get("rovid_leiras", "Példány rövid leírása:")
+
 # Betöltjük az Arial betűtípust a PDF-hez, hogy az összes magyar ékezet (ő, ű is) működjön
 try:
     pdfmetrics.registerFont(TTFont('Arial', 'arial.ttf'))
@@ -26,9 +36,9 @@ def export_konyv_pdf(konyv, fajlnev):
 
     y = 800
     for sor in sablon.splitlines():
-        if sor.startswith("Példány rövid leírása:") and len(sor) > len("Példány rövid leírása:"):
-            felirat = "Példány rövid leírása:"
-            ertek = sor[len("Példány rövid leírása:"):].strip()
+        if sor.startswith(ROVID_LEIRAS_FELIRAT) and len(sor) > len(ROVID_LEIRAS_FELIRAT):
+            felirat = ROVID_LEIRAS_FELIRAT
+            ertek = sor[len(ROVID_LEIRAS_FELIRAT):].strip()
             
             c.drawString(50, y, felirat)
             y -= 18

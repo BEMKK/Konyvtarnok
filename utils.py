@@ -147,25 +147,24 @@ def ertek_feldolgoz(kulcs, ertek_str):
 
 
 def statisztikai_szures(teljes_adatlista, kulcs, keresett_ertek):
-    """Leszűri a könyvek listáját egy kiválasztott statisztikai mezőre és értékre."""
+    """Leszűri a könyvek listáját egy kiválasztott statisztikai mezőre és értékre.
+
+    A szűrési feltételt (predikátum) egyetlen helyen, a belső predikatum()
+    függvényben definiáljuk, és ugyanezt használjuk mind a leszűrt lista
+    előállítására, mind a hívónak visszaadott predikátumra - korábban ez a
+    feltétel egy ciklusban és egy külön predikatum() függvényben is,
+    egymástól függetlenül, szó szerint meg volt ismételve.
+    """
     is_hianyzo = keresett_ertek == "Nincs kitöltve"
     forras_kulcs = "ev" if kulcs in ["evszazad", "evtized"] else kulcs
-    leszurt_adatok = []
-
-    for konyv in teljes_adatlista:
-        val = ertek_feldolgoz(kulcs, konyv.get(forras_kulcs, ""))
-        if is_hianyzo:
-            if not val:
-                leszurt_adatok.append(konyv)
-        else:
-            if val.lower() == keresett_ertek.lower():
-                leszurt_adatok.append(konyv)
 
     def predikatum(konyv):
         val = ertek_feldolgoz(kulcs, konyv.get(forras_kulcs, ""))
         if is_hianyzo:
             return not val
         return val.lower() == keresett_ertek.lower()
+
+    leszurt_adatok = [konyv for konyv in teljes_adatlista if predikatum(konyv)]
 
     return leszurt_adatok, predikatum, is_hianyzo
 

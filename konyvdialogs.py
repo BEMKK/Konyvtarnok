@@ -6,6 +6,10 @@ from theme_manager import apply_theme_from_settings
 # mint az itteni adatlap/szerkesztő dialógusok - lásd a constants.py
 # megjegyzését.
 from constants import MEZO_DEFINICIOK
+# A kijelölés/fókusz szerkesztés utáni visszaállításához (lásd
+# DeziderataReszletekDialog.on_szerkesztes) ugyanazt az egyezés-vizsgálatot
+# használjuk, mint amit a Deziderata.on_edit már használ.
+from data_manager import is_same_book
 
 class KonyvReszletekDialog(wx.Dialog):
     """Könyv adatainak kizárólagos megjelenítése (Olvasó mód - NVDA kompatibilis)."""
@@ -332,15 +336,38 @@ class DeziderataReszletekDialog(wx.Dialog):
         event.Skip()
 
     def on_szerkesztes(self, event):
-        """Átvált szerkesztő módra a szerkesztő dialógus megnyitásával."""
+        """Átvált szerkesztő módra a szerkesztő dialógus megnyitásával.
+
+        A mentés (refresh_list()) után a Deziderata.on_edit-tel megegyező
+        módon visszaállítjuk a kijelölést és a fókuszt a szerkesztett
+        tételen - a refresh_list() ugyanis törli és újraépíti a lista
+        minden sorát, ami enélkül kijelölés/fókusz és görgetési pozíció
+        nélkül hagyná a listát. Az új sorindexet (amely a Cím szerinti
+        újrarendezés miatt eltérhet a szerkesztés előttitől) ugyanazzal az
+        is_same_book egyezés-vizsgálattal keressük meg, amit a
+        Deziderata.on_edit is használ, hogy a két útvonal viselkedése ne
+        térjen el egymástól.
+        """
         self.EndModal(wx.ID_OK)
-        dlg = EditItemDialog(self.GetParent(), data=self.item_data, index=self.index)
+        szulo = self.GetParent()
+        dlg = EditItemDialog(szulo, data=self.item_data, index=self.index)
         if dlg.ShowModal() == wx.ID_OK:
             updated_data = dlg.get_data()
-            if self.index is not None and hasattr(self.GetParent(), "items"):
-                self.GetParent().items[self.index] = updated_data
-                self.GetParent().save_data()
-                self.GetParent().refresh_list()
+            if self.index is not None and hasattr(szulo, "items"):
+                szulo.items[self.index] = updated_data
+                szulo.save_data()
+                szulo.refresh_list()
+
+                target_idx = -1
+                for idx, item in enumerate(szulo.items):
+                    if is_same_book(item, updated_data):
+                        target_idx = idx
+                        break
+                if target_idx == -1 and hasattr(szulo, "list") and szulo.list.GetItemCount() > 0:
+                    target_idx = min(self.index, szulo.list.GetItemCount() - 1)
+
+                if target_idx != -1 and hasattr(szulo, "select_and_focus"):
+                    szulo.select_and_focus(target_idx)
         dlg.Destroy()
 
 
