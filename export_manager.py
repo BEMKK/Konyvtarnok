@@ -4,6 +4,10 @@ from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
+# A mezők sorrendjét és feliratait a constants.py-ból importáljuk, hogy
+# ugyanaz az egyetlen forrás írja le őket, mint a konyvdialogs.py-beli
+# adatlap/szerkesztő dialógusokét - lásd a constants.py megjegyzését.
+from constants import BIBLIOGRAFIAI_MEZO_DEFINICIOK, PELDANY_MEZO_DEFINICIOK
 
 # Betöltjük az Arial betűtípust a PDF-hez, hogy az összes magyar ékezet (ő, ű is) működjön
 try:
@@ -44,27 +48,24 @@ def export_konyv_pdf(konyv, fajlnev):
     logging.info(f"PDF mentve: {fajlnev}")
 
 def general_sablon(konyv):
-    """Visszaadja a sablon szövegét a könyv adataival kitöltve."""
-    return f"""
-Bibliográfiai adatok
-Cím: {konyv.get('cim', '')}
-Alcím: {konyv.get('alcim', '')}
-Összeállító: {konyv.get('szerzo', '')}
-Egyéb személyek: {konyv.get('egyeb_szemelyek', '')}
-Kiadó: {konyv.get('kiado', '')}
-Kiadás helye: {konyv.get('hely', '')}
-Kiadás éve: {konyv.get('ev', '')}
+    """Visszaadja a sablon szövegét a könyv adataival kitöltve.
 
-Példány adatai
-Oldalszám: {konyv.get('oldalszam', '')}
-Méret (Ma x sz, cm): {konyv.get('meretek', '')}
-Kötés típusa: {konyv.get('kotes', '')}
-Rövid cím: {konyv.get('rovid_cim', '')}
-Bekerülés dátuma: {konyv.get('bekerult', '')}
-Példány forrása: {konyv.get('forras', '')}
-Példány státusza: {konyv.get('status', '')}
-Példány rövid leírása: {konyv.get('rovid_leiras', '')}
-""".strip()
+    A mezők sorrendjét és feliratait a constants.py-beli
+    BIBLIOGRAFIAI_MEZO_DEFINICIOK / PELDANY_MEZO_DEFINICIOK listák adják -
+    ugyanaz az egyetlen forrás, amit a konyvdialogs.py-beli adatlap- és
+    szerkesztő dialógusok (MEZO_DEFINICIOK) is használnak -, hogy a
+    PDF-exportban szereplő mezők/feliratok sose térjenek el csendben azoktól.
+    """
+    sorok = ["Bibliográfiai adatok"]
+    for kulcs, felirat in BIBLIOGRAFIAI_MEZO_DEFINICIOK:
+        sorok.append(f"{felirat} {konyv.get(kulcs, '')}")
+
+    sorok.append("")
+    sorok.append("Példány adatai")
+    for kulcs, felirat in PELDANY_MEZO_DEFINICIOK:
+        sorok.append(f"{felirat} {konyv.get(kulcs, '')}")
+
+    return "\n".join(sorok)
 
 def export_statisztika_pdf(szoveg, fajlnev):
     """Statisztikai jelentés exportálása PDF fájlba."""

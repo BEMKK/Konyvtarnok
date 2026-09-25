@@ -146,6 +146,31 @@ def ertek_feldolgoz(kulcs, ertek_str):
     return val
 
 
+def statisztikai_szures(teljes_adatlista, kulcs, keresett_ertek):
+    """Leszűri a könyvek listáját egy kiválasztott statisztikai mezőre és értékre."""
+    is_hianyzo = keresett_ertek == "Nincs kitöltve"
+    forras_kulcs = "ev" if kulcs in ["evszazad", "evtized"] else kulcs
+    leszurt_adatok = []
+
+    for konyv in teljes_adatlista:
+        val = ertek_feldolgoz(kulcs, konyv.get(forras_kulcs, ""))
+        if is_hianyzo:
+            if not val:
+                leszurt_adatok.append(konyv)
+        else:
+            if val.lower() == keresett_ertek.lower():
+                leszurt_adatok.append(konyv)
+
+    def predikatum(konyv):
+        val = ertek_feldolgoz(kulcs, konyv.get(forras_kulcs, ""))
+        if is_hianyzo:
+            return not val
+        return val.lower() == keresett_ertek.lower()
+
+    return leszurt_adatok, predikatum, is_hianyzo
+
+
+
 def kereszttabla_rendezesi_kulcs(kulcs, ertek):
     """A kereszttáblás jelentés sor- és oszlopfejléceinek rendezési kulcsa.
 
@@ -275,3 +300,48 @@ def kereszttabla_statisztika(konyvek, mezo_nevek, kulcs1, kulcs2, szures_kifejez
         szoveg += "Nincs a keresési feltételnek megfelelő találat."
 
     return szoveg
+
+
+# ==============================================================================
+# VÁGÓLAP-KEZELŐ SEGÉDFÜGGVÉNYEK
+# ==============================================================================
+
+def masolas_win32_vagolapra(szoveg):
+    """Windows API segítségével másol a vágólapra (biztonsági tartalék)."""
+    try:
+        import ctypes
+        user32 = ctypes.windll.user32
+        kernel32 = ctypes.windll.kernel32
+        
+        GMEM_MOVEABLE = 0x0002
+        CF_UNICODETEXT = 13
+
+        if user32.OpenClipboard(None):
+            user32.EmptyClipboard()
+            encoded = szoveg.encode('utf-16le') + b'\x00\x00'
+            h_mem = kernel32.GlobalAlloc(GMEM_MOVEABLE, len(encoded))
+            if h_mem:
+                p_mem = kernel32.GlobalLock(h_mem)
+                ctypes.memmove(p_mem, encoded, len(encoded))
+                kernel32.GlobalUnlock(h_mem)
+                user32.SetClipboardData(CF_UNICODETEXT, h_mem)
+            user32.CloseClipboard()
+            return True
+    except Exception as e:
+        logging.error(f"Win32 vágólap másolási hiba: {e}")
+    return False
+
+
+def masolas_vagolapra_szoveg(szoveg):
+    """Szöveg másolása a vágólapra wx.TheClipboard segítségével, Win32 fallbackkel."""
+    try:
+        import wx
+        if wx.TheClipboard.Open():
+            wx.TheClipboard.SetData(wx.TextDataObject(szoveg))
+            wx.TheClipboard.Flush()
+            wx.TheClipboard.Close()
+            return True
+    except Exception as e:
+        logging.warning(f"wx.TheClipboard használata sikertelen: {e}")
+    return masolas_win32_vagolapra(szoveg)
+

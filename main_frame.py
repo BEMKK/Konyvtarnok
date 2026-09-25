@@ -18,7 +18,9 @@ from menu_bar import MenuBar
 from konyv_lista import KonyvListaCtrl
 from deziderata import Deziderata
 from data_manager import additiv_lista_import, szoveg_szuro_egyezik, szuresi_talalatok
+from utils import statisztikai_szures
 from update import check_for_updates_async
+
 
 class Konyvtarnok(wx.Frame):
     def __init__(self, adatbazis):
@@ -247,36 +249,66 @@ class Konyvtarnok(wx.Frame):
         else:
             dlg = KonyvReszletekDialog(self, konyv_adatok=konyv_adatok, db=self.db)
 
+        # Ez a közvetlen (menü/gomb általi) szerkesztési útvonal: itt a dlg
+        # maga ID_OK-val zár sikeres mentéskor, ezért itt tudjuk a szokásos
+        # módon eldönteni, hogy valóban történt-e mentés. A KonyvReszletekDialog
+        # "Szerkesztés" gombján keresztüli út más: ott a KonyvReszletekDialog
+        # már ID_CANCEL-lel zár, mielőtt a beágyazott szerkesztő megnyílna,
+        # ezért az az útvonal a lenti frissit_lista_szerkesztes_utan metódust
+        # közvetlenül, önmaga hívja meg (lásd konyvdialogs.KonyvReszletekDialog
+        # .on_szerkesztes) - hogy a két útvonal viselkedése ne térjen el.
         if dlg.ShowModal() == wx.ID_OK:
-            self.teljes_adatlista = []
-            # A korábban aktív szűrt listát jelenítjük meg újra (ha volt ilyen),
-            # ahelyett hogy a szűrő-felirat szövegéből próbálnánk visszafejteni
-            # a keresési feltételt. Mivel a szűrt lista ugyanazokra a könyv-
-            # objektumokra mutat, mint az adatbázis, a szerkesztés hatása is
-            # azonnal látszik rajta, a szűrés típusától (szöveges keresés vagy
-            # statisztikai szűrés) függetlenül.
-            if self.aktiv_szurt_lista is not None:
-                self.lista.FeltoltLista(self.aktiv_szurt_lista)
-            else:
-                self.lista.FeltoltLista(self.db.konyvek)
-            self.FrissitStatusBar()
-
-            uj_idx = -1
-            if szerkesztett_id is not None:
-                for k, v in self.lista.sor_id_terkep.items():
-                    if v == szerkesztett_id:
-                        uj_idx = k
-                        break
-            if uj_idx == -1 and 0 <= idx < self.lista.GetItemCount():
-                uj_idx = idx
-
-            if uj_idx != -1 and self.lista.GetItemCount() > 0:
-                self.lista.Select(uj_idx)
-                self.lista.Focus(uj_idx)
-                self.lista.EnsureVisible(uj_idx)
+            self.frissit_lista_szerkesztes_utan(szerkesztett_id, eredeti_idx=idx)
 
         dlg.Destroy()
         self.lista.SetFocus()
+
+    def frissit_lista_szerkesztes_utan(self, szerkesztett_id, eredeti_idx=None):
+        """Frissíti a könyvlista nézetét (a rendezés és az esetlegesen aktív
+        szűrés megőrzésével), a státuszsort, és a kijelölést egy könyv
+        szerkesztése után.
+
+        Ezt hívja meg mind a közvetlen szerkesztés (menü/gomb ->
+        KonyvSzerkesztoDialog, lásd MegnyitReszletek), mind a "Könyv
+        adatlapja" ablakban lévő "Szerkesztés" gombon keresztüli szerkesztés
+        (KonyvReszletekDialog -> KonyvSzerkesztoDialog, lásd
+        konyvdialogs.KonyvReszletekDialog.on_szerkesztes), hogy a két
+        útvonal frissítési logikája ne térjen el egymástól.
+
+        szerkesztett_id: a szerkesztett könyv adatbázis-beli azonosítója,
+            amely alapján a listában lévő (esetlegesen rendezés miatt új
+            helyre került) sorát megkeressük és újra kijelöljük.
+        eredeti_idx: a szerkesztés előtti sorindex a listában (ha ismert),
+            amit csak akkor használunk tartalék kijelölésként, ha az id
+            alapú keresés nem járt sikerrel (pl. mert az aktív szűrés miatt
+            a könyv már nem szerepel a látható listában).
+        """
+        self.teljes_adatlista = []
+        # A korábban aktív szűrt listát jelenítjük meg újra (ha volt ilyen),
+        # ahelyett hogy a szűrő-felirat szövegéből próbálnánk visszafejteni
+        # a keresési feltételt. Mivel a szűrt lista ugyanazokra a könyv-
+        # objektumokra mutat, mint az adatbázis, a szerkesztés hatása is
+        # azonnal látszik rajta, a szűrés típusától (szöveges keresés vagy
+        # statisztikai szűrés) függetlenül.
+        if self.aktiv_szurt_lista is not None:
+            self.lista.FeltoltLista(self.aktiv_szurt_lista)
+        else:
+            self.lista.FeltoltLista(self.db.konyvek)
+        self.FrissitStatusBar()
+
+        uj_idx = -1
+        if szerkesztett_id is not None:
+            for k, v in self.lista.sor_id_terkep.items():
+                if v == szerkesztett_id:
+                    uj_idx = k
+                    break
+        if uj_idx == -1 and eredeti_idx is not None and 0 <= eredeti_idx < self.lista.GetItemCount():
+            uj_idx = eredeti_idx
+
+        if uj_idx != -1 and self.lista.GetItemCount() > 0:
+            self.lista.Select(uj_idx)
+            self.lista.Focus(uj_idx)
+            self.lista.EnsureVisible(uj_idx)
 
     def OnKonyvTorles(self, event):
         indexek = self.lista.GetKijeloltIndexek()
@@ -781,29 +813,14 @@ class Konyvtarnok(wx.Frame):
                 elif hasattr(self.db, 'get_osszes_konyv'):
                     self.teljes_adatlista = self.db.get_osszes_konyv()
 
-            leszurt_adatok = []
-            is_hianyzo = keresett_ertek == "Nincs kitöltve"
-            forras_kulcs = "ev" if kulcs in ["evszazad", "evtized"] else kulcs
-
-            for konyv in self.teljes_adatlista:
-                val = dlg.ertek_feldolgoz(kulcs, konyv.get(forras_kulcs, ""))
-                if is_hianyzo:
-                    if not val:
-                        leszurt_adatok.append(konyv)
-                else:
-                    if val.lower() == keresett_ertek.lower():
-                        leszurt_adatok.append(konyv)
+            leszurt_adatok, predikatum, is_hianyzo = statisztikai_szures(self.teljes_adatlista, kulcs, keresett_ertek)
 
             if leszurt_adatok:
                 # A kiválasztott/meghatározott rendezést érvényesítjük a listán
                 self.lista.rendezes_kulcs = uj_rendezes
                 self.lista.Rendezes(uj_rendezes)
                 self.aktiv_szurt_lista = leszurt_adatok
-                self.aktiv_szuro_predikatum = (
-                    lambda k, _kulcs=kulcs, _fk=forras_kulcs, _hi=is_hianyzo, _ke=keresett_ertek, _ef=dlg.ertek_feldolgoz:
-                        (not _ef(_kulcs, k.get(_fk, ""))) if _hi
-                        else (_ef(_kulcs, k.get(_fk, "")).lower() == _ke.lower())
-                )
+                self.aktiv_szuro_predikatum = predikatum
                 self.lista.FeltoltLista(leszurt_adatok)
         
                 talalatok_szama = len(leszurt_adatok)

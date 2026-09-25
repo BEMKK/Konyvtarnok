@@ -4,6 +4,13 @@ A projekten végrehajtott lényegi változtatások dokumentációja.
 
 
 
+## [3.1.1] - 2026-09-25
+
+- Javítva a listafrissítés hibája, mely akkor jelentkezett, ha a könyv szerkesztése dialog a könyvadatlapról lett megnyitva.
+- Újabb kódrefaktorálás és javítások.
+
+
+
 ## [3.1.0] - 2026-09-22
 
 - Új, áttekintés fül a súgóban, mely általános leírást ad az alkalmazásról és annak főbb funkcióiról, kezeléséről.

@@ -77,7 +77,8 @@ class UjdonsagokDialog(wx.Dialog):
         main_sizer.Add(wx.StaticLine(self), 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 15)
         
         ujdonsagok_lista = [
-            "Új, áttekintés fül a súgóban, mely általános leírást ad az alkalmazás főbb funkcióiról és kezeléséről."
+            "Javítva a listafrissítés hibája, mely akkor jelentkezett, ha a könyv szerkesztése dialog a könyvadatlapról lett megnyitva.",
+            "Újabb kódrefaktorálás és javítások."
         ]
 
         szoveg_box = wx.BoxSizer(wx.VERTICAL)

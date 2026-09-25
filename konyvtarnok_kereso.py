@@ -4,7 +4,7 @@ import json
 import wx
 import logging
 from theme_manager import apply_theme_from_settings
-from deziderata import DATA_FILE as DEZIDERATA_DATA_FILE, is_same_book
+from deziderata import DATA_FILE as DEZIDERATA_DATA_FILE
 from data_manager import (
     load_hmac_json,
     save_hmac_json,
@@ -12,24 +12,15 @@ from data_manager import (
     konyvek_tomeges_felvetele,
     kerj_tomeges_atemeles_megerositest,
     mutass_tomeges_atemeles_eredmenyt,
+    KERESO_MEZO_ALIASOK,
+    sor_alap_adatta_alakitasa,
+    load_kereso_json,
+    is_same_book,
 )
 from gyors_kereses import GyorsListaKereso, osszes_kijelolt_index
+from utils import masolas_vagolapra_szoveg
 
-# A külső (JSON) forrásadatok mezőnevei nem mindig egyeznek meg az állomány
-# kanonikus mezőneveivel (előfordulhat rövid, ékezet nélküli 'cim' VAGY a
-# kijelzéshez használt, ékezetes 'Cím' alak is). Ez a leképezés mindhárom
-# helyen (az 'Állományban' jelzés, az állományba és a dezideráta-jegyzékbe
-# történő átemelés) ugyanazt az egy forrást használja, hogy egységes legyen,
-# mi számít 'ugyanannak a könyvnek'.
-KERESO_MEZO_ALIASOK = {
-    "cim": ("cim", "Cím"),
-    "alcim": ("alcim", "Alcím"),
-    "szerzo": ("szerzo", "Összeállító"),
-    "egyeb_szemelyek": ("egyeb_szemelyek", "Egyéb személyek"),
-    "kiado": ("kiado", "Kiadó"),
-    "hely": ("hely", "Kiadás helye"),
-    "ev": ("ev", "Kiadás éve"),
-}
+
 
 
 class KonyvtarnokKeresoApp(wx.Frame):
@@ -69,77 +60,88 @@ class KonyvtarnokKeresoApp(wx.Frame):
         self.current_theme = config.get("tema", "vilagos")
 
     def adatok_betoltese(self):
-        """Beolvassa a JSON fájlt a megfelelő mappából."""
-        fajl_utvonal = None
-
-        if getattr(sys, "frozen", False):
-            # 1. Ha csomagolt EXE: először megnézzük az EXE mellett
-            exe_mappa = os.path.dirname(sys.executable)
-            fajl_utvonal = os.path.join(exe_mappa, self.json_fajlnev)
-
-            # 2. Ha az EXE mellett nincs ott, a Temp (_MEIPASS) mappában keresünk
-            if not os.path.exists(fajl_utvonal):
-                temp_mappa = getattr(sys, "_MEIPASS", exe_mappa)
-                fajl_utvonal = os.path.join(temp_mappa, self.json_fajlnev)
-        else:
-            # 3. Fejlesztői környezet (.py futtatása esetén ez fut le!)
-            sajat_mappa = os.path.dirname(os.path.abspath(__file__))
-            fajl_utvonal = os.path.join(sajat_mappa, self.json_fajlnev)
-
-        # 4. Beolvasás ellenőrzése JSON modul segítségével
-        if fajl_utvonal and os.path.exists(fajl_utvonal):
-            try:
-                with open(fajl_utvonal, "r", encoding="utf-8") as f:
-                    adatok = json.load(f)
-
-                if isinstance(adatok, list) and len(adatok) > 0:
-                    # Dinamikusan kinyerjük az első elemből a mezőneveket (oszlopokat)
-                    self.oszlopok = list(adatok[0].keys())
-
-                    # Biztosítjuk, hogy minden érték sztring formátumú legyen a GUI-hoz
-                    adat_lista = []
-                    for sor in adatok:
-                        szurt_sor = {k: str(v).strip() if v is not None else "" for k, v in sor.items()}
-                        adat_lista.append(szurt_sor)
-
-                    return adat_lista
-                return []
-
-            except Exception as e:
-                logging.error(f"Hiba a JSON fájl ({fajl_utvonal}) beolvasásakor: {e}", exc_info=True)
+        """Beolvassa a JSON fájlt a data_manager segédfüggvényével."""
+        try:
+            oszlopok, adatok, fajl_utvonal = load_kereso_json(self.json_fajlnev)
+            if oszlopok is not None:
+                self.oszlopok = oszlopok
+                return adatok
+            else:
                 wx.MessageBox(
-                    f"Hiba a fájl beolvasásakor:\n{e}",
-                    "Hiba",
-                    wx.OK | wx.ICON_ERROR,
+                    f"A(z) '{self.json_fajlnev}' nem található a program mappájában!\n\nKeresett útvonal:\n{fajl_utvonal}",
+                    "Fájl hiányzik",
+                    wx.OK | wx.ICON_WARNING,
                 )
                 return None
-        else:
+        except Exception as e:
             wx.MessageBox(
-                f"A(z) '{self.json_fajlnev}' nem található a program mappájában!\n\nKeresett útvonal:\n{fajl_utvonal}",
-                "Fájl hiányzik",
-                wx.OK | wx.ICON_WARNING,
+                f"Hiba a fájl beolvasásakor:\n{e}",
+                "Hiba",
+                wx.OK | wx.ICON_ERROR,
             )
             return None
 
     def _sor_alap_adatta_alakitasa(self, forras_dict):
         """Egy nyers sor (a keresési JSON-ból vagy a táblázatból kiolvasott
         dict) leképezése az állomány kanonikus (cim, szerzo, kiado, hely,
-        ev, ...) mezőneveire.
+        ev, ...) mezőneveire (lásd data_manager.sor_alap_adatta_alakitasa)."""
+        return sor_alap_adatta_alakitasa(forras_dict)
 
-        Ugyanezt a leképezést használja az 'Állományban' jelzés
-        (on_kereses) és mindkét átemelés (atemeles_allomanyba,
-        atemeles_deziderataba) is, hogy egységesen döntsünk arról, mi
-        számít 'ugyanannak a könyvnek' a program egészében.
-        """
-        alap_adat = {}
-        for kulcs, aliasok in KERESO_MEZO_ALIASOK.items():
-            ertek = ""
-            for alias in aliasok:
-                if forras_dict.get(alias):
-                    ertek = forras_dict.get(alias)
-                    break
-            alap_adat[kulcs] = ertek
-        return alap_adat
+    # ==========================================================================
+    # KÖZÖS "ÁLLOMÁNYBAN VAN-E" SEGÉDMETÓDUSOK
+    # ==========================================================================
+    # Ezt a három segédmetódust (a főablak állományának cím szerinti
+    # csoportosítása, a Cím oszlop nevének megkeresése a betöltött JSON
+    # oszlopai között, és az egyes sorok tényleges "Állományban van-e"
+    # eldöntése) korábban az on_kereses és a frissit_allomany_statuszokat
+    # egymástól függetlenül, szó szerint megegyező formában tartalmazta - a
+    # kódkomment maga is jelezte, hogy a két helynek szándékosan szinkronban
+    # kellene maradnia. Innentől mindkét hely ugyanezt a három metódust
+    # hívja, így a szinkron nem kézi fegyelem kérdése többé.
+
+    def _epit_konyvek_cim_szerint(self):
+        """A főablak állományában lévő könyvek cím szerinti csoportosítása
+        (kisbetűsen, levágva), hogy soronként csak az azonos című könyvek
+        között kelljen elvégezni a teljes (tetelek_egyeznek) egyezés-
+        vizsgálatot - ez nagy állomány esetén is gyors marad, miközben
+        azonos című, de más kiadású/szerzőjű könyveket helyesen nem jelöl
+        "Állományban"-ként."""
+        konyvek_cim_szerint = {}
+        if self.parent and hasattr(self.parent, "db"):
+            if hasattr(self.parent.db, "konyvek") and self.parent.db.konyvek:
+                for k in self.parent.db.konyvek:
+                    cim = str(k.get("cim", "")).strip().lower()
+                    if cim:
+                        konyvek_cim_szerint.setdefault(cim, []).append(k)
+        return konyvek_cim_szerint
+
+    def _cim_oszlop_neve(self):
+        """Megkeresi a Cím oszlop nevét a betöltött (kereső JSON-beli)
+        oszlopnevek között, vagy - ha nem egyértelmű a fejléc - az első
+        oszlopot adja vissza tartalékként."""
+        for col in self.oszlopok:
+            if str(col).strip().lower() in ["cím", "cim"]:
+                return col
+        return self.oszlopok[0] if self.oszlopok else None
+
+    def _allomanyban_van_e(self, sor_adat, cim_oszlop_neve, konyvek_cim_szerint):
+        """Eldönti, hogy egy sor (a táblázatból vagy a nyers keresési
+        adatokból kiolvasott dict) szerepel-e már az állományban.
+
+        A cím szerinti előszűrés (konyvek_cim_szerint) után a teljes,
+        több mezőt (szerző, kiadó, hely, év) is figyelembe vevő
+        tetelek_egyeznek vizsgálattal dönt, nem csak a cím alapján."""
+        if not cim_oszlop_neve:
+            return False
+        sor_cime = str(sor_adat.get(cim_oszlop_neve, "")).strip().lower()
+        if not sor_cime or sor_cime not in konyvek_cim_szerint:
+            return False
+        sor_alap_adat = self._sor_alap_adatta_alakitasa(sor_adat)
+        return any(
+            tetelek_egyeznek(sor_alap_adat, konyv)
+            for konyv in konyvek_cim_szerint[sor_cime]
+        )
+
 
     def init_ui(self):
         fő_sizer = wx.BoxSizer(wx.VERTICAL)
@@ -281,19 +283,9 @@ class KonyvtarnokKeresoApp(wx.Frame):
             )
             return
 
-        # Meglévő könyvek csoportosítása cím szerint a főablak állományából.
-        # A teljes, több mezőt (szerző, kiadó, hely, év) is figyelembe vevő
-        # egyezés-vizsgálatot (tetelek_egyeznek) csak az azonos című könyvek
-        # között kell elvégezni, így ez a csoportosítás gyors marad nagy
-        # állomány esetén is, miközben azonos című, de más kiadású/szerzőjű
-        # könyveket helyesen nem jelöl "Állományban"-ként.
-        konyvek_cim_szerint = {}
-        if self.parent and hasattr(self.parent, "db"):
-            if hasattr(self.parent.db, "konyvek") and self.parent.db.konyvek:
-                for k in self.parent.db.konyvek:
-                    cim = str(k.get("cim", "")).strip().lower()
-                    if cim:
-                        konyvek_cim_szerint.setdefault(cim, []).append(k)
+        # Meglévő könyvek csoportosítása cím szerint a főablak állományából
+        # (lásd _epit_konyvek_cim_szerint).
+        konyvek_cim_szerint = self._epit_konyvek_cim_szerint()
 
         # Szűrés tisztán Python listával (Pandas DataFrame helyett)
         szurt_adatok = []
@@ -310,15 +302,7 @@ class KonyvtarnokKeresoApp(wx.Frame):
         if szurt_adatok:
             talalatok_szama = len(szurt_adatok)
             statusz_col_idx = len(self.oszlopok)
-
-            # Cím oszlop megkeresése
-            cim_oszlop_neve = None
-            for col in self.oszlopok:
-                if str(col).strip().lower() in ["cím", "cim"]:
-                    cim_oszlop_neve = col
-                    break
-            if not cim_oszlop_neve:
-                cim_oszlop_neve = self.oszlopok[0]
+            cim_oszlop_neve = self._cim_oszlop_neve()
 
             for sor in szurt_adatok:
                 # Sor beszúrása a táblázatba
@@ -331,18 +315,8 @@ class KonyvtarnokKeresoApp(wx.Frame):
                         sor_index, col_idx, str(sor.get(col_name, ""))
                     )
 
-                sor_cime = str(sor.get(cim_oszlop_neve, "")).strip().lower()
-
-                # Státusz ellenőrzése: a cím szerint azonos című könyvek
-                # között a teljes (szerző/kiadó/hely/év is figyelembe vevő)
-                # egyezés-vizsgálattal döntünk, nem csak a cím alapján.
-                megvan = False
-                if sor_cime and sor_cime in konyvek_cim_szerint:
-                    sor_alap_adat = self._sor_alap_adatta_alakitasa(sor)
-                    megvan = any(
-                        tetelek_egyeznek(sor_alap_adat, konyv)
-                        for konyv in konyvek_cim_szerint[sor_cime]
-                    )
+                # Státusz ellenőrzése (lásd _allomanyban_van_e).
+                megvan = self._allomanyban_van_e(sor, cim_oszlop_neve, konyvek_cim_szerint)
 
                 # UTOLSÓ OSZLOP: Státusz beírása
                 if megvan:
@@ -378,9 +352,10 @@ class KonyvtarnokKeresoApp(wx.Frame):
         például egy időközben törölt tételre, egészen a következő kereső
         gomb megnyomásáig.
 
-        Az egyezés-vizsgálat logikája szándékosan megegyezik az
-        on_kereses-ben használttal (cím szerinti csoportosítás +
-        tetelek_egyeznek), hogy a két hely soha ne térjen el egymástól.
+        Az egyezés-vizsgálat logikáját a _epit_konyvek_cim_szerint /
+        _cim_oszlop_neve / _allomanyban_van_e közös segédmetódusok végzik,
+        amelyeket az on_kereses is használ, hogy a két hely soha ne térjen
+        el egymástól.
         """
         if not self.oszlopok:
             return
@@ -390,22 +365,8 @@ class KonyvtarnokKeresoApp(wx.Frame):
             return
 
         statusz_col_idx = len(self.oszlopok)
-
-        konyvek_cim_szerint = {}
-        if self.parent and hasattr(self.parent, "db"):
-            if hasattr(self.parent.db, "konyvek") and self.parent.db.konyvek:
-                for k in self.parent.db.konyvek:
-                    cim = str(k.get("cim", "")).strip().lower()
-                    if cim:
-                        konyvek_cim_szerint.setdefault(cim, []).append(k)
-
-        cim_oszlop_neve = None
-        for col in self.oszlopok:
-            if str(col).strip().lower() in ["cím", "cim"]:
-                cim_oszlop_neve = col
-                break
-        if not cim_oszlop_neve:
-            cim_oszlop_neve = self.oszlopok[0]
+        konyvek_cim_szerint = self._epit_konyvek_cim_szerint()
+        cim_oszlop_neve = self._cim_oszlop_neve()
 
         for sor_index in range(sorok_szama):
             # A sor adatait magából a táblázatból olvassuk vissza (nem a
@@ -415,15 +376,7 @@ class KonyvtarnokKeresoApp(wx.Frame):
                 oszlop: self.tablazat.GetItemText(sor_index, col_idx)
                 for col_idx, oszlop in enumerate(self.oszlopok)
             }
-            sor_cime = str(sor_adat.get(cim_oszlop_neve, "")).strip().lower()
-
-            megvan = False
-            if sor_cime and sor_cime in konyvek_cim_szerint:
-                sor_alap_adat = self._sor_alap_adatta_alakitasa(sor_adat)
-                megvan = any(
-                    tetelek_egyeznek(sor_alap_adat, konyv)
-                    for konyv in konyvek_cim_szerint[sor_cime]
-                )
+            megvan = self._allomanyban_van_e(sor_adat, cim_oszlop_neve, konyvek_cim_szerint)
 
             if megvan:
                 self.tablazat.SetItem(sor_index, statusz_col_idx, "Állományban")
@@ -522,46 +475,12 @@ class KonyvtarnokKeresoApp(wx.Frame):
 
         teljes_szoveg = "\n".join(mentendo_sorok)
 
-        sikeres = False
-        if wx.TheClipboard.Open():
-            wx.TheClipboard.SetData(wx.TextDataObject(teljes_szoveg))
-            wx.TheClipboard.Flush()  # Biztosítja, hogy az adatok a program bezárása után is a rendszer-vágólapon maradjanak
-            wx.TheClipboard.Close()
-            sikeres = True
-        else:
-            sikeres = self._masolas_win32_vagolapra(teljes_szoveg)
-
-        if not sikeres:
+        if not masolas_vagolapra_szoveg(teljes_szoveg):
             wx.MessageBox(
                 "Nem sikerült megnyitni a vágólapot.",
                 "Hiba",
                 wx.OK | wx.ICON_ERROR,
             )
-
-    def _masolas_win32_vagolapra(self, szoveg):
-        """Windows API segítségével másol a vágólapra (biztonsági tartalék)."""
-        try:
-            import ctypes
-            user32 = ctypes.windll.user32
-            kernel32 = ctypes.windll.kernel32
-            
-            GMEM_MOVEABLE = 0x0002
-            CF_UNICODETEXT = 13
-
-            if user32.OpenClipboard(None):
-                user32.EmptyClipboard()
-                encoded = szoveg.encode('utf-16le') + b'\x00\x00'
-                h_mem = kernel32.GlobalAlloc(GMEM_MOVEABLE, len(encoded))
-                if h_mem:
-                    p_mem = kernel32.GlobalLock(h_mem)
-                    ctypes.memmove(p_mem, encoded, len(encoded))
-                    kernel32.GlobalUnlock(h_mem)
-                    user32.SetClipboardData(CF_UNICODETEXT, h_mem)
-                user32.CloseClipboard()
-                return True
-        except Exception as e:
-            logging.error(f"Win32 vágólap másolási hiba: {e}")
-        return False
 
     def atemeles_allomanyba(self):
         if not self.parent or not hasattr(self.parent, "db"):

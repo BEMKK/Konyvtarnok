@@ -187,6 +187,80 @@ DEFAULT_MEZO_ALIASOK = {
     "ev": ("ev",),
 }
 
+DEZIDERATA_MEZO_ALIASOK = {
+    "cim": ("cim", "title"),
+    "szerzo": ("szerzo", "author"),
+    "kiado": ("kiado", "publisher"),
+    "hely": ("hely", "place"),
+    "ev": ("ev", "year"),
+}
+
+KERESO_MEZO_ALIASOK = {
+    "cim": ("cim", "Cím"),
+    "alcim": ("alcim", "Alcím"),
+    "szerzo": ("szerzo", "Összeállító"),
+    "egyeb_szemelyek": ("egyeb_szemelyek", "Egyéb személyek"),
+    "kiado": ("kiado", "Kiadó"),
+    "hely": ("hely", "Kiadás helye"),
+    "ev": ("ev", "Kiadás éve"),
+}
+
+
+def is_same_book(item1, item2):
+    """
+    Két könyv/tétel egyezőségét vizsgálja a dezideráta mező-aliasok alapján (lásd tetelek_egyeznek).
+    """
+    return tetelek_egyeznek(item1, item2, DEZIDERATA_MEZO_ALIASOK)
+
+
+def sor_alap_adatta_alakitasa(forras_dict):
+    """Egy nyers sor (a keresési JSON-ból vagy a táblázatból kiolvasott dict)
+    leképezése az állomány kanonikus mezőneveire."""
+    alap_adat = {}
+    for kulcs, aliasok in KERESO_MEZO_ALIASOK.items():
+        ertek = ""
+        for alias in aliasok:
+            if forras_dict.get(alias):
+                ertek = forras_dict.get(alias)
+                break
+        alap_adat[kulcs] = ertek
+    return alap_adat
+
+
+def load_kereso_json(json_fajlnev="enekeskonyvek_adatai.json"):
+    """Beolvassa a kereső JSON fájlt a megfelelő mappából."""
+    fajl_utvonal = None
+
+    if getattr(sys, "frozen", False):
+        exe_mappa = os.path.dirname(sys.executable)
+        fajl_utvonal = os.path.join(exe_mappa, json_fajlnev)
+        if not os.path.exists(fajl_utvonal):
+            temp_mappa = getattr(sys, "_MEIPASS", exe_mappa)
+            fajl_utvonal = os.path.join(temp_mappa, json_fajlnev)
+    else:
+        sajat_mappa = os.path.dirname(os.path.abspath(__file__))
+        fajl_utvonal = os.path.join(sajat_mappa, json_fajlnev)
+
+    if fajl_utvonal and os.path.exists(fajl_utvonal):
+        try:
+            with open(fajl_utvonal, "r", encoding="utf-8") as f:
+                adatok = json.load(f)
+
+            if isinstance(adatok, list) and len(adatok) > 0:
+                oszlopok = list(adatok[0].keys())
+                adat_lista = []
+                for sor in adatok:
+                    szurt_sor = {k: str(v).strip() if v is not None else "" for k, v in sor.items()}
+                    adat_lista.append(szurt_sor)
+                return oszlopok, adat_lista, fajl_utvonal
+            return [], [], fajl_utvonal
+        except Exception as e:
+            logging.error(f"Hiba a JSON fájl ({fajl_utvonal}) beolvasásakor: {e}", exc_info=True)
+            raise
+    else:
+        return None, None, fajl_utvonal
+
+
 
 def _norm_ertek(ertek):
     return str(ertek or "").strip().lower()
