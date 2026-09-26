@@ -84,16 +84,18 @@ class Deziderata(wx.Frame):
         # --- Lista (táblázat) ---
         self.list = wx.ListCtrl(panel, style=wx.LC_REPORT | wx.BORDER_SUNKEN)
 
-        columns = [
-            "Cím",
-            "Összeállító",
-            "Egyéb személyek",
-            "Kiadó",
-            "Kiadás helye",
-            "Kiadás éve",
-            "Prioritás",
-            "Státusz"
+        # A táblázat oszlopfejléceit a konyvdialogs.DEZIDERATA_MEZO_DEFINICIOK
+        # feliratkészletéből származtatjuk (a meződefiníció végén álló
+        # kettőspontot levágva), ahelyett hogy itt egy második, kézzel
+        # karbantartott listát tartanánk ugyanezekre a feliratokra - korábban
+        # ez a két lista egymástól függetlenül létezett, ezért egy feliratot
+        # csak az egyik helyen átnevezve a kettő csendben szétcsúszott volna.
+        LISTA_OSZLOP_KULCSOK = [
+            "cim", "szerzo", "egyeb_szemelyek", "kiado",
+            "hely", "ev", "priority", "status",
         ]
+        mezo_feliratok = dict(DEZIDERATA_MEZO_DEFINICIOK)
+        columns = [mezo_feliratok[kulcs].rstrip(":") for kulcs in LISTA_OSZLOP_KULCSOK]
 
         for idx, col in enumerate(columns):
             self.list.InsertColumn(idx, col, width=120)

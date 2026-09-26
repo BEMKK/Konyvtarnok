@@ -8,6 +8,12 @@ import wx
 from pathlib import Path
 from data_manager import KonyvAdatbazis
 from main_frame import Konyvtarnok
+# A vágólapra másolás (wx.TheClipboard + Win32 API tartalék) közös
+# implementációja az utils.py-ban él; ezt korábban a HibaAblak.on_copy egy
+# saját, szinte szó szerint megegyező privát metódusban (_masolas_win32_vagolapra)
+# ismételte meg, ahelyett hogy ugyanezt a már meglévő közös függvényt hívta
+# volna, mint a KönyvTárnok-kereső ("Kijelöltek másolása a vágólapra").
+from utils import masolas_vagolapra_szoveg
 
 # Segédfüggvény az EXE MELLET lévő mappához (hibanapló, adatbázisok)
 def get_exe_dir():
@@ -75,14 +81,11 @@ class HibaAblak(wx.Dialog):
         ok_btn.SetDefault()
 
     def on_copy(self, event):
-        sikeres = False
-        if wx.TheClipboard.Open():
-            wx.TheClipboard.SetData(wx.TextDataObject(self.message))
-            wx.TheClipboard.Flush()  # Biztosítja, hogy az adatok a program bezárása után is a rendszer-vágólapon maradjanak
-            wx.TheClipboard.Close()
-            sikeres = True
-        else:
-            sikeres = self._masolas_win32_vagolapra(self.message)
+        # A tényleges másolást (wx.TheClipboard, Win32 API tartalékkal) az
+        # utils.masolas_vagolapra_szoveg közös segédfüggvénye végzi - ugyanaz,
+        # amit a KönyvTárnok-kereső "Kijelöltek másolása a vágólapra" művelete
+        # is használ.
+        sikeres = masolas_vagolapra_szoveg(self.message)
 
         if sikeres:
             copy_btn = event.GetEventObject()
@@ -103,31 +106,6 @@ class HibaAblak(wx.Dialog):
                 "Hiba",
                 wx.OK | wx.ICON_ERROR,
             )
-
-    def _masolas_win32_vagolapra(self, szoveg):
-        """Windows API segítségével másol a vágólapra (biztonsági tartalék)."""
-        try:
-            import ctypes
-            user32 = ctypes.windll.user32
-            kernel32 = ctypes.windll.kernel32
-            
-            GMEM_MOVEABLE = 0x0002
-            CF_UNICODETEXT = 13
-
-            if user32.OpenClipboard(None):
-                user32.EmptyClipboard()
-                encoded = szoveg.encode('utf-16le') + b'\x00\x00'
-                h_mem = kernel32.GlobalAlloc(GMEM_MOVEABLE, len(encoded))
-                if h_mem:
-                    p_mem = kernel32.GlobalLock(h_mem)
-                    ctypes.memmove(p_mem, encoded, len(encoded))
-                    kernel32.GlobalUnlock(h_mem)
-                    user32.SetClipboardData(CF_UNICODETEXT, h_mem)
-                user32.CloseClipboard()
-                return True
-        except Exception as e:
-            logging.error(f"Win32 vágólap másolási hiba: {e}")
-        return False
 
     def on_open(self, event):
         try:
@@ -193,7 +171,7 @@ if __name__ == '__main__':
     frame = Konyvtarnok(adatbazis)
 
     # Engedélyezd az alábbi sorokat a logging teszteléséhez:
-    # try:
+    #  try:
         # 1 / 0
     # except Exception:
         # sys.excepthook(*sys.exc_info())

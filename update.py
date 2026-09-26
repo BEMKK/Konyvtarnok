@@ -166,9 +166,20 @@ def check_for_updates_async(parent=None, is_manual=False):
         except Exception as e:
             logging.error("Hiba a frissítések ellenőrzésekor", exc_info=True)
             if is_manual:
+                # FONTOS: a hibaüzenetet MÉG az except blokkon belül, egy
+                # sima stringbe kell menteni. Az "except ... as e" által
+                # kötött 'e' nevet Python a blokk végén automatikusan
+                # eltávolítja (implicit "del e"), a wx.CallAfter viszont a
+                # _show_exc függvényt csak KÉSŐBB, a fő eseményhurokban
+                # hívja meg - vagyis már az except blokk lezárása után.
+                # Ha 'e'-t közvetlenül használnánk a lenti f-stringben,
+                # a tényleges híváskor NameError-t kapnánk a hibaüzenet
+                # megjelenítése helyett.
+                hiba_szoveg = str(e)
+
                 def _show_exc():
                     wx.MessageBox(
-                        f"Hiba történt a frissítések ellenőrzése közben:\n{e}",
+                        f"Hiba történt a frissítések ellenőrzése közben:\n{hiba_szoveg}",
                         "Hiba a frissítés ellenőrzésekor",
                         wx.OK | wx.ICON_ERROR,
                         parent

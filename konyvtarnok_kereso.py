@@ -1,6 +1,3 @@
-import os
-import sys
-import json
 import wx
 import logging
 from theme_manager import apply_theme_from_settings
@@ -12,7 +9,6 @@ from data_manager import (
     konyvek_tomeges_felvetele,
     kerj_tomeges_atemeles_megerositest,
     mutass_tomeges_atemeles_eredmenyt,
-    KERESO_MEZO_ALIASOK,
     sor_alap_adatta_alakitasa,
     load_kereso_json,
     is_same_book,

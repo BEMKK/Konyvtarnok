@@ -64,7 +64,13 @@ def apply_theme(window, theme_name="vilagos"):
         window.SetBackgroundColour(theme["panel_bg"])
 
     for child in window.GetChildren():
-        if isinstance(child, wx.Panel):
+        # A wx.ScrolledWindow NEM wx.Panel leszármazott, ezért enélkül a
+        # kifejezett kezelés nélkül a görgethető területek (pl. a
+        # BeallitasokDialog oszlopválasztó füle, a KonyvSzerkesztoDialog
+        # mezőrácsa) mindig az alapértelmezett (világos) hátteret tartották
+        # meg, míg a bennük lévő vezérlők már a téma színét kapták - foltos,
+        # a témával inkonzisztens megjelenést eredményezve.
+        if isinstance(child, (wx.Panel, wx.ScrolledWindow)):
             child.SetBackgroundColour(theme["panel_bg"])
         elif isinstance(child, (wx.TextCtrl, wx.ComboBox, wx.ListBox, wx.Choice, wx.SearchCtrl)):
             child.SetBackgroundColour(theme["ctrl_bg"])

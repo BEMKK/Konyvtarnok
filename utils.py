@@ -289,6 +289,11 @@ def kereszttabla_statisztika(konyvek, mezo_nevek, kulcs1, kulcs2, szures_kifejez
         r1_nev = megjelenített_nevek[norm_r1]
         osszesen_r1 = sum(matrix[norm_r1].values())
 
+        # Az elsődleges szempont aktuális értékét (r1_nev) is ki kell írni,
+        # különben - főleg szűrés nélküli, teljes kereszttábla esetén, ahol
+        # egymás után több csoport blokkja is megjelenik - semmi nem
+        # jelezné, melyik "Találatok száma" melyik csoportra vonatkozik.
+        szoveg += f"{r1_nev}\n"
         szoveg += f"Találatok száma: {osszesen_r1}\n"
         for norm_r2, db in sorted(matrix[norm_r1].items(), key=lambda x: kereszttabla_rendezesi_kulcs(kulcs2, x[0])):
             r2_nev = megjelenített_nevek2.get(norm_r2, norm_r2)

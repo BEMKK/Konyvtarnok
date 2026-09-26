@@ -4,6 +4,16 @@ A projekten végrehajtott lényegi változtatások dokumentációja.
 
 
 
+## [3.1.2] - 2026-09-26
+
+- Javítva a listafrissítés hibája a Dezideráta-kezelőben, mely akkor jelentkezett, ha a könyv szerkesztése dialog az adatlapról lett megnyitva.
+- Javítva a statisztika kereszttáblás jelentése, mely eddig nem tartalmazta az elsődleges szempont értékét.
+- Javítva a frissítés keresésekor felugró hibaüzenet internetkapcsolat hiánya esetén.
+- Javítva a téma alkalmazása a beállítások ablak görgetésekor.
+- Újabb kódrefaktorálás és javítások.
+
+
+
 ## [3.1.1] - 2026-09-25
 
 - Javítva a listafrissítés hibája, mely akkor jelentkezett, ha a könyv szerkesztése dialog a könyvadatlapról lett megnyitva.
