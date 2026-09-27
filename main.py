@@ -13,13 +13,15 @@ from main_frame import Konyvtarnok
 # saját, szinte szó szerint megegyező privát metódusban (_masolas_win32_vagolapra)
 # ismételte meg, ahelyett hogy ugyanezt a már meglévő közös függvényt hívta
 # volna, mint a KönyvTárnok-kereső ("Kijelöltek másolása a vágólapra").
-from utils import masolas_vagolapra_szoveg
+# Az alkalmazás alapmappájának meghatározása (alkalmazas_alapmappa) szintén
+# az utils.py-ban él, mert ezt korábban a config_manager.py, a
+# data_manager.py, a deziderata.py és ez a fájl (get_exe_dir) egymástól
+# függetlenül, szó szerint megegyező formában tartalmazta.
+from utils import masolas_vagolapra_szoveg, alkalmazas_alapmappa
 
 # Segédfüggvény az EXE MELLET lévő mappához (hibanapló, adatbázisok)
 def get_exe_dir():
-    if getattr(sys, 'frozen', False):
-        return Path(sys.executable).parent
-    return Path(__file__).parent
+    return Path(alkalmazas_alapmappa())
 
 
 # =========================================================
@@ -96,7 +98,7 @@ class HibaAblak(wx.Dialog):
                 try:
                     if copy_btn and bool(copy_btn):
                         copy_btn.SetLabel(eredeti)
-                except (RuntimeError, Exception):
+                except Exception:
                     pass
 
             wx.CallLater(1500, reset_label)

@@ -7,15 +7,37 @@ import logging
 import uuid
 import wx
 
-# A program (exe vagy script) mappájához kötött abszolút alapútvonal,
-# hogy az állományjegyzék fájl mindig ugyanoda kerüljön, függetlenül
-# attól, hogy milyen munkakönyvtárból indították a programot.
-if getattr(sys, 'frozen', False):
-    _BASE_DIR = os.path.dirname(sys.executable)
-else:
-    _BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+# Az alkalmazás alapmappájának (exe melletti, ill. szkript-mappa)
+# meghatározása az utils.py-ba került, mert ezt korábban a
+# config_manager.py, a data_manager.py, a deziderata.py és a main.py
+# egymástól függetlenül, szó szerint megegyező formában tartalmazta. (A
+# load_kereso_json lentebbi, _MEIPASS-t is figyelembe vevő logikája ettől
+# eltér, mert az egy csomagolt, olvasásra szánt erőforrásfájlt keres, nem
+# az írható adatfájlok mappáját - ezért az szándékosan külön maradt.)
+from utils import alkalmazas_alapmappa
+
+_BASE_DIR = alkalmazas_alapmappa()
 
 DEFAULT_ADATBAZIS_FAJL = os.path.join(_BASE_DIR, "allomanyjegyzek.json")
+
+
+class MentesiHiba(Exception):
+    """Azt jelzi, hogy egy könyv/tétel állományba vétele, módosítása vagy
+    törlése a memóriában megtörtént, de a lemezre írás (AdatokMentese)
+    sikertelen volt.
+
+    Ezt szándékosan külön kivételként dobjuk, nem pedig a megszokott
+    False visszatérési értékkel jelezzük, mert a hívók (pl.
+    KonyvSzerkesztoDialog.on_mentes) a False-t eddig "már szerepel
+    duplikátumként" / "nem található a könyv" jelentéssel bírónak
+    tekintették. Egy lemezre írási hiba (pl. tele lemez, jogosultsági
+    hiba) esetén viszont ez a két üzenet félrevezető lenne: a könyv
+    valójában megtalálható/hozzáadható volt, csak a mentés hiúsult meg.
+    A KonyvAdatbazis metódusai emiatt a mentés sikertelensége esetén
+    visszavonják a memóriabeli módosítást is, hogy a memória és a lemezen
+    lévő állapot ne csússzon szét, majd ezt a kivételt dobják.
+    """
+    pass
 
 # ==============================================================================
 # HMAC-SHA256 ALAPÚ ADATINTEGRITÁS-VÉDELEM
@@ -154,18 +176,26 @@ def konyvek_tomeges_felvetele(db, konyv_adatok_listaja, utani_frissites_fv=None)
     sikeres_indexek = []
     uj_konyv_objektumok = []
 
-    for idx, konyv_adat in enumerate(konyv_adatok_listaja):
-        if not str(konyv_adat.get("cim", "")).strip():
-            continue
-        if db.uj_konyv_hozzaadasa(konyv_adat):
-            sikeres += 1
-            sikeres_indexek.append(idx)
-            uj_konyv_objektumok.append(db.konyvek[-1])
-        else:
-            elutasitott += 1
-
-    if utani_frissites_fv is not None:
-        utani_frissites_fv(uj_konyv_objektumok)
+    # A ciklust try/finally-be csomagoljuk: ha egy tétel felvétele közben
+    # MentesiHiba (lemezre írási hiba) történik, a hívónak ezt a kivételt
+    # kell látnia (nem szabad "elutasítottként", duplikátumként
+    # elkönyvelni - lásd data_manager.MentesiHiba), de a nézetet a hívó
+    # frissítő függvényén keresztül még ekkor is frissítjük a addig
+    # ténylegesen sikeresen felvett tételekkel, hogy a felhasználó lássa,
+    # meddig jutott a művelet.
+    try:
+        for idx, konyv_adat in enumerate(konyv_adatok_listaja):
+            if not str(konyv_adat.get("cim", "")).strip():
+                continue
+            if db.uj_konyv_hozzaadasa(konyv_adat):
+                sikeres += 1
+                sikeres_indexek.append(idx)
+                uj_konyv_objektumok.append(db.konyvek[-1])
+            else:
+                elutasitott += 1
+    finally:
+        if utani_frissites_fv is not None:
+            utani_frissites_fv(uj_konyv_objektumok)
 
     return sikeres, elutasitott, sikeres_indexek, uj_konyv_objektumok
 
@@ -371,14 +401,48 @@ class KonyvAdatbazis:
 
     # --- ID ALAPÚ MENTÉS ---
     def konyv_mentese_by_id(self, konyv_id, uj_adatok):
+        """Frissíti a konyv_id azonosítójú könyvet uj_adatok-kal.
+
+        Visszatérési érték: True sikeres mentés esetén; False, ha a
+        konyv_id-hoz KIFEJEZETTEN nem található könyv az állományban.
+
+        Ha a könyvet megtaláltuk és módosítottuk a memóriában, de a lemezre
+        mentés meghiúsul, a módosítást visszavonjuk (az eredeti adatokat
+        állítjuk vissza ugyanabban a dict-objektumban, hogy a listában
+        (KonyvListaCtrl) és az esetleges aktív szűrésben lévő referenciák
+        érvényben maradjanak), és MentesiHiba kivételt dobunk - ezt
+        korábban a hívó a "nem található az eredeti könyv" esettel
+        megegyező False értékként kapta meg, ami félrevezető volt egy
+        ténylegesen sikeres keresés + sikertelen lemezre írás esetén.
+        """
         for konyv in self.konyvek:
             if konyv.get("id") == konyv_id:
+                eredeti_adatok = dict(konyv)
                 konyv.update(uj_adatok)
                 konyv["id"] = konyv_id  # ID megőrzése
-                return self.AdatokMentese()
+                if not self.AdatokMentese():
+                    konyv.clear()
+                    konyv.update(eredeti_adatok)
+                    raise MentesiHiba(
+                        f"Nem sikerült elmenteni a módosítást ({self.fajlnev})."
+                    )
+                return True
         return False
 
     def uj_konyv_hozzaadasa(self, uj_adatok, engedelyez_duplikaciót=False):
+        """Felveszi az uj_adatok könyvet az állományba.
+
+        Visszatérési érték: True, ha sikeresen felvette és el is mentette;
+        False, ha ez KIFEJEZETTEN duplikátum miatt maradt el.
+
+        Ha a felvétel maga sikeres lenne, de a lemezre mentés (AdatokMentese)
+        meghiúsul, a felvételt visszavonjuk (hogy a memória és a lemez ne
+        csússzon szét), és MentesiHiba kivételt dobunk - ezt korábban a
+        hívók (pl. a KonyvSzerkesztoDialog "Mentés" gombja) a duplikátum
+        esettel azonos módon, False-ként kapták meg, ami téves "már
+        szerepel duplikátumként" hibaüzenetet eredményezett egy valójában
+        lemezre írási hiba esetén.
+        """
         if not engedelyez_duplikaciót and self.is_duplikalat(uj_adatok):
             return False
         
@@ -387,14 +451,38 @@ class KonyvAdatbazis:
             uj_adatok["id"] = str(uuid.uuid4())
 
         self.konyvek.append(uj_adatok)
-        return self.AdatokMentese()
+        if not self.AdatokMentese():
+            self.konyvek.pop()
+            raise MentesiHiba(
+                f"Nem sikerült elmenteni az állományjegyzéket ({self.fajlnev})."
+            )
+        return True
 
     # --- ID ALAPÚ TÖRLES ---
     def konyv_torlese_by_id(self, konyv_id):
+        """Törli a konyv_id azonosítójú könyvet az állományból.
+
+        Visszatérési érték: True sikeres törlés esetén; False, ha a
+        konyv_id-hoz KIFEJEZETTEN nem található könyv.
+
+        Ha a könyvet megtaláltuk és eltávolítottuk a memóriából, de a
+        lemezre mentés meghiúsul, a törlést visszavonjuk (visszatesszük a
+        könyvet az eredeti pozíciójára), és MentesiHiba kivételt dobunk -
+        korábban ezt a hívó (main_frame.OnKonyvTorles) egyáltalán nem is
+        ellenőrizte, ezért egy sikertelen mentés a felhasználó számára
+        teljesen észrevétlenül hagyta volna a könyvet "törtnek" a
+        felületen, miközben a lemezen (és újraindítás után) még mindig
+        szerepelt volna.
+        """
         for i, konyv in enumerate(self.konyvek):
             if konyv.get("id") == konyv_id:
                 del self.konyvek[i]
-                return self.AdatokMentese()
+                if not self.AdatokMentese():
+                    self.konyvek.insert(i, konyv)
+                    raise MentesiHiba(
+                        f"Nem sikerült elmenteni a törlést ({self.fajlnev})."
+                    )
+                return True
         return False
 
     def save_to_json(self, target_filepath):

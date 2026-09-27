@@ -2,7 +2,6 @@ import json
 import locale
 import logging
 import os
-import sys
 import webbrowser
 import wx
 from config_manager import load_settings, save_settings
@@ -17,6 +16,7 @@ from data_manager import (
     mutass_tomeges_atemeles_eredmenyt,
     DEZIDERATA_MEZO_ALIASOK,
     is_same_book,
+    MentesiHiba,
 )
 from konyvdialogs import (
     DEZIDERATA_MEZO_DEFINICIOK,
@@ -25,9 +25,12 @@ from konyvdialogs import (
     EditItemDialog,
 )
 from gyors_kereses import GyorsListaKereso, osszes_kijelolt_index
-# A magyar_rendezesi_kulcs az utils.py-ba került át: tisztán szövegfeldolgozó
-# logika, semmi köze a konyv_lista.py-beli (GUI) KonyvListaCtrl-hez.
-from utils import magyar_rendezesi_kulcs
+# A magyar_rendezesi_kulcs és az alkalmazas_alapmappa az utils.py-ba
+# kerültek át: tisztán szövegfeldolgozó, illetve az alkalmazás mappáját
+# meghatározó, wx-től független logika (utóbbit korábban a
+# config_manager.py, a data_manager.py, a deziderata.py és a main.py is
+# egymástól függetlenül, szó szerint megegyező formában tartalmazta).
+from utils import magyar_rendezesi_kulcs, alkalmazas_alapmappa
 
 # Magyar locale beállítása
 try:
@@ -39,11 +42,7 @@ except Exception:
         logging.debug(f"Magyar locale beállítása nem sikerült: {e}")
 
 APP_NAME = "KönyvTárnok Dezideráta-kezelő"
-if getattr(sys, "frozen", False):
-    BASE_DIR = os.path.dirname(sys.executable)
-else:
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
+BASE_DIR = alkalmazas_alapmappa()
 DATA_FILE = os.path.join(BASE_DIR, "deziderata.json")
 
 # ==============================================================================
@@ -54,7 +53,6 @@ DATA_FILE = os.path.join(BASE_DIR, "deziderata.json")
 class Deziderata(wx.Frame):
     def __init__(self, parent=None):
         super().__init__(parent, title=f"{APP_NAME}", size=(900, 500))
-        self.parent = parent
 
         # Adatmodell: a tételek listája (szótárakból álló listaként)
         self.items = []
@@ -518,10 +516,24 @@ class Deziderata(wx.Frame):
 
         # A tényleges felvételi ciklust a data_manager.konyvek_tomeges_felvetele
         # közös segédfüggvénye végzi (ugyanaz, mint a KönyvTárnok-kereső
-        # "Felvétel az állományba" műveleténél).
-        sikeres, visszautasitott, sikeres_relativ_indexek, _ = konyvek_tomeges_felvetele(
-            parent_frame.db, konyv_adatok, utani_frissites_fv=_frissites
-        )
+        # "Felvétel az állományba" műveleténél). Ha a mentés (lemezre írás)
+        # meghiúsul, a data_manager.MentesiHiba kivételt kapjuk - ezt
+        # szándékosan külön kezeljük, hogy ne keveredjen össze a
+        # duplikátum miatti elutasítással (lásd data_manager.MentesiHiba).
+        try:
+            sikeres, visszautasitott, sikeres_relativ_indexek, _ = konyvek_tomeges_felvetele(
+                parent_frame.db, konyv_adatok, utani_frissites_fv=_frissites
+            )
+        except MentesiHiba as e:
+            wx.MessageBox(
+                f"Hiba történt az állományjegyzék mentése közben:\n{e}\n\n"
+                "A már sikeresen felvett tételek megmaradnak, de a további "
+                "kijelölt tételek felvétele emiatt megszakadt.",
+                "Mentési hiba",
+                wx.OK | wx.ICON_ERROR,
+                self,
+            )
+            return
 
         if sikeres > 0:
             sikeres_indexek = [kijelolt_indexek[i] for i in sikeres_relativ_indexek]

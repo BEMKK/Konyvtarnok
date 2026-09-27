@@ -19,9 +19,40 @@ Két, korábban külön helyen élő logikacsoportot fog össze:
    vékony hívó rétegként (self.db.konyvek átadásával) delegálnak ide.
 """
 import re
+import os
+import sys
 import datetime
 import logging
 from collections import defaultdict
+
+# ==============================================================================
+# ALKALMAZÁS-ALAPMAPPA MEGHATÁROZÁSA
+# ==============================================================================
+
+
+def alkalmazas_alapmappa():
+    """A program (exe vagy script) mappájához kötött abszolút alapútvonal,
+    hogy a program adatfájljai (settings.json, allomanyjegyzek.json,
+    deziderata.json, hibanaplo.log stb.) mindig ugyanoda kerüljenek,
+    függetlenül attól, hogy milyen munkakönyvtárból indították a
+    programot, illetve hogy lefagyasztott (PyInstaller) .exe-ként vagy
+    sima Python szkriptként fut-e.
+
+    Mivel az alkalmazás összes modulja egyetlen, közös mappában él, ez a
+    segédfüggvény - bár maga az utils.py-ban van definiálva - ugyanazt az
+    útvonalat adja vissza, mint amit a hívó modul a saját __file__-ja
+    alapján számolna ki.
+
+    Korábban ezt a néhány soros mintát (getattr(sys, 'frozen', False)
+    ellenőrzés, majd sys.executable vagy a modul __file__-ja alapján
+    számolt könyvtár) a config_manager.py, a data_manager.py, a
+    deziderata.py és a main.py egymástól függetlenül, szó szerint
+    megegyező formában tartalmazta.
+    """
+    if getattr(sys, "frozen", False):
+        return os.path.dirname(sys.executable)
+    return os.path.dirname(os.path.abspath(__file__))
+
 
 # ==============================================================================
 # RENDEZÉSI ÉS DÁTUMFELDOLGOZÓ SEGÉDFÜGGVÉNYEK
@@ -170,6 +201,47 @@ def statisztikai_szures(teljes_adatlista, kulcs, keresett_ertek):
 
 
 
+def szam_mezo_kulcs(ertek):
+    """Egy nyers mezőérték (pl. 'oldalszam' vagy 'ev') rendezési kulcsa:
+    a benne szereplő számjegyeket veszi ki, vagy 0-t ad vissza, ha nincs
+    bennük számjegy."""
+    szam_str = "".join(filter(str.isdigit, str(ertek)))
+    return int(szam_str) if szam_str else 0
+
+
+def meret_mezo_kulcs(ertek):
+    """A 'meretek' mező (pl. '21x14,5 cm') rendezési kulcsa: csak az 'x'
+    vagy 'X' előtti (magassági) részt veszi figyelembe, abban keresi az
+    első (tizedesvesszős/pontos) számot."""
+    magassag_resz = str(ertek).split('x')[0].split('X')[0].strip()
+    match = re.search(r'\d+(?:[.,]\d+)?', magassag_resz)
+    if match:
+        return float(match.group(0).replace(',', '.'))
+    return 0.0
+
+
+def konyv_mezo_rendezesi_kulcs(mezo_kulcs, nyers_ertek):
+    """Egy könyv-rekord egyetlen mezőjének (nyers, karakterlánc) értékéből
+    képzett rendezési kulcs, a mező típusának megfelelően: szám (oldalszám,
+    kiadás éve), méret, dátum (bekerülés) vagy magyar ábécé szerint.
+
+    Ezt a logikát korábban a konyv_lista.py (KonyvListaCtrl.FeltoltLista)
+    és a statisztika.py (StatisztikaDialog.on_szamol belső riport_rendezes
+    függvénye) egymástól függetlenül, szó szerint megegyező formában
+    tartalmazta.
+    """
+    if mezo_kulcs in ("oldalszam", "ev"):
+        return szam_mezo_kulcs(nyers_ertek)
+
+    if mezo_kulcs == "meretek":
+        return meret_mezo_kulcs(nyers_ertek)
+
+    if mezo_kulcs == "bekerult":
+        return bekerult_datum_kulcs(nyers_ertek)
+
+    return magyar_rendezesi_kulcs(nyers_ertek)
+
+
 def kereszttabla_rendezesi_kulcs(kulcs, ertek):
     """A kereszttáblás jelentés sor- és oszlopfejléceinek rendezési kulcsa.
 
@@ -180,17 +252,24 @@ def kereszttabla_rendezesi_kulcs(kulcs, ertek):
     ábécé szerint (a többi mezőnél, beleértve az évszázad/évtized
     feliratokat is, amikben a magyar_rendezesi_kulcs a római számokat is
     helyesen kezeli) rendezünk.
+
+    Itt a "bekerult" már a statisztikához előfeldolgozott (csak évet
+    tartalmazó) csoportcímke, nem a nyers dátum - ezért ugyanazt a
+    számkinyerést (szam_mezo_kulcs) használjuk rá, mint az ev/oldalszam
+    mezőknél, nem a konyv_mezo_rendezesi_kulcs dátumfeldolgozó ágát.
+    A tényleges szám-/méret-kinyerést a szam_mezo_kulcs / meret_mezo_kulcs
+    közös segédfüggvények végzik, hogy ez a logika ne legyen duplikálva.
     """
     szoveg = str(ertek or "").strip()
 
     if kulcs in ("ev", "oldalszam", "bekerult"):
         szam_str = "".join(filter(str.isdigit, szoveg))
-        return (0, int(szam_str)) if szam_str else (1, 0)
+        return (0, szam_mezo_kulcs(szoveg)) if szam_str else (1, 0)
 
     if kulcs == "meretek":
         magassag_resz = szoveg.split('x')[0].split('X')[0].strip()
         match = re.search(r'\d+(?:[.,]\d+)?', magassag_resz)
-        return (0, float(match.group(0).replace(',', '.'))) if match else (1, 0.0)
+        return (0, meret_mezo_kulcs(szoveg)) if match else (1, 0.0)
 
     return (0, magyar_rendezesi_kulcs(szoveg))
 

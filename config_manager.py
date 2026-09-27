@@ -1,14 +1,15 @@
-import sys as _sys
 import os as _os
 import json
 import logging
 
 from constants import DEFAULT_LATHATO_OSZLOPOK
+# Az alkalmazás alapmappájának (exe melletti, ill. szkript-mappa)
+# meghatározása az utils.py-ba került, mert ezt korábban a
+# config_manager.py, a data_manager.py, a deziderata.py és a main.py
+# egymástól függetlenül, szó szerint megegyező formában tartalmazta.
+from utils import alkalmazas_alapmappa
 
-if getattr(_sys, 'frozen', False):
-    _BASE_DIR = _os.path.dirname(_sys.executable)
-else:
-    _BASE_DIR = _os.path.dirname(_os.path.abspath(__file__))
+_BASE_DIR = alkalmazas_alapmappa()
 
 SETTINGS_FILE = _os.path.join(_BASE_DIR, "settings.json")
 DEFAULT_CONFIG = {

@@ -5,11 +5,11 @@ from theme_manager import apply_theme_from_settings
 from export_manager import export_statisztika_pdf
 from config_manager import load_settings, save_settings
 from utils import (
-    bekerult_datum_kulcs,
-    magyar_rendezesi_kulcs,
     ertek_feldolgoz,
     egyedi_kitoltetlen_statisztika,
     kereszttabla_statisztika,
+    konyv_mezo_rendezesi_kulcs,
+    statisztikai_szures,
 )
 
 class StatisztikaDialog(wx.Dialog):
@@ -251,12 +251,11 @@ class StatisztikaDialog(wx.Dialog):
                 szazalek = (ures_db / osszes_szam * 100) if osszes_szam > 0 else 0
                 szoveg += f"\nNincs kitöltve: {ures_db} db ({szazalek:.1f}%)\n"
         else:
-            talalatok = []
-            forras_kulcs = "ev" if kulcs in ["evszazad", "evtized"] else kulcs
-            for konyv in osszes_konyv:
-                val = self.ertek_feldolgoz(kulcs, konyv.get(forras_kulcs, ""))
-                if val.lower() == keresett_ertek.lower():
-                    talalatok.append(konyv)
+            # A tényleges szűrést a data_manager.OnStatisztika (főablak) által
+            # is használt közös utils.statisztikai_szures predikátum végzi -
+            # korábban ez a loop itt, egymástól függetlenül, szó szerint
+            # megegyező formában volt megírva.
+            talalatok, _, _ = statisztikai_szures(osszes_konyv, kulcs, keresett_ertek)
 
             talalat_szam = len(talalatok)
 
@@ -277,29 +276,19 @@ class StatisztikaDialog(wx.Dialog):
 
                     A rend_kulcs mezőtípusának megfelelő rendezést alkalmazza
                     (szám az évnél/oldalszámnál, méret a méreteknél, dátum a
-                    bekerülésnél, magyar ábécé egyébként) - ugyanazt a logikát,
-                    amit a főablak könyvlistája is használ. Korábban ez a
-                    függvény mindig egyszerű kisbetűs szövegként hasonlította
-                    össze az értékeket, ezért pl. a "Bekerülés éve" szerinti
-                    rendezés valójában a hónapnevek betűrendje szerint történt
+                    bekerülésnél, magyar ábécé egyébként) - ugyanazt a közös
+                    utils.konyv_mezo_rendezesi_kulcs függvényt hívja, amit a
+                    főablak könyvlistája (konyv_lista.py) is használ, hogy ez
+                    a logika ne legyen két helyen, egymástól függetlenül
+                    karbantartva. Korábban ez a függvény itt helyben, szó
+                    szerint megegyező formában volt megírva, és mindig
+                    egyszerű kisbetűs szövegként hasonlította össze az
+                    értékeket, ezért pl. a "Bekerülés éve" szerinti rendezés
+                    valójában a hónapnevek betűrendje szerint történt
                     (augusztus, december, február, január, ...), nem
                     időrendben.
                     """
-                    nyers_ertek = konyv.get(rend_kulcs, "")
-
-                    if rend_kulcs in ("oldalszam", "ev"):
-                        szam_str = "".join(filter(str.isdigit, str(nyers_ertek)))
-                        return int(szam_str) if szam_str else 0
-
-                    if rend_kulcs == "meretek":
-                        magassag_resz = str(nyers_ertek).split('x')[0].split('X')[0].strip()
-                        match = re.search(r'\d+(?:[.,]\d+)?', magassag_resz)
-                        return float(match.group(0).replace(',', '.')) if match else 0.0
-
-                    if rend_kulcs == "bekerult":
-                        return bekerult_datum_kulcs(nyers_ertek)
-
-                    return magyar_rendezesi_kulcs(nyers_ertek)
+                    return konyv_mezo_rendezesi_kulcs(rend_kulcs, konyv.get(rend_kulcs, ""))
 
                 talalatok.sort(key=riport_rendezes)
 

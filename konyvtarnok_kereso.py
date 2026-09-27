@@ -12,6 +12,7 @@ from data_manager import (
     sor_alap_adatta_alakitasa,
     load_kereso_json,
     is_same_book,
+    MentesiHiba,
 )
 from gyors_kereses import GyorsListaKereso, osszes_kijelolt_index
 from utils import masolas_vagolapra_szoveg
@@ -51,9 +52,11 @@ class KonyvtarnokKeresoApp(wx.Frame):
         # Gyorsbillentyű tábla a Ctrl+W bezáráshoz
         self.init_shortcuts()
 
-        # Téma alkalmazása
+        # Téma alkalmazása - a Show()-t csak EZUTÁN hívjuk (lásd az init_ui
+        # végén lévő kommentet).
         config = apply_theme_from_settings(self)
         self.current_theme = config.get("tema", "vilagos")
+        self.Show()
 
     def adatok_betoltese(self):
         """Beolvassa a JSON fájlt a data_manager segédfüggvényével."""
@@ -220,7 +223,12 @@ class KonyvtarnokKeresoApp(wx.Frame):
         self.panel.SetSizer(fő_sizer)
         self.kereso_mezo.SetFocus()
         self.Centre()
-        self.Show()
+        # A Show()-t szándékosan NEM itt hívjuk meg: a __init__ csak a téma
+        # alkalmazása (apply_theme_from_settings) UTÁN jeleníti meg az
+        # ablakot, ugyanúgy, mint a Deziderata és a Konyvtarnok főablak -
+        # így elkerülhető, hogy az ablak egy pillanatra a világos
+        # alapértelmezett témával villanjon fel, mielőtt a beállított téma
+        # (pl. sötét/pasztell) alkalmazásra kerülne.
 
     def init_shortcuts(self):
         """Gyorsbillentyűk beállítása (Ctrl+W a kilépéshez)."""
@@ -546,10 +554,24 @@ class KonyvtarnokKeresoApp(wx.Frame):
 
         # A tényleges felvételi ciklust a data_manager.konyvek_tomeges_felvetele
         # közös segédfüggvénye végzi (ugyanaz, mint a Dezideráta-kezelő
-        # "Felvétel az állományba" műveleténél).
-        sikeres, visszautasitott, sikeres_relativ_indexek, _ = konyvek_tomeges_felvetele(
-            self.parent.db, konyv_adatok, utani_frissites_fv=_frissites
-        )
+        # "Felvétel az állományba" műveleténél). Ha a mentés (lemezre írás)
+        # meghiúsul, a data_manager.MentesiHiba kivételt kapjuk - ezt
+        # szándékosan külön kezeljük, hogy ne keveredjen össze a
+        # duplikátum miatti elutasítással (lásd data_manager.MentesiHiba).
+        try:
+            sikeres, visszautasitott, sikeres_relativ_indexek, _ = konyvek_tomeges_felvetele(
+                self.parent.db, konyv_adatok, utani_frissites_fv=_frissites
+            )
+        except MentesiHiba as e:
+            wx.MessageBox(
+                f"Hiba történt az állományjegyzék mentése közben:\n{e}\n\n"
+                "A már sikeresen felvett tételek megmaradnak, de a további "
+                "kijelölt tételek felvétele emiatt megszakadt.",
+                "Mentési hiba",
+                wx.OK | wx.ICON_ERROR,
+                self,
+            )
+            return
 
         # A sikeresen átemelt sorok "Státusz" oszlopát azonnal frissítjük,
         # hogy ne kelljen új keresést indítani az "Állományban" jelzés

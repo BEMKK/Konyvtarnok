@@ -1,14 +1,19 @@
 import wx
-import re
 
 from constants import DEFAULT_LATHATO_OSZLOPOK
 from gyors_kereses import GyorsListaKereso, osszes_kijelolt_index
 # A rendezési/dátumfeldolgozó segédfüggvények (magyar_rendezesi_kulcs,
-# bekerult_datum_kulcs) az utils.py-ba kerültek át, mert tisztán szöveg-/
-# adatfeldolgozó logika, semmi közük a wx-hez - így más, nem-GUI modulok
-# (statisztika.py, deziderata.py) is ezekből, nem pedig ebből a vizuális
-# komponensből (KonyvListaCtrl) importálhatják őket.
-from utils import magyar_rendezesi_kulcs, bekerult_datum_kulcs
+# konyv_mezo_rendezesi_kulcs) az utils.py-ba kerültek át, mert tisztán
+# szöveg-/adatfeldolgozó logika, semmi közük a wx-hez - így más, nem-GUI
+# modulok (statisztika.py, deziderata.py) is ezekből, nem pedig ebből a
+# vizuális komponensből (KonyvListaCtrl) importálhatják őket.
+# A konyv_mezo_rendezesi_kulcs (mezőtípus szerinti: szám/méret/dátum/
+# magyar ábécé rendezési kulcs) ugyanaz a közös függvény, amit a
+# statisztika.py jelentés-rendezése is használ - korábban ez a logika a
+# KonyvListaCtrl.FeltoltLista helyi szam_kulcs/meret_kulcs függvényeiben
+# és a StatisztikaDialog.on_szamol helyi riport_rendezes függvényében
+# egymástól függetlenül, szó szerint megegyező formában volt megírva.
+from utils import magyar_rendezesi_kulcs, konyv_mezo_rendezesi_kulcs
 
 
 class KonyvListaCtrl(wx.ListCtrl):
@@ -88,20 +93,6 @@ class KonyvListaCtrl(wx.ListCtrl):
 
         akt_rendezes = self.rendezes_kulcs if self.rendezes_kulcs else "cim"
 
-        def szam_kulcs(ertek):
-            szam_str = "".join(filter(str.isdigit, str(ertek)))
-            return int(szam_str) if szam_str else 0
-
-        def meret_kulcs(ertek):
-            # Csak az 'x' vagy 'X' előtti részt vágja le (magasság)
-            magassag_resz = str(ertek).split('x')[0].split('X')[0].strip()
-            # Megkeresi az első számot (tizedesvesszővel vagy ponttal)
-            match = re.search(r'\d+(?:[.,]\d+)?', magassag_resz)
-            if match:
-                # Tört számmá alakítja (pl. "12,5" -> 12.5), így a 12.5 pontosan a 12 után kerül
-                return float(match.group(0).replace(',', '.'))
-            return 0.0
-
         def osszetett_rendezesi_kulcs(konyv):
             raw_val = konyv.get(akt_rendezes, "")
             
@@ -109,15 +100,11 @@ class KonyvListaCtrl(wx.ListCtrl):
             is_empty = raw_val is None or str(raw_val).strip() == ""
             hianyos = 1 if is_empty else 0
 
-            # 1. Elsődleges rendezési érték kiszámítása
-            if akt_rendezes in ("oldalszam", "ev"):
-                elso = szam_kulcs(raw_val)
-            elif akt_rendezes == "meretek":
-                elso = meret_kulcs(konyv.get("meretek", ""))
-            elif akt_rendezes == "bekerult":
-                elso = bekerult_datum_kulcs(raw_val)
-            else:
-                elso = magyar_rendezesi_kulcs(raw_val)
+            # 1. Elsődleges rendezési érték kiszámítása - a mezőtípus szerinti
+            # (szám/méret/dátum/magyar ábécé) döntést az utils.konyv_mezo_
+            # rendezesi_kulcs közös függvénye végzi (lásd az importnál lévő
+            # kommentet).
+            elso = konyv_mezo_rendezesi_kulcs(akt_rendezes, raw_val)
             
             # 2. Másodlagos és harmadlagos rendezési értékek
             if akt_rendezes == "cim":

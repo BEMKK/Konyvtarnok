@@ -17,7 +17,7 @@ from konyvtarnok_kereso import KonyvtarnokKeresoApp
 from menu_bar import MenuBar
 from konyv_lista import KonyvListaCtrl
 from deziderata import Deziderata
-from data_manager import additiv_lista_import, szoveg_szuro_egyezik, szuresi_talalatok
+from data_manager import additiv_lista_import, szoveg_szuro_egyezik, szuresi_talalatok, MentesiHiba
 from utils import statisztikai_szures
 from update import check_for_updates_async
 
@@ -331,8 +331,26 @@ class Konyvtarnok(wx.Frame):
                     torlendo_id_k.append(konyv.get("id"))
                 elif konyv:
                     logging.warning(f"A könyvnek nincs ID-je, nem törölhető: {konyv.get('cim', '?')}")
-            for konyv_id in torlendo_id_k:
-                self.db.konyv_torlese_by_id(konyv_id)
+
+            # A db.konyv_torlese_by_id visszatérési értékét (illetve az
+            # esetleges MentesiHiba kivételt) korábban itt egyáltalán nem
+            # néztük meg: egy sikertelen lemezre mentés esetén a könyv
+            # csendben, mindenféle hibaüzenet nélkül "eltűnt" volna a
+            # listából, majd újraindítás után visszatért volna, mert
+            # valójában sosem lett elmentve. Most megszakítjuk a törlést és
+            # jelezzük a hibát, amint az első ilyen eset előfordul.
+            try:
+                for konyv_id in torlendo_id_k:
+                    self.db.konyv_torlese_by_id(konyv_id)
+            except MentesiHiba as e:
+                wx.MessageBox(
+                    f"Hiba történt a törlés mentése közben:\n{e}\n\n"
+                    "A törlés emiatt megszakadt, a további kijelölt könyvek "
+                    "esetleg nem lettek törölve.",
+                    "Mentési hiba",
+                    wx.OK | wx.ICON_ERROR,
+                    self,
+                )
 
             self.teljes_adatlista = []
             if self.aktiv_szurt_lista is not None:
@@ -618,6 +636,22 @@ class Konyvtarnok(wx.Frame):
             hozzaadva, kihagyva = additiv_lista_import(kivalasztott_utvonal, _hozzaad)
         except ValueError as e:
             wx.MessageBox(str(e), "Hiba", wx.OK | wx.ICON_ERROR)
+            return
+        except MentesiHiba as e:
+            # Külön ág a data_manager.MentesiHiba-nak: ez azt jelenti, hogy
+            # egy tétel importálása közben a lemezre mentés hiúsult meg (nem
+            # duplikátum volt), ezért ezt nem szabad az általános "hiba
+            # történt az importálás során" üzenettel összemosni, illetve a
+            # már addig sikeresen importált (és elmentett) tételek
+            # megmaradnak.
+            wx.MessageBox(
+                f"Hiba történt az állományjegyzék mentése közben:\n{e}\n\n"
+                "Az addig sikeresen importált tételek megmaradnak, de az "
+                "importálás emiatt megszakadt.",
+                "Mentési hiba",
+                wx.OK | wx.ICON_ERROR,
+            )
+            self._uj_konyvek_utani_frissites(uj_konyv_objektumok)
             return
         except Exception as e:
             logging.error(f"Hiba történt az importálás közben: {e}")
