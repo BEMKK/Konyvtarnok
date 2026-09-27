@@ -18,6 +18,9 @@ from main_frame import Konyvtarnok
 # data_manager.py, a deziderata.py és ez a fájl (get_exe_dir) egymástól
 # függetlenül, szó szerint megegyező formában tartalmazta.
 from utils import masolas_vagolapra_szoveg, alkalmazas_alapmappa
+# A "futó exe önfrissítése" folyamat két horgot igényel a program
+# indításánál és megjelenésénél - lásd update.py a részletes leírásért.
+from update import cleanup_old_exe, kezel_update_ready_jelzes
 
 # Segédfüggvény az EXE MELLET lévő mappához (hibanapló, adatbázisok)
 def get_exe_dir():
@@ -129,7 +132,7 @@ class HibaAblak(wx.Dialog):
 # =========================================================
 # Alapértelmezett beállítás fájlnév nélkül (nem hoz létre fájlt indításkor)
 logging.basicConfig(
-    level=logging.ERROR,
+    level=logging.WARNING,
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 
@@ -164,6 +167,12 @@ sys.excepthook = custom_excepthook
 # PROGRAM INDÍTÁSA
 # =========================================================
 if __name__ == '__main__':
+    # A korábbi önfrissítés által hátrahagyott "<név>.exe.old" fájl
+    # eltávolítása, ha időközben felszabadult a zárolása. Ezt a lehető
+    # legkorábban érdemes hívni, még a wx.App() létrehozása előtt is,
+    # mivel semmilyen GUI-elemtől nem függ.
+    cleanup_old_exe()
+
     app = wx.App()
     
     # 1. Létrehozzuk az adatbázis objektumot
@@ -178,4 +187,11 @@ if __name__ == '__main__':
     # except Exception:
         # sys.excepthook(*sys.exc_info())
     frame.Show()
+
+    # Ha ezt a példányt egy önfrissítés indította (lásd update.py:
+    # perform_self_update), ez a hívás jelzi a régi, még futó példánynak,
+    # hogy az új főablak már látható, tehát az bezárhatja magát. Szándékosan
+    # a frame.Show() UTÁN van: a régi példány addig fut/mutat folyamatjelzőt,
+    # amíg ez a sor le nem fut.
+    kezel_update_ready_jelzes(sys.argv)
     app.MainLoop()

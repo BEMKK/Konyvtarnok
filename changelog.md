@@ -4,6 +4,12 @@ A projekten végrehajtott lényegi változtatások dokumentációja.
 
 
 
+## [3.2.0] - 2026-09-27
+
+- A program mostantól képes letölteni az új verziót, és felülírni vele a régit.
+
+
+
 ## [3.1.2] - 2026-09-26
 
 - Javítva a listafrissítés hibája a Dezideráta-kezelőben, mely akkor jelentkezett, ha a könyv szerkesztése dialog az adatlapról lett megnyitva.

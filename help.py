@@ -120,7 +120,7 @@ class HelpNotebookDialog(wx.Dialog):
                 "Frissítés",
                 "FRISSÍTÉSEK KERESÉSE\n\n"
                 "  Új verzió ellenőrzéséhez használja a Súgó menü Frissítések keresése menüpontját, vagy nyomja meg a Ctrl+Shift+F billentyűkombinációt.\n"
-                "  Ha van elérhető új verzió, a felugró ablakban megjelenik annak leírása, valamint a GitHub kiadási oldal megnyitására, és a frissítés elhalasztására szolgáló gombok. Az új verzió futtatható fájlját Önnek kell a megnyíló GitHub oldalról letölteni, és a régi fájlt manuálisan lecserélni az újra. Fontos, hogy az új verzió abba a mappába kerüljön,  ahol a régi volt, különben a program nem fogja megtalálni az állomány- és dezideráta-jegyzéket, valamint az Ön beállításait tartalmazó JSON fájlt.\n"
+                "  Ha van elérhető új verzió, a felugró ablakban megjelenik annak leírása, valamint a letöltésre, a GitHub kiadási oldal megnyitására, és a frissítés elhalasztására szolgáló gombok. Az új verzió letöltéséhez kattintson a frissítés telepítése gombra. Ekkor a program automatikusan letölti és megnyitja az új verziót.
                 "  Ha nincs új verzió, a program felugró ablakban tájékoztat erről.\n"
                 "  A program alapértelmezés szerint minden indításkor ellenőrzi a frissítéseket, ezt a beállítások ablakban módosíthatja.\n"
             ),

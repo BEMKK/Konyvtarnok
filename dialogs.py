@@ -77,10 +77,7 @@ class UjdonsagokDialog(wx.Dialog):
         main_sizer.Add(wx.StaticLine(self), 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 15)
         
         ujdonsagok_lista = [
-            "Javítva a listafrissítés hibája a Dezideráta-kezelőben, mely akkor jelentkezett, ha a könyv szerkesztése dialog az adatlapról lett megnyitva.",
-            "Javítva a statisztika kereszttáblás jelentése, mely eddig nem tartalmazta az elsődleges szempont értékét.",
-            "Javítva a frissítés keresésekor felugró hibaüzenet internetkapcsolat hiánya esetén.",
-            "Javítva a téma alkalmazása a beállítások ablak görgetésekor.",
+            "Frissítés letöltésének lehetősége, az új verziót a program immár automatikusan letölti és elindítja!",
             "Újabb kódrefaktorálás és javítások."
         ]
 
