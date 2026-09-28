@@ -55,6 +55,22 @@ def get_current_exe_path():
     return os.path.abspath(sys.executable)
 
 
+def _tiszta_pyinstaller_kornyezet():
+    """Az új exe példány saját _MEI mappába csomagoljon ki, ne a régi
+    (szülő) példányét használja. Enélkül a bootloader a szülőtől örökölt
+    környezeti változók miatt újrahasznosítja a régi _MEI mappát, amit a
+    régi példány kilépéskor törölni próbál -> "Failed to remove temporary
+    directory" figyelmeztetés."""
+    env = os.environ.copy()
+    # PyInstaller >= 6.9: hivatalos mód a "friss" onefile indításra
+    env["PYINSTALLER_RESET_ENVIRONMENT"] = "1"
+    # Régebbi verziók (5.x: _MEIPASS2, 6.0-6.8: _PYI_*)
+    for kulcs in list(env):
+        if kulcs == "_MEIPASS2" or kulcs.startswith("_PYI_"):
+            env.pop(kulcs, None)
+    return env
+
+
 def cleanup_old_exe():
     """A main.py legelején hívandó: eltávolítja egy korábbi frissítés által
     hátrahagyott '<név>.exe.old' fájlt, ha az időközben felszabadult."""
@@ -188,7 +204,16 @@ def perform_self_update(parent, letoltes_url, uj_verzio):
             os.close(jelzo_fd)
             os.remove(jelzo_path)  # csak a nevet akarjuk, a fájl még ne létezzen
 
-            subprocess.Popen([exe_path, UPDATE_READY_ARG, jelzo_path])
+            subprocess.Popen(
+                [exe_path, UPDATE_READY_ARG, jelzo_path],
+                env=_tiszta_pyinstaller_kornyezet(),
+                cwd=exe_dir,
+                close_fds=True,
+                creationflags=(
+                    getattr(subprocess, "DETACHED_PROCESS", 0)
+                    | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
+                ),
+            )
 
             # 4. VÁRAKOZÁS az új példány jelzésére (időkorláttal).
             hatarido = time.time() + JELZOFAJL_VARAKOZAS_MP

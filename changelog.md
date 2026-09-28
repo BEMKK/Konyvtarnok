@@ -4,6 +4,12 @@ A projekten végrehajtott lényegi változtatások dokumentációja.
 
 
 
+## [3.2.2] - 2026-09-28
+
+- Javítva a frissítés letöltése után jelentkező ideiglenes mappa törlésének ütközése.
+
+
+
 ## [3.2.1] - 2026-09-28
 
 - Javítva a kezdőbetűvel való gyorskeresés pufferelési hibája.

@@ -76,8 +76,7 @@ class UjdonsagokDialog(wx.Dialog):
         main_sizer.Add(wx.StaticLine(self), 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 15)
         
         ujdonsagok_lista = [
-            "Javítva a kezdőbetűvel való gyorskeresés pufferelési hibája.",
-            "Újabb kódrefaktorálás és javítások."
+            "Javítva a frissítéskor jelentkező ideiglenes mappa törlésének hibája."
         ]
 
         szoveg_box = wx.BoxSizer(wx.VERTICAL)
