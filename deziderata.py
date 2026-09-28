@@ -65,13 +65,11 @@ class Deziderata(wx.Frame):
         # --- Gombok ---
         btn_box = wx.BoxSizer(wx.HORIZONTAL)
 
-        self.btn_details = wx.Button(panel, label="Tétel részletei")
         self.btn_add = wx.Button(panel, label="Új tétel hozzáadása")
         self.btn_edit = wx.Button(panel, label="Tétel szerkesztése")
         self.btn_allomany = wx.Button(panel, label="Felvétel az állományba")
         self.btn_delete = wx.Button(panel, label="Tétel eltávolítása")
 
-        btn_box.Add(self.btn_details, 0, wx.ALL, 5)
         btn_box.Add(self.btn_add, 0, wx.ALL, 5)
         btn_box.Add(self.btn_edit, 0, wx.ALL, 5)
         btn_box.Add(self.btn_allomany, 0, wx.ALL, 5)
@@ -129,7 +127,6 @@ class Deziderata(wx.Frame):
         self.Bind(wx.EVT_MENU, self.on_export_json, item_export)
         self.Bind(wx.EVT_MENU, self.on_exit, item_exit)
 
-        self.btn_details.Bind(wx.EVT_BUTTON, self.on_reszletek)
         self.btn_add.Bind(wx.EVT_BUTTON, self.on_add)
         self.btn_edit.Bind(wx.EVT_BUTTON, self.on_edit)
         self.btn_allomany.Bind(wx.EVT_BUTTON, self.on_atemeles_allomanyba)

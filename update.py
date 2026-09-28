@@ -349,13 +349,13 @@ class FrissitesDialog(wx.Dialog):
         btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
 
         if self.exe_asset_url:
-            btn_telepit = wx.Button(self, label="Frissítés telepítése")
+            btn_telepit = wx.Button(self, label="Frissítés most")
             btn_telepit.SetDefault()
             btn_telepit.Bind(wx.EVT_BUTTON, self.on_telepites)
             btn_sizer.Add(btn_telepit, 0, wx.RIGHT, 10)
 
-        btn_open = wx.Button(self, label="Frissítési oldal megnyitása")
-        btn_close = wx.Button(self, wx.ID_CANCEL, label="Később")
+        btn_open = wx.Button(self, label="Megtekintés a GitHub-on")
+        btn_close = wx.Button(self, wx.ID_CANCEL, label="Frissítés elhalasztása")
 
         btn_open.Bind(wx.EVT_BUTTON, self.on_open_browser)
 

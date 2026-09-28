@@ -124,9 +124,11 @@ class HelpNotebookDialog(wx.Dialog):
                 "  A program alapértelmezés szerint minden indításkor ellenőrzi a frissítéseket, ezt a beállítások ablakban módosíthatja.\n"
                 "  Ha van elérhető új verzió, a felugró ablakban megjelenik annak leírása, valamint a letöltésre, a GitHub kiadási oldal megnyitására, és a frissítés elhalasztására szolgáló gombok.\n"
                 "  Ha nem érhető el frissítés, manuális ellenőrzés esetén a program felugró ablakban tájékoztat erről.\n\n"
-                "2. Frissítés letöltése:\n"
-                "  Az új verzió letöltéséhez kattintson a frissítés telepítése gombra.\n"
+                "2. Frissítés letöltése vagy elhalasztása:\n"
+                "  Az új verzió letöltéséhez kattintson a frissítés most gombra.\n"
                 "  Ekkor a program automatikusan letölti és megnyitja az új verziót.\n"
+                "  Amennyiben később szeretné letölteni a frissítést, kattintson a frissítés elhalasztása gombra.\n"
+                "  Az Önnek megfelelő időpontban futtassa újra a frissítés keresését a fenti módon, és válassza a frissítés most opciót.\n"
             ),
             (
                 "Billentyűparancsok",

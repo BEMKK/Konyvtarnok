@@ -4,9 +4,11 @@ A projekten végrehajtott lényegi változtatások dokumentációja.
 
 
 
-## [3.2.2] - 2026-09-28
+## [3.3.0] - 2026-09-29
 
 - Javítva a frissítés letöltése után jelentkező ideiglenes mappa törlésének ütközése.
+- Javítva a frissítést jelző párbeszédablak gombjainak feliratai.
+- Eltávolítva a Dezideráta-kezelő Tétel részletei gombja az eszköztárról.
 
 
 
