@@ -33,7 +33,8 @@ class GyorsListaKereso:
     def __init__(self, ido_kuszob=1.2):
         self.ido_kuszob = ido_kuszob
         self.puffer = ""
-        self.utolso_leutes_ideje = 0
+        # -inf: az első leütés mindig "régi" leütésnek számít (puffer nullázás)
+        self.utolso_leutes_ideje = float("-inf")
 
     def torol_egy_karaktert(self):
         """A Backspace billentyű kezeléséhez: törli a puffer utolsó karakterét."""
@@ -49,7 +50,7 @@ class GyorsListaKereso:
         sikerül, átadja a `feldolgozo_fv(karakter)` hívónak megadott
         callback-nek (jellemzően a `feldolgoz` metódusnak egy már
         előkészített lekérő/beállító készlettel). Ha nem nyerhető ki
-        használható karakter, `event.Skip()`-et hív, hogy a widget
+        nyomtatható karakter (pl. Enter, Tab, Esc, Ctrl+billentyű), `event.Skip()`-et hív, hogy a widget
         alapértelmezett billentyűkezelése lefusson.
         """
         key_code = event.GetKeyCode()
@@ -72,7 +73,11 @@ class GyorsListaKereso:
             except (ValueError, OverflowError):
                 pass
 
-        if karakter:
+        # Vezérlőkarakterek (Enter '\r', Tab '\t', Esc '\x1b', Ctrl+C '\x03' stb.)
+        # nem kerülhetnek a keresőpufferbe, és az eseményt tovább kell engedni.
+        # A módosítóbillentyűket szándékosan nem tiltjuk: az AltGr (= Ctrl+Alt)
+        # billentyűvel gépelt karakterek is érvényes, nyomtatható karakterek.
+        if karakter and karakter.isprintable():
             feldolgozo_fv(karakter)
         else:
             event.Skip()
@@ -93,8 +98,10 @@ class GyorsListaKereso:
         if not karakter:
             return
 
-        aktualis_ido = time.time()
+        # monotonic: az óra átállítása (NTP, nyári időszámítás) nem zavarja meg
+        aktualis_ido = time.monotonic()
         elozo_buffer = self.puffer
+        is_single_char_repeat = False
 
         if aktualis_ido - self.utolso_leutes_ideje > self.ido_kuszob:
             self.puffer = ""
@@ -123,14 +130,9 @@ class GyorsListaKereso:
         if total == 0:
             return
 
-        # Ciklikus keresés: ha 1 karakteres puffer és ugyanazt nyomták le,
-        # a jelenlegi kijelöléstől kezdve keresünk tovább (körkörösen)
-        is_single_char_repeat = (
-            len(keresett) == 1 and
-            len(elozo_buffer) == 1 and
-            keresett == elozo_buffer.lower()
-        )
-
+        # Ciklikus keresés: ha 1 karakteres puffer és ugyanazt nyomták le
+        # (is_single_char_repeat, fentebb számolva), a jelenlegi kijelöléstől
+        # kezdve keresünk tovább (körkörösen)
         current_idx = kivalasztott_lekero()
         if is_single_char_repeat and current_idx != -1:
             start_idx = (current_idx + 1) % total
@@ -149,12 +151,9 @@ class GyorsListaKereso:
                         return i
             return -1
 
-        # 1. Pontos előtag egyezés keresése
+        # Nem ismétlő esetben a start_idx eleve 0, vagyis a teljes listát
+        # végigkeresi; ismétlő esetben körkörösen, a kijelölés utánitól.
         talalt = keres_elo_tag(start_idx, korokre=is_single_char_repeat)
-
-        # 2. Ha nincs találat és nem körkörösen kerestünk, próbáljuk az elejéről
-        if talalt == -1 and not is_single_char_repeat:
-            talalt = keres_elo_tag(0)
 
         if talalt != -1:
             kivalasztas_beallito(talalt)

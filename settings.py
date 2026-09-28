@@ -1,5 +1,4 @@
 import wx
-from config_manager import load_settings
 from constants import DEFAULT_LATHATO_OSZLOPOK
 from konyv_lista import KonyvListaCtrl
 from theme_manager import get_theme_names, apply_theme
@@ -17,6 +16,13 @@ class BeallitasokDialog(wx.Dialog):
         ("bekerult", "Bekerülés dátuma")
     ]
 
+    FREKVENCIA_OPCIOK = [
+        ("startup", "Minden indításkor"),
+        ("daily", "Naponta"),
+        ("weekly", "Hetente"),
+        ("monthly", "Havonta")
+    ]
+
     # A jelölőnégyzetek felirata mostantól a KonyvListaCtrl.OSZLOP_DEFINICIOK
     # (konyv_lista.py) szótárból származik, ami a lista tényleges
     # oszlopfejléceit is meghatározza. Korábban ez a lista itt külön, kézzel
@@ -28,11 +34,15 @@ class BeallitasokDialog(wx.Dialog):
         (kulcs, adat[0]) for kulcs, adat in KonyvListaCtrl.OSZLOP_DEFINICIOK.items()
     ]
 
-    def __init__(self, parent, lathato_oszlopok=None, aktiv_tema="vilagos"):
+    def __init__(self, parent, config):
+        """A `config` a hívó által betöltött beállítás-szótár (load_settings()
+        eredménye) - a dialógus maga nem olvassa újra a settings.json-t, így
+        egyetlen forrásból dolgozik. A lathato_oszlopok és a tema kulcsot is
+        ebből veszi.
+        """
         super().__init__(parent, title="Beállítások", size=(420, 500), style=wx.DEFAULT_DIALOG_STYLE | wx.STAY_ON_TOP)
-        config = load_settings()        
-        self.lathato_oszlopok = lathato_oszlopok if lathato_oszlopok is not None else [k for k, _ in self.ELERHETO_OSZLOPOK]
-        self.aktiv_tema = aktiv_tema
+        self.lathato_oszlopok = config.get("lathato_oszlopok", DEFAULT_LATHATO_OSZLOPOK)
+        self.aktiv_tema = config.get("tema", "vilagos")
 
         fo_sizer = wx.BoxSizer(wx.VERTICAL)
         
@@ -94,7 +104,7 @@ class BeallitasokDialog(wx.Dialog):
         btn_reset_def = wx.Button(panel_oszlopok, label="Alapértelmezettek visszaállítása")
         
         btn_select_all.Bind(wx.EVT_BUTTON, self.on_mindet_kijelol)
-        btn_reset_def.Bind(wx.EVT_BUTTON, self.on_alapértelmezett_oszlopok)
+        btn_reset_def.Bind(wx.EVT_BUTTON, self.on_alapertelmezett_oszlopok)
 
         btn_oszlop_sizer.Add(btn_select_all, 0, wx.RIGHT, 5)
         btn_oszlop_sizer.Add(btn_reset_def, 0)
@@ -149,12 +159,6 @@ class BeallitasokDialog(wx.Dialog):
         self.cb_auto_update.SetValue(config.get("auto_update_check", True))
 
         lbl_freq = wx.StaticText(panel_frissites, label="Ellenőrzés gyakorisága:")
-        self.FREKVENCIA_OPCIOK = [
-            ("startup", "Minden indításkor"),
-            ("daily", "Naponta"),
-            ("weekly", "Hetente"),
-            ("monthly", "Havonta")
-        ]
         self.choice_freq = wx.Choice(panel_frissites, choices=[nev for _, nev in self.FREKVENCIA_OPCIOK])
         
         akt_freq = config.get("update_frequency", "startup")
@@ -203,11 +207,15 @@ class BeallitasokDialog(wx.Dialog):
         for cb in self.jelolo_negyzetek.values():
             cb.SetValue(True)
 
-    def on_alapértelmezett_oszlopok(self, event):
+    def on_alapertelmezett_oszlopok(self, event):
         for kulcs, cb in self.jelolo_negyzetek.items():
             cb.SetValue(kulcs in DEFAULT_LATHATO_OSZLOPOK)
 
     def on_manual_update_check(self, event):
+        # Szándékosan lokális (lusta) import: az update modul csak a kézi
+        # ellenőrzés gombnál kell, és modulszintű importként körkörös importot
+        # okozhatna (update -> ... -> settings). Ha az update.py sem közvetlenül,
+        # sem közvetve nem importálja a settings modult, a fájl elejére áthelyezhető.
         from update import check_for_updates_async
         check_for_updates_async(parent=self, is_manual=True)
 

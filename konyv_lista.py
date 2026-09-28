@@ -82,10 +82,6 @@ class KonyvListaCtrl(wx.ListCtrl):
     def FeltoltLista(self, adatok=None):
         self.sor_id_terkep.clear()
 
-        if not self.aktiv_oszlopok:
-            self.SetItemCount(0)
-            return
-
         if adatok is not None:
             self.jelenlegi_adatok = list(adatok)
         else:
@@ -125,17 +121,16 @@ class KonyvListaCtrl(wx.ListCtrl):
         for idx, konyv in enumerate(self.jelenlegi_adatok):
             self.sor_id_terkep[idx] = konyv.get("id")
 
-        try:
-            item_count = self.GetItemCount()
-            for i in range(item_count):
-                self.Select(i, False)
-            if item_count > 0:
-                self.Focus(0)
-        except Exception:
-            pass
+        # Az összes kijelölés törlése egyetlen hívással (-1 = minden elem);
+        # virtuális listánál nem kell soronként végigmenni.
+        self.SetItemState(-1, 0, wx.LIST_STATE_SELECTED)
 
-        count = len(self.jelenlegi_adatok)
+        # Aktív oszlop nélkül nincs mit megjeleníteni (0 sor), de az adatok
+        # (szűrés, rendezés) ilyenkor is frissülnek, nem maradnak régiek.
+        count = len(self.jelenlegi_adatok) if self.aktiv_oszlopok else 0
         self.SetItemCount(count)
+        if count > 0:
+            self.Focus(0)
         self.Refresh()
 
     def OnGetItemText(self, item, col):

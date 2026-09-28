@@ -4,6 +4,12 @@ A projekten végrehajtott lényegi változtatások dokumentációja.
 
 
 
+## [3.2.1] - 2026-09-28
+
+- Javítva a kezdőbetűvel való gyorskeresés pufferelési hibája.
+
+
+
 ## [3.2.0] - 2026-09-27
 
 - A program mostantól képes letölteni az új verziót, és felülírni vele a régit.

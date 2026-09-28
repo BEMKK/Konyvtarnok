@@ -775,7 +775,11 @@ class Konyvtarnok(wx.Frame):
 
     def OnBeallitasok(self, event):
         config = load_settings()
-        dlg = BeallitasokDialog(self, lathato_oszlopok=self.lista.aktiv_oszlopok, aktiv_tema=config.get("tema", "vilagos"))
+        # A dialógus a kapott config-ból dolgozik, maga nem olvassa újra a
+        # settings.json-t. Az oszlopoknál a lista jelenlegi állapota az irányadó
+        # (ez eltérhet a fájltól, pl. ha egy korábbi mentés nem sikerült).
+        config["lathato_oszlopok"] = list(self.lista.aktiv_oszlopok)
+        dlg = BeallitasokDialog(self, config)
         if dlg.ShowModal() == wx.ID_OK:
             uj_oszlopok = dlg.GetKivalasztottOszlopok()
             uj_tema = dlg.GetKivalasztottTema()

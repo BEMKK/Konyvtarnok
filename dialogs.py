@@ -71,21 +71,21 @@ class UjdonsagokDialog(wx.Dialog):
         main_sizer.Add(cim_label, 0, wx.ALIGN_CENTER | wx.TOP, 15)
         
         verzio_label = wx.StaticText(self, label=f"v{APP_VERSION} {APP_STAGE}".strip())
-        verzio_label.SetForegroundColour(wx.Colour(120, 120, 120))
         main_sizer.Add(verzio_label, 0, wx.ALIGN_CENTER | wx.TOP | wx.BOTTOM, 5)        
 
         main_sizer.Add(wx.StaticLine(self), 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 15)
         
         ujdonsagok_lista = [
-            "Frissítés letöltésének lehetősége, az új verziót a program immár automatikusan letölti és elindítja!",
+            "Javítva a kezdőbetűvel való gyorskeresés pufferelési hibája.",
             "Újabb kódrefaktorálás és javítások."
         ]
 
         szoveg_box = wx.BoxSizer(wx.VERTICAL)
+        bullet_cimkek = []
         for elem in ujdonsagok_lista:
             pont_sizer = wx.BoxSizer(wx.HORIZONTAL)
             bullet = wx.StaticText(self, label="• ")
-            bullet.SetForegroundColour(wx.Colour(0, 120, 215))
+            bullet_cimkek.append(bullet)
             
             txt = wx.StaticText(self, label=elem)
             txt.Wrap(380)
@@ -102,14 +102,19 @@ class UjdonsagokDialog(wx.Dialog):
         ok_gomb.SetDefault()
         btn_sizer.AddButton(ok_gomb)
         
-        # Téma alkalmazása Realize előtt
-        apply_theme_from_settings(self)
-
         btn_sizer.Realize()
         
         main_sizer.Add(btn_sizer, 0, wx.ALIGN_CENTER | wx.BOTTOM, 15)
         
         self.SetSizer(main_sizer)
+
+        # A témát az összes widget felépítése UTÁN, de a saját színezés ELŐTT
+        # kell alkalmazni: az apply_theme minden StaticText előtérszínét
+        # felülírja, így a korábban beállított egyedi színek hatástalanok voltak.
+        apply_theme_from_settings(self)
+        verzio_label.SetForegroundColour(wx.Colour(120, 120, 120))
+        for bullet in bullet_cimkek:
+            bullet.SetForegroundColour(wx.Colour(0, 120, 215))
         
         self.Centre()
 
