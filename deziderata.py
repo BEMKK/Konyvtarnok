@@ -104,7 +104,6 @@ class Deziderata(wx.Frame):
         menubar = wx.MenuBar()
         menu_items = wx.Menu()
 
-        item_details = menu_items.Append(wx.ID_ANY, "Tétel részletei")
         item_add = menu_items.Append(wx.ID_NEW, "Új tétel hozzáadása\tCTRL+N")
         item_edit = menu_items.Append(wx.ID_EDIT, "Tétel szerkesztése\tCTRL+E")
         item_allomany = menu_items.Append(wx.ID_ANY, "Tétel állományba vétele\tCTRL+F")
@@ -118,7 +117,6 @@ class Deziderata(wx.Frame):
         self.SetMenuBar(menubar)
 
         # --- Események ---
-        self.Bind(wx.EVT_MENU, self.on_reszletek, item_details)
         self.Bind(wx.EVT_MENU, self.on_add, item_add)
         self.Bind(wx.EVT_MENU, self.on_edit, item_edit)
         self.Bind(wx.EVT_MENU, self.on_atemeles_allomanyba, item_allomany)

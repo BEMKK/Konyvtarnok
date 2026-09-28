@@ -78,7 +78,7 @@ class UjdonsagokDialog(wx.Dialog):
         ujdonsagok_lista = [
             "Javítva a frissítéskor jelentkező ideiglenes mappa törlésének hibája.",
             "Javítva a frissítést jelző párbeszédablak gombjainak feliratai.",
-            "Eltávolítva a Dezideráta-kezelőből a Tétel részletei gomb, így a részletek kizárólag enterrel vagy dupla kattintással nyithatók meg."
+            "Eltávolítva a Dezideráta-kezelő Tétel részletei gomb és menüpont, így a részletek kizárólag enterrel vagy dupla kattintással nyithatók meg."
         ]
 
         szoveg_box = wx.BoxSizer(wx.VERTICAL)

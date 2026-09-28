@@ -8,7 +8,7 @@ A projekten végrehajtott lényegi változtatások dokumentációja.
 
 - Javítva a frissítés letöltése után jelentkező ideiglenes mappa törlésének ütközése.
 - Javítva a frissítést jelző párbeszédablak gombjainak feliratai.
-- Eltávolítva a Dezideráta-kezelő Tétel részletei gombja az eszköztárról.
+- Eltávolítva a Dezideráta-kezelő Tétel részletei gomb az eszköztárról és menüpont a felső menüsorból.
 
 
 
