@@ -4,6 +4,18 @@ A projekten végrehajtott lényegi változtatások dokumentációja.
 
 
 
+## [3.3.2] - 2026-09-29
+
+- Kisebb uix javítások és finomítások.
+
+
+
+## [3.3.1] - 2026-09-29
+
+- Javítva a rádiógombok és jelölőnégyzetek akadálymentes felolvasásának hibája.
+
+
+
 ## [3.3.0] - 2026-09-29
 
 - Javítva a frissítés letöltése után jelentkező ideiglenes mappa törlésének ütközése.
