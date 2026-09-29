@@ -98,8 +98,13 @@ def apply_theme(window, theme_name="vilagos"):
         elif isinstance(child, wx.StaticText):
             child.SetForegroundColour(theme["text_fg"])
         elif isinstance(child, (wx.CheckBox, wx.RadioButton)):
-            child.SetForegroundColour(theme["text_fg"])
-            child.SetBackgroundColour(theme["panel_bg"])
+            # Szándékosan NEM állítunk rajta színt. Az explicit szín Windows
+            # alatt owner-drawn (saját rajzolású) vezérlővé alakíthatja az
+            # elemet, amit a képernyőolvasók (NVDA) nyomógombként olvasnak
+            # fel: elvész a jelölőnégyzet/rádiógomb szerepkör és a
+            # "bejelölve" állapot. A natív vezérlő a szülő (panel) háttérszínét
+            # örökli, ezért a háttér így is a témához igazodik.
+            pass
         
         # Rekurzió a gyermek elemek gyermekeire (pl. sizer-be ágyazott panelek, ablakok)
         if hasattr(child, "GetChildren") and child.GetChildren():
