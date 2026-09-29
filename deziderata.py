@@ -352,15 +352,15 @@ class Deziderata(wx.Frame):
 
         db = len(selected_indices)
         uzenet = (
-            f"Biztosan törölni szeretnéd a kijelölt {db} db tételt?"
+            f"Biztosan törölni szeretné a kijelölt {db} db tételt?"
             if db > 1
-            else "Biztosan törölni szeretnéd a kijelölt tételt?"
+            else "Biztosan törölni szeretné a kijelölt tételt?"
         )
 
         confirm = wx.MessageBox(
             uzenet,
             "Törlés megerősítése",
-            wx.YES_NO | wx.ICON_QUESTION
+            wx.YES_NO | wx.NO_DEFAULT | wx.ICON_QUESTION
         )
 
         if confirm == wx.YES:

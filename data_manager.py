@@ -517,9 +517,9 @@ def kerj_tomeges_atemeles_megerositest(parent, darab, tetel_nev, cel_nev):
     Visszaadja True-t, ha a felhasználó igennel válaszolt.
     """
     uzenet = (
-        f"Biztosan át szeretnéd emelni a kijelölt {darab} db {tetel_nev} {cel_nev}?"
+        f"Biztosan át szeretné emelni a kijelölt {darab} db {tetel_nev} {cel_nev}?"
         if darab > 1
-        else f"Biztosan át szeretnéd emelni a kijelölt {tetel_nev} {cel_nev}?"
+        else f"Biztosan át szeretné emelni a kijelölt {tetel_nev} {cel_nev}?"
     )
     valasz = wx.MessageBox(uzenet, "Átemelés megerősítése", wx.YES_NO | wx.ICON_QUESTION, parent)
     return valasz == wx.YES

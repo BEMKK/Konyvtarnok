@@ -319,7 +319,7 @@ class Konyvtarnok(wx.Frame):
         darab = len(indexek)
         uzenet = f"Biztosan törölni szeretné a(z) '{self.lista.GetItemText(indexek[0])}' című könyvet?" if darab == 1 else f"Biztosan törölni szeretné a kijelölt {darab} db könyvet?"
 
-        kerdes = wx.MessageDialog(self, uzenet, "Megerősítés", wx.YES_NO | wx.NO_DEFAULT | wx.ICON_QUESTION)
+        kerdes = wx.MessageDialog(self, uzenet, "Törlés megerősítése", wx.YES_NO | wx.NO_DEFAULT | wx.ICON_QUESTION)
         
         if kerdes.ShowModal() == wx.ID_YES:
             cel_index = min(indexek)

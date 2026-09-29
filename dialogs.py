@@ -76,7 +76,7 @@ class UjdonsagokDialog(wx.Dialog):
         main_sizer.Add(wx.StaticLine(self), 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 15)
         
         ujdonsagok_lista = [
-            "Javítva a rádiógombok és jelölőnégyzetek akadálymentes felolvasásának hibája."
+            "Kisebb uix javítások."
         ]
 
         szoveg_box = wx.BoxSizer(wx.VERTICAL)
