@@ -178,10 +178,10 @@ class Konyvtarnok(wx.Frame):
 
         self.Bind(wx.EVT_MENU, self.OnMindentKijelol, id=id_mindent_kijelol)
 
-        # FÓKUSZ ÉS KIJELÖLÉS (Visszaállítva!)
+        # FÓKUSZ (kijelölés nélkül): indításkor az első tétel nincs kijelölve.
         self.lista.SetFocus()
-        if self.lista.GetItemCount() > 0:
-            self.lista.Select(0)
+        # if self.lista.GetItemCount() > 0:
+        #     self.lista.Select(0)
             
         self.FrissitStatusBar()
         self.Show()

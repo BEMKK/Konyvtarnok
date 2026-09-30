@@ -121,16 +121,28 @@ class KonyvListaCtrl(wx.ListCtrl):
         for idx, konyv in enumerate(self.jelenlegi_adatok):
             self.sor_id_terkep[idx] = konyv.get("id")
 
-        # Az összes kijelölés törlése egyetlen hívással (-1 = minden elem);
-        # virtuális listánál nem kell soronként végigmenni.
-        self.SetItemState(-1, 0, wx.LIST_STATE_SELECTED)
+        # Az összes kijelölés ÉS a fókusz törlése egyetlen hívással (-1 = minden
+        # elem); virtuális listánál nem kell soronként végigmenni. A fókuszt még
+        # a SetItemCount előtt töröljük, amikor a régi elemszám még érvényes.
+        self.SetItemState(-1, 0, wx.LIST_STATE_SELECTED | wx.LIST_STATE_FOCUSED)
 
         # Aktív oszlop nélkül nincs mit megjeleníteni (0 sor), de az adatok
         # (szűrés, rendezés) ilyenkor is frissülnek, nem maradnak régiek.
         count = len(self.jelenlegi_adatok) if self.aktiv_oszlopok else 0
+        # A 0-ra állítás nullázza a natív lista belső állapotát (fókusz,
+        # kijelölés), így szűkülő listánál nem maradhat érvénytelen index.
+        self.SetItemCount(0)
         self.SetItemCount(count)
+        # Szándékosan nincs self.Focus(0): a lista első sora így sem kijelölve,
+        # sem fókuszban nincs, amíg a felhasználó nem lép a listában.
+        # (Ha a fókusz nélküli állapot gondot okozna, a következő két sor
+        # visszaállítja az első sor fókuszát.)
+        # if count > 0:
+        #     self.Focus(0)
         if count > 0:
-            self.Focus(0)
+            # Üres listánál az igazítás kimarad (lásd IgazitOszlopSzelesseg),
+            # ezért a lista megtelésekor itt pótoljuk.
+            self.IgazitOszlopSzelesseg()
         self.Refresh()
 
     def OnGetItemText(self, item, col):
@@ -165,6 +177,15 @@ class KonyvListaCtrl(wx.ListCtrl):
 
     def OnSize(self, event):
         event.Skip()
+        self.IgazitOszlopSzelesseg()
+
+    def IgazitOszlopSzelesseg(self):
+        # Üres virtuális listán a SetColumnWidth Windowson érvénytelen elemre
+        # hivatkozik (GetSubItemRect assertion), ezért ilyenkor kihagyjuk; az
+        # oszlopok addig megtartják az utolsó szélességüket.
+        if self.GetItemCount() == 0:
+            return
+
         szerel_szelesseg = self.GetClientSize().width - wx.SystemSettings.GetMetric(wx.SYS_VSCROLL_X)
         
         SULYOK = {

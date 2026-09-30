@@ -4,6 +4,12 @@ A projekten végrehajtott lényegi változtatások dokumentációja.
 
 
 
+## [3.3.3] - 2026-09-30
+
+- Indításkor, valamint rendezés, szűrés és keresésnél a főablak első tétele már nem kerül automatikusan fókuszba és kijelölésre, a fókusz a lista első nyílbillentyű-lenyomásakor jelenik meg.
+
+
+
 ## [3.3.2] - 2026-09-29
 
 - Kisebb uix javítások és finomítások.

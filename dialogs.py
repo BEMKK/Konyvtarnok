@@ -76,7 +76,7 @@ class UjdonsagokDialog(wx.Dialog):
         main_sizer.Add(wx.StaticLine(self), 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 15)
         
         ujdonsagok_lista = [
-            "Kisebb uix javítások."
+            "Indításkor és keresés után a lista első tétele nem kerül automatikusan kijelölésre és fókuszba."
         ]
 
         szoveg_box = wx.BoxSizer(wx.VERTICAL)
