@@ -96,7 +96,7 @@ class HelpNotebookDialog(wx.Dialog):
                 "3. Találatok kijelölése és másolása:\n"
                 "  Az összes találatot kijelölheti a Ctrl + A billentyűparancsal. A kijelölt sorok adatait a Ctrl + C gombokkal másolhatja a vágólapra.\n\n"
                 "4. Találat átemelése a Deziderátába vagy az Állományba:\n"
-                "  A kiválasztott találat(ok)at a Ctrl + D billentyűkombinációval felveheti a Dezideráta-jegyzékbe, a Ctrl + F billentyűkombinációval pedig a fő könyvállományba.\n"
+                "  A kiválasztott találat(ok)at az erre szolgáló gombokkal, a jobbklikkre felugró helyi menüből és billentyűparancsokkal is átemelheti a deziderátába vagy az állományba.\nAdott találat átemeléséhez  használja a Ctrl + D billentyűkombinációt a Dezideráta-jegyzékbe, vagy a Ctrl + F billentyűkombinációt az állományba való átemeléshez.\n"
             ),
             (
                 "Beállítások",

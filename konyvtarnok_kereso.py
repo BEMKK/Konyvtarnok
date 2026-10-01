@@ -17,11 +17,7 @@ from data_manager import (
 from gyors_kereses import GyorsListaKereso, osszes_kijelolt_index
 from utils import masolas_vagolapra_szoveg
 
-
-
-
 class KonyvtarnokKeresoApp(wx.Frame):
-
     def __init__(self, parent=None):
         super().__init__(
             parent=parent, title="KönyvTárnok kereső", size=(1000, 600)
@@ -219,6 +215,29 @@ class KonyvtarnokKeresoApp(wx.Frame):
         fő_sizer.Add(
             self.tablazat, proportion=1, flag=wx.EXPAND | wx.ALL, border=10
         )
+
+        # --- Gombsor ---
+        btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.btn_atemeles_allomanyba = wx.Button(
+            self.panel, label="Átemelés az állományba"
+        )
+        self.btn_atemeles_deziderataba = wx.Button(
+            self.panel, label="Átemelés a Deziderátába"
+        )
+
+        btn_sizer.Add(self.btn_atemeles_allomanyba, 0, wx.RIGHT, 10)
+        btn_sizer.Add(self.btn_atemeles_deziderataba, 0, wx.RIGHT, 10)
+
+        # Az alábbi sor adja hozzá a gombok sizerét a fő elrendezéshez (fő_sizer):
+        fő_sizer.Add(btn_sizer, 0, wx.ALIGN_RIGHT | wx.ALL, 10)
+
+        self.btn_atemeles_allomanyba.Bind(
+            wx.EVT_BUTTON, lambda e: self.atemeles_allomanyba()
+        )
+        self.btn_atemeles_deziderataba.Bind(
+            wx.EVT_BUTTON, lambda e: self.atemeles_deziderataba()
+        )
+        # ---------------------------------------------
 
         self.panel.SetSizer(fő_sizer)
         self.kereso_mezo.SetFocus()

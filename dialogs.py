@@ -76,7 +76,7 @@ class UjdonsagokDialog(wx.Dialog):
         main_sizer.Add(wx.StaticLine(self), 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 15)
         
         ujdonsagok_lista = [
-            "Indításkor és keresés után a lista első tétele nem kerül automatikusan kijelölésre és fókuszba."
+            "A KönyvTárnok-kereső találatainak átemelése immár a felületen lévő gombokkal is elvégezhető."
         ]
 
         szoveg_box = wx.BoxSizer(wx.VERTICAL)
