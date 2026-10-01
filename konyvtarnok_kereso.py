@@ -279,14 +279,6 @@ class KonyvtarnokKeresoApp(wx.Frame):
         self.eredmeny_szoveg.SetLabel(f"Találatok ({darabszam} db):")
         self.tablazat.SetName(szoveg)
 
-    def on_szoveg_valtozas(self, event):
-        """Ha a felhasználó kiüríti a keresőmezőt, a táblázat is kiürül."""
-        if not self.kereso_mezo.GetValue().strip():
-            self.tablazat.DeleteAllItems()
-            self.frissit_akadalymentesites(0)
-            self.btn_kereses_torlese.Enable(False)
-        event.Skip()
-
     def frissit_torles_gomb_allapot(self):
         """Engedélyezi a törlés gombot, ha van szöveg a mezőben vagy van találat a táblázatban."""
         van_szoveg = bool(self.kereso_mezo.GetValue().strip())
