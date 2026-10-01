@@ -149,6 +149,10 @@ class KonyvtarnokKeresoApp(wx.Frame):
         self.kereso_mezo.Bind(wx.EVT_TEXT_ENTER, self.on_kereses)
         self.kereso_mezo.Bind(wx.EVT_TEXT, self.on_szoveg_valtozas)
 
+        self.btn_kereses_torlese = wx.Button(self.panel, label="Keresés törlése")
+        self.btn_kereses_torlese.Enable(False)
+        self.btn_kereses_torlese.Bind(wx.EVT_BUTTON, self.on_kereses_torlese)
+
         kereso_gomb = wx.Button(self.panel, label="Keresés")
         kereso_gomb.Bind(wx.EVT_BUTTON, self.on_kereses)
 
@@ -159,6 +163,7 @@ class KonyvtarnokKeresoApp(wx.Frame):
             border=5,
         )
         kereso_sizer.Add(self.kereso_mezo, proportion=1, flag=wx.EXPAND)
+        kereso_sizer.Add(self.btn_kereses_torlese, flag=wx.LEFT, border=5)
         kereso_sizer.Add(kereso_gomb, flag=wx.LEFT, border=5)
 
         fő_sizer.Add(kereso_sizer, flag=wx.EXPAND | wx.ALL, border=10)
@@ -218,6 +223,9 @@ class KonyvtarnokKeresoApp(wx.Frame):
 
         # --- Gombsor ---
         btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.btn_masolas_vagolapra = wx.Button(
+            self.panel, label="Másolás vágólapra"
+        )
         self.btn_atemeles_allomanyba = wx.Button(
             self.panel, label="Átemelés az állományba"
         )
@@ -225,12 +233,15 @@ class KonyvtarnokKeresoApp(wx.Frame):
             self.panel, label="Átemelés a Deziderátába"
         )
 
+        btn_sizer.Add(self.btn_masolas_vagolapra, 0, wx.RIGHT, 10)
         btn_sizer.Add(self.btn_atemeles_allomanyba, 0, wx.RIGHT, 10)
         btn_sizer.Add(self.btn_atemeles_deziderataba, 0, wx.RIGHT, 10)
 
-        # Az alábbi sor adja hozzá a gombok sizerét a fő elrendezéshez (fő_sizer):
-        fő_sizer.Add(btn_sizer, 0, wx.ALIGN_RIGHT | wx.ALL, 10)
+        fő_sizer.Add(btn_sizer, 0, wx.ALIGN_LEFT | wx.ALL, 10)
 
+        self.btn_masolas_vagolapra.Bind(
+            wx.EVT_BUTTON, lambda e: self.masolas_vagolapra()
+        )
         self.btn_atemeles_allomanyba.Bind(
             wx.EVT_BUTTON, lambda e: self.atemeles_allomanyba()
         )
@@ -273,7 +284,31 @@ class KonyvtarnokKeresoApp(wx.Frame):
         if not self.kereso_mezo.GetValue().strip():
             self.tablazat.DeleteAllItems()
             self.frissit_akadalymentesites(0)
+            self.btn_kereses_torlese.Enable(False)
         event.Skip()
+
+    def frissit_torles_gomb_allapot(self):
+        """Engedélyezi a törlés gombot, ha van szöveg a mezőben vagy van találat a táblázatban."""
+        van_szoveg = bool(self.kereso_mezo.GetValue().strip())
+        van_talalat = self.tablazat.GetItemCount() > 0
+        self.btn_kereses_torlese.Enable(van_szoveg or van_talalat)
+
+    def on_szoveg_valtozas(self, event):
+        """Ha a felhasználó kiüríti a keresőmezőt, a táblázat is kiürül, és frissül a törlés gomb."""
+        if not self.kereso_mezo.GetValue().strip():
+            self.tablazat.DeleteAllItems()
+            self.frissit_akadalymentesites(0)
+        self.frissit_torles_gomb_allapot()
+        event.Skip()
+
+    def on_kereses_torlese(self, event):
+        """Kiüríti a keresőmezőt és a találati táblázatot, majd fókuszba helyezi a mezőt."""
+        self.kereso_mezo.Clear()
+        self.tablazat.DeleteAllItems()
+        self.frissit_akadalymentesites(0)
+        self.frissit_torles_gomb_allapot()
+        self.btn_kereses_torlese.Enable(False)
+        self.kereso_mezo.SetFocus()
 
     def on_kereses(self, event):
         """A keresés logikája gombnyomásra vagy Enterre (Pandas nélkül)."""
@@ -288,7 +323,7 @@ class KonyvtarnokKeresoApp(wx.Frame):
         keresett_szo = self.kereso_mezo.GetValue().strip().lower()
         if not keresett_szo:
             wx.MessageBox(
-                "Írj be valamit a keresőmezőbe!",
+                "Adja meg a keresendő kifejezést!",
                 "Figyelmeztetés",
                 wx.OK | wx.ICON_INFORMATION,
             )
@@ -300,8 +335,8 @@ class KonyvtarnokKeresoApp(wx.Frame):
 
         if not kijelolt_oszlopok:
             wx.MessageBox(
-                "Válassz ki legalább egy oszlopot a kereséshez!",
-                "Figyelmeztetés",
+                "Jelöljön ki legalább egy oszlopot a kereséshez!",
+                "Nincs kijelölve oszlop",
                 wx.OK | wx.ICON_INFORMATION,
             )
             return
@@ -360,6 +395,7 @@ class KonyvtarnokKeresoApp(wx.Frame):
             for i in range(self.tablazat.GetItemCount()):
                 self.tablazat.Select(i, on=False)
 
+        self.btn_kereses_torlese.Enable(True)
         self.tablazat.SetFocus()
 
     def frissit_allomany_statuszokat(self):
@@ -518,8 +554,8 @@ class KonyvtarnokKeresoApp(wx.Frame):
 
         if not kijelolt_indexek:
             wx.MessageBox(
-                "Nincs kijelölve egyetlen elem sem!",
-                "Figyelmeztetés",
+                "Nincs kijelölve egyetlen találat sem!",
+                "Nincs kijelölt találat",
                 wx.OK | wx.ICON_WARNING,
             )
             return
@@ -620,8 +656,8 @@ class KonyvtarnokKeresoApp(wx.Frame):
 
         if not kijelolt_indexek:
             wx.MessageBox(
-                "Nincs kijelölve egyetlen elem sem!",
-                "Figyelmeztetés",
+                "Nincs kijelölve egyetlen találat sem!",
+                "Nincs kijelölés",
                 wx.OK | wx.ICON_WARNING,
             )
             return

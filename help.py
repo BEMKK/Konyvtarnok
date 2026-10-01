@@ -92,11 +92,11 @@ class HelpNotebookDialog(wx.Dialog):
                 "1. A KönyvTárnok-kereső megnyitása:\n"
                 "  A külső énekeskönyv adatbázisban való kereséshez válassza az Eszközök -> KönyvTárnok-kereső menüpontot, vagy nyomja meg a Ctrl + Shift + K billentyűkombinációt.\n\n"
                 "2. Keresés:\n"
-                "  Írja be a keresendő szót vagy kifejezést a keresőmezőbe, majd nyomja meg az Enter billentyűt a találatok kilistázásához. A mező melletti jelölőnégyzetekkel kiválaszthatja, mely oszlopokban szeretne keresni (cím, összeállító, kiadó, kiadás helye, kiadás éve, megjegyzés).\n\n"
+                "  Írja be a keresendő szót vagy kifejezést a keresőmezőbe, majd nyomja meg a keresés gombot vagy az Enter billentyűt a találatok megjelenítéséhez. Amint gépelni kezd, a Keresés törlése gomb aktívvá válik, ennek segítségével kiürítheti a keresőmezőt, valamint keresés után a találatok listáját is. A mező melletti jelölőnégyzetekkel kiválaszthatja, mely oszlopokban szeretne keresni (cím, összeállító, kiadó, kiadás helye, kiadás éve, megjegyzés).\n\n"
                 "3. Találatok kijelölése és másolása:\n"
-                "  Az összes találatot kijelölheti a Ctrl + A billentyűparancsal. A kijelölt sorok adatait a Ctrl + C gombokkal másolhatja a vágólapra.\n\n"
+                "  Az összes találatot kijelölheti a Ctrl + A billentyűparanccsal. A kijelölt sorok adatait a Ctrl + C gombokkal másolhatja a vágólapra.\n\n"
                 "4. Találat átemelése a Deziderátába vagy az Állományba:\n"
-                "  A kiválasztott találat(ok)at az erre szolgáló gombokkal, a jobbklikkre felugró helyi menüből és billentyűparancsokkal is átemelheti a deziderátába vagy az állományba.\nAdott találat átemeléséhez  használja a Ctrl + D billentyűkombinációt a Dezideráta-jegyzékbe, vagy a Ctrl + F billentyűkombinációt az állományba való átemeléshez.\n"
+                "  A kiválasztott találat(ok)at az erre szolgáló gombokkal, a jobbklikkre felugró helyi menüből és billentyűparancsokkal is átemelheti a deziderátába vagy az állományba.\nAdott találat átemeléséhez  használja a Ctrl + D billentyűkombinációt a Dezideráta-jegyzékbe, vagy a Ctrl + F billentyűkombinációt az állományba való átemeléshez. A másolást, valamint az átemeléseket a felugró menüből is elvégezheti. A menü előhívásához kattintson duplán a kívánt találatra, vagy nyomja meg rajta az Enter billentyűt.\n"
             ),
             (
                 "Beállítások",
