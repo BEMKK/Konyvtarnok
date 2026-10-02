@@ -11,6 +11,8 @@ from data_manager import (
     kerj_tomeges_atemeles_megerositest,
     mutass_tomeges_atemeles_eredmenyt,
     sor_alap_adatta_alakitasa,
+    allomany_rekord_forras_dictbol,
+    deziderata_tetel_forras_dictbol,
     load_kereso_json,
     is_same_book,
     MentesiHiba,
@@ -39,6 +41,11 @@ class KonyvtarnokKeresoApp(wx.Frame):
         # 1. JSON fájl betöltése a háttérben
         self.json_fajlnev = "enekeskonyvek_adatai.json"  # Excel helyett JSON
         self.oszlopok = []
+        # A táblázat soraihoz tartozó EREDETI (forrás) sor-dictek. A
+        # táblázat sorainak ListCtrl-adata (SetItemData) erre a listára
+        # mutató index. Az átemelés és a státuszfrissítés ebből dolgozik, nem
+        # a megjelenített cellaszövegekből (lásd _sor_eredeti_dict).
+        self._talalat_sorok = []
         self.adatok = self.adatok_betoltese()
 
         # Gyorskeresés (gépeléssel ugrás a listában)
@@ -88,6 +95,26 @@ class KonyvtarnokKeresoApp(wx.Frame):
         dict) leképezése az állomány kanonikus (cim, szerzo, kiado, hely,
         ev, ...) mezőneveire (lásd data_manager.sor_alap_adatta_alakitasa)."""
         return sor_alap_adatta_alakitasa(forras_dict)
+
+    def _tablazat_uritese(self):
+        """Kiüríti a találati táblázatot és az eredeti sor-dictek tárolóját."""
+        self.tablazat.DeleteAllItems()
+        self._talalat_sorok = []
+
+    def _sor_eredeti_dict(self, sor_index):
+        """Visszaadja a táblázat adott sorához tartozó EREDETI forrás-dictet.
+
+        A megjelenített cellaszövegekből nem lehet hűen visszaépíteni a
+        könyvet (a nem látható mezők elvesznének), ezért minden sor mellé
+        eltároljuk a forrás dictjét. Ha ez valamiért nem érhető el, a
+        látható cellákból épített dict a tartalék."""
+        kulcs = self.tablazat.GetItemData(sor_index)
+        if 0 <= kulcs < len(self._talalat_sorok):
+            return self._talalat_sorok[kulcs]
+        return {
+            oszlop: self.tablazat.GetItemText(sor_index, col_idx)
+            for col_idx, oszlop in enumerate(self.oszlopok)
+        }
 
     # ==========================================================================
     # KÖZÖS "ÁLLOMÁNYBAN VAN-E" SEGÉDMETÓDUSOK
@@ -176,7 +203,7 @@ class KonyvtarnokKeresoApp(wx.Frame):
         státusz-frissítés minden keresésnél lefut, és nem szabad minden
         alkalommal felugró ablakkal zavarni a felhasználót)."""
         frame = getattr(self.parent, "deziderata_frame", None) if self.parent else None
-        if frame is not None:
+        if frame is not None and not getattr(frame, "_mentes_tiltva", False):
             return [x for x in frame.items if isinstance(x, dict)], True
 
         try:
@@ -391,7 +418,7 @@ class KonyvtarnokKeresoApp(wx.Frame):
     def on_szoveg_valtozas(self, event):
         """Ha a felhasználó kiüríti a keresőmezőt, a táblázat is kiürül, és frissül a törlés gomb."""
         if not self.kereso_mezo.GetValue().strip():
-            self.tablazat.DeleteAllItems()
+            self._tablazat_uritese()
             self.frissit_akadalymentesites(0)
         self.frissit_torles_gomb_allapot()
         event.Skip()
@@ -399,7 +426,7 @@ class KonyvtarnokKeresoApp(wx.Frame):
     def on_kereses_torlese(self, event):
         """Kiüríti a keresőmezőt és a találati táblázatot, majd fókuszba helyezi a mezőt."""
         self.kereso_mezo.Clear()
-        self.tablazat.DeleteAllItems()
+        self._tablazat_uritese()
         self.frissit_akadalymentesites(0)
         self.frissit_torles_gomb_allapot()
         self.btn_kereses_torlese.Enable(False)
@@ -407,7 +434,7 @@ class KonyvtarnokKeresoApp(wx.Frame):
 
     def on_kereses(self, event):
         """A keresés logikája gombnyomásra vagy Enterre (Pandas nélkül)."""
-        self.tablazat.DeleteAllItems()
+        self._tablazat_uritese()
 
         if self.adatok is None:
             wx.MessageBox(
@@ -465,6 +492,8 @@ class KonyvtarnokKeresoApp(wx.Frame):
                 sor_index = self.tablazat.InsertItem(
                     self.tablazat.GetItemCount(), elsocsella
                 )
+                self._talalat_sorok.append(sor)
+                self.tablazat.SetItemData(sor_index, len(self._talalat_sorok) - 1)
                 for col_idx, col_name in enumerate(self.oszlopok[1:], start=1):
                     self.tablazat.SetItem(
                         sor_index, col_idx, str(sor.get(col_name, ""))
@@ -512,14 +541,8 @@ class KonyvtarnokKeresoApp(wx.Frame):
         ctx = self._statusz_kontextus()
 
         for sor_index in range(sorok_szama):
-            # A sor adatait magából a táblázatból olvassuk vissza (nem a
-            # self.adatok eredeti listájából), hogy pontosan azt a
-            # tartalmat vizsgáljuk, ami a felhasználó előtt látszik.
-            sor_adat = {
-                oszlop: self.tablazat.GetItemText(sor_index, col_idx)
-                for col_idx, oszlop in enumerate(self.oszlopok)
-            }
-            self._statusz_beallitasa(sor_index, sor_adat, ctx)
+            # A sor eredeti forrás-dictjéből dolgozunk (lásd _sor_eredeti_dict).
+            self._statusz_beallitasa(sor_index, self._sor_eredeti_dict(sor_index), ctx)
 
         self.tablazat.Refresh()
 
@@ -639,31 +662,13 @@ class KonyvtarnokKeresoApp(wx.Frame):
         if not kerj_tomeges_atemeles_megerositest(self, db, "találatot", "az állományba"):
             return
 
-        excel_oszlopok_szama = len(self.oszlopok) if self.oszlopok else 0
-        oszlop_nevek = [
-            self.tablazat.GetColumn(i).GetText()
-            for i in range(excel_oszlopok_szama)
+        # Az eredeti forrás-dictből építünk (nem a cellaszövegekből), az
+        # ismeretlen mezők (pl. "megjegyzes") kiszűrésével - lásd
+        # data_manager.allomany_rekord_forras_dictbol.
+        konyv_adatok = [
+            allomany_rekord_forras_dictbol(self._sor_eredeti_dict(sor_idx))
+            for sor_idx in kijelolt_indexek
         ]
-
-        konyv_adatok = []
-        for sor_idx in kijelolt_indexek:
-            konyv_adat = {}
-            for col_idx in range(excel_oszlopok_szama):
-                kulcs = oszlop_nevek[col_idx]
-                ertek = self.tablazat.GetItemText(sor_idx, col_idx)
-                konyv_adat[kulcs] = ertek
-
-            alap_adat = self._sor_alap_adatta_alakitasa(konyv_adat)
-            alap_adat.update({
-                "oldalszam": konyv_adat.get("oldalszam", ""),
-                "meretek": konyv_adat.get("meretek", ""),
-                "kotes": konyv_adat.get("kotes", ""),
-                "rovid_cim": konyv_adat.get("rovid_cim", ""),
-                "forras": konyv_adat.get("forras", ""),
-                "status": konyv_adat.get("status", ""),
-                "rovid_leiras": konyv_adat.get("rovid_leiras", ""),
-            })
-            konyv_adatok.append(alap_adat)
 
         # A lista frissítését a főablak szűrés-megőrző segédmetódusára
         # bízzuk (ugyanaz, mint kézi felvitelnél vagy JSON importnál), hogy
@@ -735,12 +740,6 @@ class KonyvtarnokKeresoApp(wx.Frame):
         if not kerj_tomeges_atemeles_megerositest(self, db, "találatot", "a deziderátába"):
             return
 
-        excel_oszlopok_szama = len(self.oszlopok) if self.oszlopok else 0
-        oszlop_nevek = [
-            self.tablazat.GetColumn(i).GetText()
-            for i in range(excel_oszlopok_szama)
-        ]
-
         json_fajl = DEZIDERATA_DATA_FILE
 
         try:
@@ -764,19 +763,7 @@ class KonyvtarnokKeresoApp(wx.Frame):
         visszautasitott = 0
 
         for sor_idx in kijelolt_indexek:
-            konyv_adat = {}
-            for col_idx in range(excel_oszlopok_szama):
-                kulcs = oszlop_nevek[col_idx]
-                ertek = self.tablazat.GetItemText(sor_idx, col_idx)
-                konyv_adat[kulcs] = ertek
-
-            alap_adat = self._sor_alap_adatta_alakitasa(konyv_adat)
-            alap_adat.update({
-                "priority": "Másodlagos",
-                "status": "Jelenleg nem kapható",
-                "location": "",
-                "price": ""
-            })
+            alap_adat = deziderata_tetel_forras_dictbol(self._sor_eredeti_dict(sor_idx))
 
             if alap_adat["cim"].strip():
                 mar_letezik = any(is_same_book(alap_adat, item) for item in deziderata_lista)

@@ -15,6 +15,7 @@ from data_manager import (
     kerj_tomeges_atemeles_megerositest,
     mutass_tomeges_atemeles_eredmenyt,
     DEZIDERATA_MEZO_ALIASOK,
+    allomany_rekord_dezideratabol,
     is_same_book,
     MentesiHiba,
 )
@@ -56,6 +57,13 @@ class Deziderata(wx.Frame):
 
         # Adatmodell: a tételek listája (szótárakból álló listaként)
         self.items = []
+
+        # True, ha a deziderata.json betöltése nem sikerült (olvasási hiba,
+        # ismeretlen formátum vagy érvénytelen HMAC-aláírás). Ilyenkor az
+        # items üres, a lemezen viszont lehet (sérült, de megmenthető) adat,
+        # ezért a szerkesztés és a mentés le van tiltva: különben az első
+        # új tétel felvétele a fájl tartalmát az egyetlen új tétellel írná felül.
+        self._mentes_tiltva = False
 
         self.statusbar = self.CreateStatusBar()
 
@@ -173,11 +181,15 @@ class Deziderata(wx.Frame):
     # --- JSON KEZELŐ FÜGGVÉNYEK ---
 
     def load_data(self):
+        self._mentes_tiltva = False
         try:
             betoltott_adat, ervenyes = load_hmac_json(DATA_FILE)
         except Exception as e:
+            logging.error(f"Hiba a dezideráta-lista ({DATA_FILE}) betöltésekor: {e}", exc_info=True)
+            self._mentes_tiltva = True
             wx.MessageBox(
-                f"Hiba az adatok betöltésekor: {e}",
+                f"Hiba az adatok betöltésekor: {e}\n\n"
+                "A fájl védelme érdekében a dezideráta szerkesztése le van tiltva.",
                 "Hiba",
                 wx.OK | wx.ICON_ERROR,
             )
@@ -190,10 +202,12 @@ class Deziderata(wx.Frame):
                 f"A dezideráta-lista ({DATA_FILE}) HMAC-aláírása érvénytelen: "
                 "a fájl megsérült vagy jogosulatlanul módosították."
             )
+            self._mentes_tiltva = True
             wx.MessageBox(
                 "Az adatfájl integritás-ellenőrzése sikertelen: a fájl "
                 "megsérülhetett, vagy valaki módosította a programon kívül.\n\n"
-                "Az adatok betöltése biztonsági okból megszakadt.",
+                "Az adatok betöltése biztonsági okból megszakadt, és a fájl "
+                "védelme érdekében a dezideráta szerkesztése le van tiltva.",
                 "Integritási hiba",
                 wx.OK | wx.ICON_ERROR,
             )
@@ -207,7 +221,30 @@ class Deziderata(wx.Frame):
         # Lista frissítése a GUI-ban
         self.refresh_list()
 
+    def _szerkesztes_engedelyezett(self):
+        """False-t ad (és tájékoztat), ha a betöltés sikertelen volt, ezért a
+        módosítás nem engedhető meg - lásd _mentes_tiltva."""
+        if not self._mentes_tiltva:
+            return True
+        wx.MessageBox(
+            "A dezideráta-jegyzék betöltése nem sikerült, ezért a szerkesztése "
+            "le van tiltva: a program nem írja felül a meglévő (esetleg sérült) fájlt.\n\n"
+            f"Fájl: {DATA_FILE}\n\n"
+            "Ha a fájl sérült, állítsa vissza egy biztonsági másolatból, vagy "
+            "nevezze át (pl. deziderata_serult.json), majd nyissa meg újra a "
+            "Dezideráta-kezelőt.",
+            "Szerkesztés letiltva",
+            wx.OK | wx.ICON_WARNING,
+            self,
+        )
+        return False
+
     def save_data(self):
+        # Védőháló: a hívók (on_add stb.) már az elején ellenőrzik, de egy
+        # betöltési hiba után semmiképp sem írhatjuk felül a fájlt.
+        if self._mentes_tiltva:
+            logging.error("A dezideráta mentése letiltva (sikertelen betöltés után).")
+            return
         if not save_hmac_json(DATA_FILE, self.items):
             wx.MessageBox(
                 "Hiba az adatok mentésekor.",
@@ -226,6 +263,11 @@ class Deziderata(wx.Frame):
 
     def FrissitStatusBar(self):
         """Frissíti a status bar szövegét az elemek száma alapján."""
+        if self._mentes_tiltva:
+            self.statusbar.SetStatusText(
+                "A dezideráta nem tölthető be, a szerkesztés le van tiltva."
+            )
+            return
         db_szam = self.list.GetItemCount()
         self.statusbar.SetStatusText(f"Dezideráta tételeinek száma: {db_szam}.")
 
@@ -298,6 +340,8 @@ class Deziderata(wx.Frame):
         self.list.SetFocus()
 
     def on_add(self, event):
+        if not self._szerkesztes_engedelyezett():
+            return
         dlg = AddItemDialog(self)
         if dlg.ShowModal() == wx.ID_OK:
             data = dlg.get_data()
@@ -317,6 +361,8 @@ class Deziderata(wx.Frame):
         dlg.Destroy()
 
     def on_edit(self, event):
+        if not self._szerkesztes_engedelyezett():
+            return
         selected_idx = self.list.GetFirstSelected()
         if selected_idx == -1:
             wx.MessageBox(
@@ -349,6 +395,8 @@ class Deziderata(wx.Frame):
 
     def on_delete(self, event):
         """Kijelölt tétel(ek) törlése (tömeges törlés támogatásával)."""
+        if not self._szerkesztes_engedelyezett():
+            return
         selected_indices = osszes_kijelolt_index(self.list)
 
         if not selected_indices:
@@ -413,6 +461,8 @@ class Deziderata(wx.Frame):
         fileDialog.Destroy()
 
     def on_import_json(self, event):
+        if not self._szerkesztes_engedelyezett():
+            return
         config = load_settings()
         default_dir = config.get("last_json_dir", "")
 
@@ -458,6 +508,8 @@ class Deziderata(wx.Frame):
         self.Close()
 
     def on_atemeles_allomanyba(self, event=None):
+        if not self._szerkesztes_engedelyezett():
+            return
         if not self.GetParent() or not hasattr(self.GetParent(), "db"):
             wx.MessageBox(
                 "Az átemelés nem lehetséges, mert a Dezideráta-kezelő önállóan fut!",
@@ -482,25 +534,10 @@ class Deziderata(wx.Frame):
 
         parent_frame = self.GetParent()
 
-        konyv_adatok = []
-        for idx in kijelolt_indexek:
-            item = self.items[idx]
-            konyv_adatok.append({
-                "cim": item.get("cim", item.get("title", "")),
-                "alcim": "",
-                "szerzo": item.get("szerzo", item.get("author", "")),
-                "egyeb_szemelyek": item.get("egyeb_szemelyek", ""),
-                "kiado": item.get("kiado", item.get("publisher", "")),
-                "hely": item.get("hely", item.get("place", "")),
-                "ev": str(item.get("ev", item.get("year", ""))),
-                "oldalszam": "",
-                "meretek": "",
-                "kotes": "",
-                "rovid_cim": "",
-                "forras": item.get("location", ""),
-                "status": "",
-                "rovid_leiras": "",
-            })
+        konyv_adatok = [
+            allomany_rekord_dezideratabol(self.items[idx])
+            for idx in kijelolt_indexek
+        ]
 
         # A lista frissítését a főablak szűrés-megőrző segédmetódusára
         # bízzuk (ugyanaz, mint kézi felvitelnél, JSON importnál vagy a

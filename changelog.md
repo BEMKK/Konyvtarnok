@@ -7,6 +7,7 @@ A projekten végrehajtott lényegi változtatások dokumentációja.
 ## [3.6.0] - 2026-10-03
 
 - A Deziderátában lévő találatok jelzése a KönyvTárnok-kereső státusz oszlopában.
+- A KönyvTárnok-kereső mostantól nem a látható oszlopokból, hanem a sorok eredeti dict-jéből építi az átemelt adatokat.
 
 
 

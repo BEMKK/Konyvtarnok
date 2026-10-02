@@ -233,6 +233,19 @@ KERESO_MEZO_ALIASOK = {
     "kiado": ("kiado", "Kiadó"),
     "hely": ("hely", "Kiadás helye"),
     "ev": ("ev", "Kiadás éve"),
+    # Az állomány további mezői. Ezek is átjutnak az átemeléskor, ha a
+    # forrásban szerepelnek (magyar fejléccel vagy a kanonikus kulccsal).
+    "oldalszam": ("oldalszam", "Oldalszám"),
+    "meretek": ("meretek", "Méretek", "Méret"),
+    "kotes": ("kotes", "Kötés"),
+    "rovid_cim": ("rovid_cim", "Rövid cím"),
+    "rovid_leiras": ("rovid_leiras", "Rövid leírás"),
+    # SZÁNDÉKOSAN csak a pontos, kanonikus kulccsal: a kereső táblázatának
+    # "Státusz" (Állományban/Deziderátában) és a többforrásos nézet
+    # "Forrás" oszlopa nem egyezik a könyv saját status/forras mezőjével,
+    # ezért ezekhez NEM szabad magyar fejléc-aliast felvenni.
+    "forras": ("forras",),
+    "status": ("status",),
 }
 
 
@@ -255,6 +268,69 @@ def sor_alap_adatta_alakitasa(forras_dict):
                 break
         alap_adat[kulcs] = ertek
     return alap_adat
+
+
+# ==============================================================================
+# KÖZÖS ÁTEMELŐ (DICT -> KANONIKUS ALAK) SEGÉDFÜGGVÉNYEK
+# ==============================================================================
+# Az állomány és a dezideráta-jegyzék csak a lenti, explicit mezőlistákban
+# szereplő kulcsokat fogadja el. Az átemelt rekordot mindig ezekből építjük
+# FEHÉRLISTÁVAL, ezért egy forrás ismeretlen mezője (pl. "megjegyzes") sosem
+# kerül át, és a forrás eredeti dictjét sem módosítjuk (a
+# KonyvAdatbazis.uj_konyv_hozzaadasa ugyanis a kapott dictbe beleírja az
+# "id"-t, és a dictet szó szerint menti).
+ALLOMANY_MEZOK = (
+    "cim", "alcim", "szerzo", "egyeb_szemelyek", "kiado", "hely", "ev",
+    "oldalszam", "meretek", "kotes", "rovid_cim", "forras", "status",
+    "rovid_leiras",
+)
+
+# A dezideráta bibliográfiai mezői (az alcím nem tartozik ide) és a
+# dezideráta-specifikus mezők alapértékei.
+DEZIDERATA_BIBLIO_MEZOK = ("cim", "szerzo", "egyeb_szemelyek", "kiado", "hely", "ev")
+DEZIDERATA_ALAPERTEKEK = {
+    "priority": "Másodlagos",
+    "status": "Jelenleg nem kapható",
+    "location": "",
+    "price": "",
+}
+
+
+def _tiszta_szoveg(ertek):
+    return str(ertek if ertek is not None else "").strip()
+
+
+def allomany_rekord_forras_dictbol(forras_dict):
+    """Egy keresési forrás sor-dictjéből (az eredeti, nem a megjelenített
+    cellaszövegekből) felépíti az állományba felvehető rekordot: pontosan az
+    ALLOMANY_MEZOK kulcsaival, szövegként. Ami a forrásban nincs, az üres."""
+    alap = sor_alap_adatta_alakitasa(forras_dict)
+    return {mezo: _tiszta_szoveg(alap.get(mezo, "")) for mezo in ALLOMANY_MEZOK}
+
+
+def deziderata_tetel_forras_dictbol(forras_dict):
+    """Egy keresési forrás sor-dictjéből felépíti a dezideráta-jegyzékbe
+    felvehető tételt: a bibliográfiai mezők a forrásból, a prioritás, státusz,
+    hely és ár a DEZIDERATA_ALAPERTEKEK-ből. A forrás saját status mezője
+    szándékosan nem kerül át (más jelentése van)."""
+    alap = sor_alap_adatta_alakitasa(forras_dict)
+    tetel = {mezo: _tiszta_szoveg(alap.get(mezo, "")) for mezo in DEZIDERATA_BIBLIO_MEZOK}
+    tetel.update(DEZIDERATA_ALAPERTEKEK)
+    return tetel
+
+
+def allomany_rekord_dezideratabol(tetel):
+    """Egy dezideráta-tételből (a régi, angol kulcsú tételeket is kezelve)
+    felépíti az állományba felvehető rekordot. A dezideráta "location"
+    mezője az állomány "forras" mezőjébe kerül."""
+    rekord = {mezo: "" for mezo in ALLOMANY_MEZOK}
+    for mezo in ("cim", "szerzo", "kiado", "hely", "ev"):
+        rekord[mezo] = _tiszta_szoveg(
+            _elso_kitoltott_ertek(tetel, DEZIDERATA_MEZO_ALIASOK[mezo])
+        )
+    rekord["egyeb_szemelyek"] = _tiszta_szoveg(tetel.get("egyeb_szemelyek", ""))
+    rekord["forras"] = _tiszta_szoveg(tetel.get("location", ""))
+    return rekord
 
 
 def load_kereso_json(json_fajlnev="enekeskonyvek_adatai.json"):
