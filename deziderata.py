@@ -214,6 +214,15 @@ class Deziderata(wx.Frame):
                 "Hiba",
                 wx.OK | wx.ICON_ERROR,
             )
+            return
+
+        # Ha a "KönyvTárnok kereső" ablak nyitva van, a találatai között
+        # szereplő "Deziderátában" jelzések a most mentett változás miatt
+        # elavulhattak (új tétel, törlés, szerkesztés, átemelés az
+        # állományba) - ezért értesítjük a főablakon keresztül.
+        szulo = self.GetParent()
+        if szulo is not None and hasattr(szulo, "frissit_kereso_statuszokat"):
+            szulo.frissit_kereso_statuszokat()
 
     def FrissitStatusBar(self):
         """Frissíti a status bar szövegét az elemek száma alapján."""

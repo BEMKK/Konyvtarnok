@@ -4,6 +4,12 @@ A projekten végrehajtott lényegi változtatások dokumentációja.
 
 
 
+## [3.6.0] - 2026-10-03
+
+- A Deziderátában lévő találatok jelzése a KönyvTárnok-kereső státusz oszlopában.
+
+
+
 ## [3.5.0] - 2026-10-02
 
 - Hozzáadva a másolás vágólapra és a keresés törlése gomb a KönyvTárnok-keresőhöz.

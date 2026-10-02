@@ -225,9 +225,19 @@ class Konyvtarnok(wx.Frame):
         # megváltoztathatja az állományt, ez a legmegbízhatóbb pont arra,
         # hogy a kereső ablakot is naprakészen tartsuk - új keresés
         # indítása nélkül is.
+        self.frissit_kereso_statuszokat()
+
+    def frissit_kereso_statuszokat(self):
+        """Ha a "KönyvTárnok kereső" ablak nyitva van, újraszámoltatja a
+        találati táblázat 'Állományban' és 'Deziderátában' jelzéseit.
+
+        Két helyről hívódik: a FrissitStatusBar-ból (az állomány
+        változásakor) és a Dezideráta-kezelő mentéseiből (a dezideráta
+        változásakor, lásd Deziderata.save_data) - utóbbiról azért, mert a
+        dezideráta módosítása nem jár együtt a FrissitStatusBar hívásával."""
         if self.konyvtarnok_kereso_frame is not None:
             try:
-                self.konyvtarnok_kereso_frame.frissit_allomany_statuszokat()
+                self.konyvtarnok_kereso_frame.frissit_statuszokat()
             except RuntimeError:
                 # A wx ablakobjektum már megsemmisült (pl. bezárás közben
                 # futott le ez a hívás) - jelöljük referenciamentesnek.

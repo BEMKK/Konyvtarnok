@@ -76,8 +76,7 @@ class UjdonsagokDialog(wx.Dialog):
         main_sizer.Add(wx.StaticLine(self), 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 15)
         
         ujdonsagok_lista = [
-            "A KönyvTárnok-keresőben javítva a felugró figyelmeztetések szövege.",
-            "Ugyanitt hozzáadva a másolás vágólapra és a keresés törlése gomb."
+            "A KönyvTárnok-kereső mostantól a Deziderátában lévő találatokat is jelzi a státusz oszlopban."
         ]
 
         szoveg_box = wx.BoxSizer(wx.VERTICAL)

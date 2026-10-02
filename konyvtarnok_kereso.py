@@ -1,5 +1,6 @@
 import wx
 import logging
+from types import SimpleNamespace
 from theme_manager import apply_theme_from_settings
 from deziderata import DATA_FILE as DEZIDERATA_DATA_FILE
 from data_manager import (
@@ -16,6 +17,12 @@ from data_manager import (
 )
 from gyors_kereses import GyorsListaKereso, osszes_kijelolt_index
 from utils import masolas_vagolapra_szoveg
+
+# A Státusz oszlop sorainak háttérszíne (RGB). Ha egy tétel mindkét helyen
+# szerepel, az "Állományban" szín az erősebb jelzés.
+SZIN_ALLOMANYBAN = (220, 245, 220)
+SZIN_DEZIDERATABAN = (255, 243, 205)
+
 
 class KonyvtarnokKeresoApp(wx.Frame):
     def __init__(self, parent=None):
@@ -119,6 +126,18 @@ class KonyvtarnokKeresoApp(wx.Frame):
                 return col
         return self.oszlopok[0] if self.oszlopok else None
 
+    def _van_egyezes(self, sor_adat, cim_oszlop_neve, cim_szerint, egyezes_fv):
+        """Közös egyezés-vizsgálat: a cím szerint előszűrt csoportban
+        (cim_szerint) megkeresi, van-e olyan tétel, amelyre az egyezes_fv
+        (tetelek_egyeznek / is_same_book) igazat ad a sor kanonikus alakjára."""
+        if not cim_oszlop_neve:
+            return False
+        sor_cime = str(sor_adat.get(cim_oszlop_neve, "")).strip().lower()
+        if not sor_cime or sor_cime not in cim_szerint:
+            return False
+        sor_alap_adat = self._sor_alap_adatta_alakitasa(sor_adat)
+        return any(egyezes_fv(sor_alap_adat, tetel) for tetel in cim_szerint[sor_cime])
+
     def _allomanyban_van_e(self, sor_adat, cim_oszlop_neve, konyvek_cim_szerint):
         """Eldönti, hogy egy sor (a táblázatból vagy a nyers keresési
         adatokból kiolvasott dict) szerepel-e már az állományban.
@@ -126,16 +145,100 @@ class KonyvtarnokKeresoApp(wx.Frame):
         A cím szerinti előszűrés (konyvek_cim_szerint) után a teljes,
         több mezőt (szerző, kiadó, hely, év) is figyelembe vevő
         tetelek_egyeznek vizsgálattal dönt, nem csak a cím alapján."""
-        if not cim_oszlop_neve:
-            return False
-        sor_cime = str(sor_adat.get(cim_oszlop_neve, "")).strip().lower()
-        if not sor_cime or sor_cime not in konyvek_cim_szerint:
-            return False
-        sor_alap_adat = self._sor_alap_adatta_alakitasa(sor_adat)
-        return any(
-            tetelek_egyeznek(sor_alap_adat, konyv)
-            for konyv in konyvek_cim_szerint[sor_cime]
+        return self._van_egyezes(
+            sor_adat, cim_oszlop_neve, konyvek_cim_szerint, tetelek_egyeznek
         )
+
+    def _deziderataban_van_e(self, sor_adat, cim_oszlop_neve, dezi_cim_szerint):
+        """Eldönti, hogy egy sor szerepel-e már a dezideráta-jegyzékben (a
+        Dezideráta-kezelő saját duplikátum-ellenőrzésével, is_same_book)."""
+        return self._van_egyezes(
+            sor_adat, cim_oszlop_neve, dezi_cim_szerint, is_same_book
+        )
+
+    # ==========================================================================
+    # DEZIDERÁTA-JEGYZÉK ELÉRÉSE (a Dezideráta-kezelő ablak lehet zárva is)
+    # ==========================================================================
+
+    def _deziderata_tetelek(self):
+        """Visszaadja a dezideráta-jegyzék aktuális tételeit: (tételek, olvashato).
+
+        A Dezideráta-kezelő ablak nem feltétlenül van nyitva a kereső
+        futásakor (a főablakkal ellentétben), ezért két ág van:
+        - ha az ablak nyitva van, a memóriabeli listáját (items) használjuk,
+          mert az mindig a legfrissebb (minden módosítás után azonnal mentődik);
+        - ha zárva van, a deziderata.json fájlt olvassuk be, a HMAC
+          integritás-ellenőrzéssel együtt (ugyanúgy, mint az
+          atemeles_deziderataba).
+
+        Ha a fájl nem olvasható vagy az aláírása érvénytelen, üres listát és
+        olvashato=False értéket adunk vissza (a hibát csak naplózzuk, mert a
+        státusz-frissítés minden keresésnél lefut, és nem szabad minden
+        alkalommal felugró ablakkal zavarni a felhasználót)."""
+        frame = getattr(self.parent, "deziderata_frame", None) if self.parent else None
+        if frame is not None:
+            return [x for x in frame.items if isinstance(x, dict)], True
+
+        try:
+            adat, ervenyes = load_hmac_json(DEZIDERATA_DATA_FILE)
+        except Exception as e:
+            logging.warning(f"A dezideráta-jegyzék nem olvasható a státuszhoz: {e}")
+            return [], False
+        if not ervenyes:
+            logging.warning(
+                "A dezideráta-jegyzék HMAC-aláírása érvénytelen, "
+                "a 'Deziderátában' jelzés nem elérhető."
+            )
+            return [], False
+        if not isinstance(adat, list):
+            return [], True
+        return [x for x in adat if isinstance(x, dict)], True
+
+    @staticmethod
+    def _csoportosit_cim_szerint(tetelek):
+        """Tételek cím szerinti csoportosítása (kisbetűsen, levágva). A
+        dezideráta régi, angol kulcsú tételeit (title) is felismeri."""
+        csoportok = {}
+        for t in tetelek:
+            cim = str(t.get("cim", t.get("title", ""))).strip().lower()
+            if cim:
+                csoportok.setdefault(cim, []).append(t)
+        return csoportok
+
+    def _statusz_kontextus(self):
+        """Egyszer felépíti mindazt, ami egy sor-csoport státuszának
+        kiszámításához kell (az állomány és a dezideráta cím szerinti
+        csoportosítása), hogy soronként ne kelljen újra összeállítani."""
+        dezi_tetelek, dezi_olvashato = self._deziderata_tetelek()
+        return SimpleNamespace(
+            cim_oszlop=self._cim_oszlop_neve(),
+            konyvek=self._epit_konyvek_cim_szerint(),
+            dezi=self._csoportosit_cim_szerint(dezi_tetelek),
+            dezi_olvashato=dezi_olvashato,
+        )
+
+    def _statusz_beallitasa(self, sor_index, sor_adat, ctx):
+        """Kiszámolja és beírja egy táblázatsor Státusz cellájába, hogy a
+        tétel az állományban és/vagy a deziderátában szerepel-e, és ennek
+        megfelelően színezi a sort."""
+        van_allomany = self._allomanyban_van_e(sor_adat, ctx.cim_oszlop, ctx.konyvek)
+        van_dezi = self._deziderataban_van_e(sor_adat, ctx.cim_oszlop, ctx.dezi)
+
+        cimkek = []
+        if van_allomany:
+            cimkek.append("Állományban")
+        if van_dezi:
+            cimkek.append("Deziderátában")
+
+        if van_allomany:
+            hatter = wx.Colour(*SZIN_ALLOMANYBAN)
+        elif van_dezi:
+            hatter = wx.Colour(*SZIN_DEZIDERATABAN)
+        else:
+            hatter = wx.NullColour
+
+        self.tablazat.SetItem(sor_index, len(self.oszlopok), ", ".join(cimkek))
+        self.tablazat.SetItemBackgroundColour(sor_index, hatter)
 
 
     def init_ui(self):
@@ -212,7 +315,7 @@ class KonyvtarnokKeresoApp(wx.Frame):
                 self.tablazat.InsertColumn(i, str(oszlop), width=130)
             statusz_col_idx = len(self.oszlopok)
             self.tablazat.InsertColumn(
-                statusz_col_idx, "Státusz", width=120
+                statusz_col_idx, "Státusz", width=200
             )
         else:
             self.tablazat.InsertColumn(0, "Üzenet", width=400)
@@ -333,10 +436,6 @@ class KonyvtarnokKeresoApp(wx.Frame):
             )
             return
 
-        # Meglévő könyvek csoportosítása cím szerint a főablak állományából
-        # (lásd _epit_konyvek_cim_szerint).
-        konyvek_cim_szerint = self._epit_konyvek_cim_szerint()
-
         # Szűrés tisztán Python listával (Pandas DataFrame helyett)
         szurt_adatok = []
         for sor in self.adatok:
@@ -351,8 +450,14 @@ class KonyvtarnokKeresoApp(wx.Frame):
 
         if szurt_adatok:
             talalatok_szama = len(szurt_adatok)
-            statusz_col_idx = len(self.oszlopok)
-            cim_oszlop_neve = self._cim_oszlop_neve()
+            statusz_ctx = self._statusz_kontextus()
+            if statusz_ctx.dezi_olvashato:
+                self.SetStatusText(f"Keresés {len(self.adatok)} kötet adataiban")
+            else:
+                self.SetStatusText(
+                    "A dezideráta-jegyzék nem olvasható, ezért a "
+                    "\u201eDeziderátában\u201d jelzés nem elérhető."
+                )
 
             for sor in szurt_adatok:
                 # Sor beszúrása a táblázatba
@@ -365,19 +470,8 @@ class KonyvtarnokKeresoApp(wx.Frame):
                         sor_index, col_idx, str(sor.get(col_name, ""))
                     )
 
-                # Státusz ellenőrzése (lásd _allomanyban_van_e).
-                megvan = self._allomanyban_van_e(sor, cim_oszlop_neve, konyvek_cim_szerint)
-
-                # UTOLSÓ OSZLOP: Státusz beírása
-                if megvan:
-                    self.tablazat.SetItem(
-                        sor_index, statusz_col_idx, "Állományban"
-                    )
-                    self.tablazat.SetItemBackgroundColour(
-                        sor_index, wx.Colour(220, 245, 220)
-                    )
-                else:
-                    self.tablazat.SetItem(sor_index, statusz_col_idx, "")
+                # UTOLSÓ OSZLOP: Státusz (Állományban / Deziderátában)
+                self._statusz_beallitasa(sor_index, sor, statusz_ctx)
 
             self.frissit_akadalymentesites(talalatok_szama)
         else:
@@ -390,24 +484,24 @@ class KonyvtarnokKeresoApp(wx.Frame):
         self.btn_kereses_torlese.Enable(True)
         self.tablazat.SetFocus()
 
-    def frissit_allomany_statuszokat(self):
+    def frissit_statuszokat(self):
         """Újraszámolja és frissíti a táblázatban JELENLEG megjelenő (már
-        korábbi kereséskor betöltött) találatok 'Állományban' státuszát, a
-        főablak aktuális állománya alapján - anélkül, hogy új keresést
-        kellene indítani.
+        korábbi kereséskor betöltött) találatok 'Állományban' és
+        'Deziderátában' státuszát, az állomány és a dezideráta-jegyzék
+        aktuális állapota alapján - anélkül, hogy új keresést kellene
+        indítani.
 
         Ezt hívja meg a főablak minden olyan művelet (könyv törlése,
-        szerkesztése, felvétele) után, amely megváltoztathatja, mely
-        tételek szerepelnek már az állományban. E hívás nélkül a kereső
-        ablak - ha nyitva marad - téves "Állományban" jelzést mutathat
-        például egy időközben törölt tételre, egészen a következő kereső
-        gomb megnyomásáig.
+        szerkesztése, felvétele) után, amely megváltoztathatja az
+        állományt, valamint a Dezideráta-kezelő minden mentése után (lásd
+        Konyvtarnok.frissit_kereso_statuszokat). E hívás nélkül a kereső
+        ablak - ha nyitva marad - téves jelzést mutathatna egy időközben
+        törölt vagy átemelt tételre, egészen a következő kereső gomb
+        megnyomásáig.
 
-        Az egyezés-vizsgálat logikáját a _epit_konyvek_cim_szerint /
-        _cim_oszlop_neve / _allomanyban_van_e közös segédmetódusok végzik,
+        Az egyezés-vizsgálat logikáját a közös segédmetódusok végzik,
         amelyeket az on_kereses is használ, hogy a két hely soha ne térjen
-        el egymástól.
-        """
+        el egymástól."""
         if not self.oszlopok:
             return
 
@@ -415,9 +509,7 @@ class KonyvtarnokKeresoApp(wx.Frame):
         if sorok_szama == 0:
             return
 
-        statusz_col_idx = len(self.oszlopok)
-        konyvek_cim_szerint = self._epit_konyvek_cim_szerint()
-        cim_oszlop_neve = self._cim_oszlop_neve()
+        ctx = self._statusz_kontextus()
 
         for sor_index in range(sorok_szama):
             # A sor adatait magából a táblázatból olvassuk vissza (nem a
@@ -427,16 +519,7 @@ class KonyvtarnokKeresoApp(wx.Frame):
                 oszlop: self.tablazat.GetItemText(sor_index, col_idx)
                 for col_idx, oszlop in enumerate(self.oszlopok)
             }
-            megvan = self._allomanyban_van_e(sor_adat, cim_oszlop_neve, konyvek_cim_szerint)
-
-            if megvan:
-                self.tablazat.SetItem(sor_index, statusz_col_idx, "Állományban")
-                self.tablazat.SetItemBackgroundColour(
-                    sor_index, wx.Colour(220, 245, 220)
-                )
-            else:
-                self.tablazat.SetItem(sor_index, statusz_col_idx, "")
-                self.tablazat.SetItemBackgroundColour(sor_index, wx.NullColour)
+            self._statusz_beallitasa(sor_index, sor_adat, ctx)
 
         self.tablazat.Refresh()
 
@@ -562,8 +645,6 @@ class KonyvtarnokKeresoApp(wx.Frame):
             for i in range(excel_oszlopok_szama)
         ]
 
-        statusz_col_idx = excel_oszlopok_szama
-
         konyv_adatok = []
         for sor_idx in kijelolt_indexek:
             konyv_adat = {}
@@ -620,16 +701,12 @@ class KonyvtarnokKeresoApp(wx.Frame):
             )
             return
 
-        # A sikeresen átemelt sorok "Státusz" oszlopát azonnal frissítjük,
-        # hogy ne kelljen új keresést indítani az "Állományban" jelzés
-        # megjelenéséhez.
-        if self.oszlopok:
-            sikeres_sor_indexek = [kijelolt_indexek[i] for i in sikeres_relativ_indexek]
-            for sor_idx in sikeres_sor_indexek:
-                self.tablazat.SetItem(sor_idx, statusz_col_idx, "Állományban")
-                self.tablazat.SetItemBackgroundColour(
-                    sor_idx, wx.Colour(220, 245, 220)
-                )
+        # A "Státusz" oszlopot azonnal frissítjük, hogy ne kelljen új
+        # keresést indítani az "Állományban" jelzés megjelenéséhez. A
+        # teljes frissítés (a sorok kézi átírása helyett) azért kell, hogy
+        # egy már a deziderátában is szereplő tétel "Deziderátában" jelzése
+        # ne vesszen el.
+        self.frissit_statuszokat()
 
         mutass_tomeges_atemeles_eredmenyt(
             self, sikeres, visszautasitott, "az állományhoz", "az állományban"
@@ -720,6 +797,9 @@ class KonyvtarnokKeresoApp(wx.Frame):
         if hasattr(self.parent, "deziderata_frame") and self.parent.deziderata_frame is not None:
             self.parent.deziderata_frame.items = deziderata_lista
             self.parent.deziderata_frame.refresh_list()
+
+        # Az átemelt sorok azonnal "Deziderátában" jelzést kapnak.
+        self.frissit_statuszokat()
 
         mutass_tomeges_atemeles_eredmenyt(
             self, sikeres, visszautasitott, "a dezideráta-jegyzékbe", "a dezideráta-jegyzékben"
