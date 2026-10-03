@@ -1,12 +1,14 @@
 # Ideiglenes és log fájlok
 *.log
 *.tmp
+*.spec
 
 # Beállítások és titkos adatok (jelszavak, API kulcsok)
 .env
 .env.local
 allomanyjegyzek.json
 deziderata.json
+settings.json
 
 # Python gyorsítótár és fordított fájlok (JAVÍTVA)
 __pycache__/
