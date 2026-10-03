@@ -1,0 +1,17 @@
+# Ideiglenes és log fájlok
+*.log
+*.tmp
+
+# Beállítások és titkos adatok (jelszavak, API kulcsok)
+.env
+.env.local
+allomanyjegyzek.json
+deziderata.json
+
+# Python gyorsítótár és fordított fájlok (JAVÍTVA)
+__pycache__/
+*.pyc
+
+# Könyvtárak és függőségek (függ a projekttől)
+dist/
+build/
