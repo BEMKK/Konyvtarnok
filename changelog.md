@@ -4,6 +4,12 @@ A projekten végrehajtott lényegi változtatások dokumentációja.
 
 
 
+## [3.7.0] - 2026-10-04
+
+- A KönyvTárnok-kereső mostantól támogatja az "és" szókapcsolatot, vagyis egy sor akkor is találat, ha a keresett kifejezés szavai több oszlopban szerepelnek.
+
+
+
 ## [3.6.0] - 2026-10-03
 
 - A Deziderátában lévő találatok jelzése a KönyvTárnok-kereső státusz oszlopában.

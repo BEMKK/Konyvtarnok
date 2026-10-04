@@ -463,16 +463,16 @@ class KonyvtarnokKeresoApp(wx.Frame):
             )
             return
 
-        # Szűrés tisztán Python listával (Pandas DataFrame helyett)
+        # Szűrés tisztán Python listával (Pandas DataFrame helyett).
+        # A kifejezést szavakra bontjuk: egy sor akkor találat, ha MINDEN szó
+        # szerepel a kijelölt oszlopok valamelyikében (nem feltétlenül
+        # ugyanabban az oszlopban). Pl. a "Kodály Rózsavölgyi" akkor is talál,
+        # ha a két név külön oszlopban van.
+        szavak = keresett_szo.split()
         szurt_adatok = []
         for sor in self.adatok:
-            talalat = False
-            for oszlop in kijelolt_oszlopok:
-                ertek = str(sor.get(oszlop, "")).lower()
-                if keresett_szo in ertek:
-                    talalat = True
-                    break
-            if talalat:
+            ertekek = [str(sor.get(oszlop, "")).lower() for oszlop in kijelolt_oszlopok]
+            if all(any(szo in ertek for ertek in ertekek) for szo in szavak):
                 szurt_adatok.append(sor)
 
         if szurt_adatok:

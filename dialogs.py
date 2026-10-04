@@ -76,7 +76,7 @@ class UjdonsagokDialog(wx.Dialog):
         main_sizer.Add(wx.StaticLine(self), 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 15)
         
         ujdonsagok_lista = [
-            "A KönyvTárnok-kereső mostantól a Deziderátában lévő találatokat is jelzi a státusz oszlopban."
+            "A KönyvTárnok-kereső mostantól szavanként keres, vagyis egy sor akkor is találat, ha a keresett szavak több oszlopban szerepelnek (pl. szerző kiadó \"Ady Kodály\")."
         ]
 
         szoveg_box = wx.BoxSizer(wx.VERTICAL)
