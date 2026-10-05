@@ -6,7 +6,7 @@ from config_manager import load_settings
 # A témák szótára és definíciói
 THEMES = {
     "vilagos": {
-        "name": "Világos (Hagyományos)",
+        "name": "Világos",
         "panel_bg": wx.Colour(240, 240, 240),
         "text_fg": wx.Colour(0, 0, 0),
         "ctrl_bg": wx.Colour(255, 255, 255),
@@ -17,7 +17,7 @@ THEMES = {
         "header_fg": wx.Colour(0, 0, 0),
     },
     "sotet": {
-        "name": "Sötét (Szemkímélő)",
+        "name": "Sötét",
         "panel_bg": wx.Colour(43, 43, 43),
         "text_fg": wx.Colour(220, 220, 220),
         "ctrl_bg": wx.Colour(60, 63, 65),

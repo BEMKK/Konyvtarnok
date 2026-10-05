@@ -4,13 +4,13 @@ import sys
 import re
 import logging
 from constants import APP_TITLE
-from dialogs import NevjegyDialog, UjdonsagokDialog, FajlutkozesDialog
+from dialogs import NevjegyDialog, UjdonsagokDialog, FajlutkozesDialog, exportal_egy_konyv
 from kereso import KeresoDialog
 from settings import BeallitasokDialog
 from konyvdialogs import KonyvReszletekDialog, KonyvSzerkesztoDialog
 from statisztika import StatisztikaDialog
 from help import HelpNotebookDialog
-from export_manager import export_konyv_pdf, tomeges_export_pdf, get_biztonsagos_pdf_fajlnev
+from export_manager import tomeges_export_pdf
 from config_manager import load_settings, save_settings
 from theme_manager import apply_theme
 from konyvtarnok_kereso import KonyvtarnokKeresoApp
@@ -70,6 +70,7 @@ class Konyvtarnok(wx.Frame):
         gomb_szerk = wx.Button(panel, label="Kijelölt könyv szerkesztése")
         gomb_torol = wx.Button(panel, label="Kijelöltek törlése")
         gomb_torol.SetBitmap(bmp_torol)
+        gomb_katalogus = wx.Button(panel, label="Katalóguslap exportálása")
 
         kereso_cimke = wx.StaticText(panel, label="Keresés:")
         self.kereso_ctrl = wx.SearchCtrl(panel, size=(220, -1))
@@ -85,11 +86,13 @@ class Konyvtarnok(wx.Frame):
         gomb_sizer.Add(gomb_uj, 0, wx.RIGHT, 15)
         gomb_sizer.Add(gomb_szerk, 0, wx.RIGHT, 15)
         gomb_sizer.Add(gomb_torol, 0, wx.RIGHT, 15)
+        gomb_sizer.Add(gomb_katalogus, 0, wx.RIGHT, 15)
+
+        gomb_sizer.AddStretchSpacer(1) 
+
         gomb_sizer.Add(kereso_cimke, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 5)
         gomb_sizer.Add(self.kereso_ctrl, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 15)
-        
-        gomb_sizer.AddStretchSpacer(1) 
-        
+                
         self.szuro_kijelzo = wx.StaticText(panel, label="")
         font = self.szuro_kijelzo.GetFont()
         font.MakeItalic()
@@ -142,6 +145,7 @@ class Konyvtarnok(wx.Frame):
         self.Bind(wx.EVT_MENU, self.OnExportalas, menusor.export_elem)
         self.Bind(wx.EVT_MENU, self.OnJsonImport, menusor.json_import)
         self.Bind(wx.EVT_MENU, self.OnJsonExport, menusor.json_export)
+        self.Bind(wx.EVT_MENU, self.OnKatalogusExport, menusor.katalogus)
         self.Bind(wx.EVT_MENU, lambda e: self.OnRendezes("cim"), menusor.cim)
         self.Bind(wx.EVT_MENU, lambda e: self.OnRendezes("szerzo"), menusor.szerzo)
         self.Bind(wx.EVT_MENU, lambda e: self.OnRendezes("kiado"), menusor.kiado)
@@ -165,6 +169,7 @@ class Konyvtarnok(wx.Frame):
         gomb_uj.Bind(wx.EVT_BUTTON, self.OnUjKonyv)
         gomb_szerk.Bind(wx.EVT_BUTTON, lambda e: self.MegnyitReszletek(szerkesztesre=True))
         gomb_torol.Bind(wx.EVT_BUTTON, self.OnKonyvTorles)
+        gomb_katalogus.Bind(wx.EVT_BUTTON, self.OnKatalogusExport)
         self.gomb_szuro_torles.Bind(wx.EVT_BUTTON, lambda e: self.szuro_torlese())
 
         self.kereso_ctrl.Bind(wx.EVT_TEXT, self.OnKeresoValtozas)
@@ -404,10 +409,12 @@ class Konyvtarnok(wx.Frame):
         szerkeszt_item = popup_menu.Append(wx.ID_ANY, "Könyv szerkesztése")
         popup_menu.AppendSeparator()
         torol_item = popup_menu.Append(wx.ID_ANY, f"Kijelölt könyvek törlése ({len(indexek)} db)")
+        export_item = popup_menu.Append(wx.ID_ANY, f"Kijelöltek exportálása ({len(indexek)} db)")
 
         self.Bind(wx.EVT_MENU, lambda e: self.MegnyitReszletek(szerkesztesre=False), megtekint_item)
         self.Bind(wx.EVT_MENU, lambda e: self.MegnyitReszletek(szerkesztesre=True), szerkeszt_item)
         self.Bind(wx.EVT_MENU, self.OnKonyvTorles, torol_item)
+        self.Bind(wx.EVT_MENU, self.OnExportalas, export_item)
 
         self.PopupMenu(popup_menu)
         popup_menu.Destroy()
@@ -549,34 +556,8 @@ class Konyvtarnok(wx.Frame):
 
         if len(indexek) == 1:
             konyv_adatok = self.lista.GetKonyvByRowIndex(indexek[0])
-            if not konyv_adatok:
-                return
-
-            alapértelmezett_fajlnev = get_biztonsagos_pdf_fajlnev(konyv_adatok)
-
-            ment_dlg = wx.FileDialog(
-                self, 
-                "Könyvadatlap exportálása", 
-                defaultDir=default_dir, 
-                defaultFile=alapértelmezett_fajlnev, 
-                wildcard="PDF fájl (*.pdf)|*.pdf", 
-                style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT
-            )
-            if ment_dlg.ShowModal() != wx.ID_OK:
-                ment_dlg.Destroy()
-                return
-            
-            fajlnev = ment_dlg.GetPath()
-            config["last_pdf_dir"] = os.path.dirname(fajlnev)
-            save_settings(config)
-            ment_dlg.Destroy()
-
-            try:
-                export_konyv_pdf(konyv_adatok, fajlnev)
-                wx.MessageBox("Exportálás sikeres!", "Exportálás", wx.OK | wx.ICON_INFORMATION)
-            except Exception as e:
-                logging.error(f"Hiba történt exportálás közben: {e}")
-                wx.MessageBox(f"Hiba történt exportálás közben:\n{e}", "Hiba", wx.OK | wx.ICON_ERROR)
+            if konyv_adatok:
+                exportal_egy_konyv(self, konyv_adatok)
 
         else:
             # ITT TÖRTÉNT A JAVÍTÁS: defaultPath=default_dir beállítása
@@ -701,6 +682,42 @@ class Konyvtarnok(wx.Frame):
             except Exception as e:
                 wx.MessageBox(f"Hiba történt a mentés során:\n{e}", "Hiba", wx.OK | wx.ICON_ERROR)
         ment_dlg.Destroy()
+
+    def OnKatalogusExport(self, event):
+        konyvek = list(self.lista.jelenlegi_adatok)
+        oszlopok = list(self.lista.aktiv_oszlopok)
+        if not konyvek or not oszlopok:
+            wx.MessageBox("A katalóguslapot nem lehet exportálni: a lista vagy az oszlopkészlet üres.",
+                          "Katalóguslap mentése", wx.OK | wx.ICON_WARNING)
+            return
+
+        config = load_settings()
+        dlg = wx.FileDialog(
+            self, "Katalóguslap mentése PDF-be",
+            defaultDir=config.get("last_json_dir", ""),
+            defaultFile="katalogus.pdf",
+            wildcard="PDF fájl (*.pdf)|*.pdf",
+            style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT)
+        if dlg.ShowModal() != wx.ID_OK:
+            dlg.Destroy()
+            return
+        utvonal = dlg.GetPath()
+        dlg.Destroy()
+
+        config["last_json_dir"] = os.path.dirname(utvonal)
+        save_settings(config)
+
+        try:
+            with wx.BusyCursor():
+                katalogus_pdf(utvonal, konyvek, oszlopok)
+        except Exception as e:
+            logging.error("Hiba a katalóguslap készítésekor", exc_info=True)
+            wx.MessageBox(f"Hiba történt a PDF készítésekor:\n{e}", "Hiba", wx.OK | wx.ICON_ERROR)
+            return
+
+        if wx.MessageBox("A katalóguslap elkészült. Megnyitja most?", "Katalóguslap",
+                         wx.YES_NO | wx.ICON_QUESTION) == wx.YES:
+            os.startfile(utvonal)
 
     def on_kereses_dialógus_megnyitasa(self, event):
         dlg = KeresoDialog(self)

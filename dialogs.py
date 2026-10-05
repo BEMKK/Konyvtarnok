@@ -4,6 +4,8 @@ import logging
 import wx
 from constants import APP_NAME, APP_VERSION, APP_STAGE
 from theme_manager import apply_theme_from_settings
+from config_manager import load_settings, save_settings
+from export_manager import export_konyv_pdf, get_biztonsagos_pdf_fajlnev
 
 class NevjegyDialog(wx.Dialog):
     """Saját Névjegy párbeszédablak wx.Dialog alapokon."""
@@ -76,7 +78,8 @@ class UjdonsagokDialog(wx.Dialog):
         main_sizer.Add(wx.StaticLine(self), 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 15)
         
         ujdonsagok_lista = [
-            "A KönyvTárnok-kereső mostantól szavanként keres, vagyis egy sor akkor is találat, ha a keresett szavak több oszlopban szerepelnek (pl. szerző kiadó \"Ady Kodály\")."
+            "Új funkció a katalóguslap exportálása.",
+            "Hozzáadva a könyvadatlap exportálása funkció a könyv adatlapjához és a popup menühöz."
         ]
 
         szoveg_box = wx.BoxSizer(wx.VERTICAL)
@@ -150,3 +153,40 @@ class FajlutkozesDialog(wx.Dialog):
         
         self.SetSizerAndFit(main_sizer)
         self.CentreOnParent()
+
+
+def exportal_egy_konyv(szulo_ablak, konyv_adatok):
+    """Egy könyv adatlapjának exportálása PDF-be (fájlmentés párbeszéddel).
+
+    A szulo_ablak lehet a főablak vagy egy dialógus is, így a
+    fájlválasztó és az üzenetek a hívó ablak fölött jelennek meg.
+    Visszatérés: True, ha az exportálás sikeres volt.
+    """
+    config = load_settings()
+
+    with wx.FileDialog(
+        szulo_ablak,
+        "Könyvadatlap exportálása",
+        defaultDir=config.get("last_pdf_dir", ""),
+        defaultFile=get_biztonsagos_pdf_fajlnev(konyv_adatok),
+        wildcard="PDF fájl (*.pdf)|*.pdf",
+        style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT,
+    ) as ment_dlg:
+        if ment_dlg.ShowModal() != wx.ID_OK:
+            return False
+        fajlnev = ment_dlg.GetPath()
+
+    config["last_pdf_dir"] = os.path.dirname(fajlnev)
+    save_settings(config)
+
+    try:
+        export_konyv_pdf(konyv_adatok, fajlnev)
+    except Exception as e:
+        logging.error(f"Hiba történt exportálás közben: {e}")
+        wx.MessageBox(f"Hiba történt exportálás közben:\n{e}", "Hiba",
+                      wx.OK | wx.ICON_ERROR, szulo_ablak)
+        return False
+
+    wx.MessageBox("Exportálás sikeres!", "Exportálás",
+                  wx.OK | wx.ICON_INFORMATION, szulo_ablak)
+    return True

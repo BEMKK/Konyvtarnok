@@ -53,7 +53,7 @@ class BeallitasokDialog(wx.Dialog):
         panel_tema = wx.Panel(self.notebook)
         tema_sizer = wx.BoxSizer(wx.VERTICAL)
         
-        lbl_tema = wx.StaticText(panel_tema, label="Válassza ki az alkalmazás témáját:")
+        lbl_tema = wx.StaticText(panel_tema, label="Téma")
         self.tema_valaszto = wx.Choice(panel_tema, choices=[nev for _, nev in get_theme_names()])
         self.tema_kulcsok = [kulcs for kulcs, _ in get_theme_names()]
         
@@ -62,7 +62,7 @@ class BeallitasokDialog(wx.Dialog):
         else:
             self.tema_valaszto.SetSelection(0)
             
-        lbl_rendezes = wx.StaticText(panel_tema, label="Alapértelmezett rendezés:")
+        lbl_rendezes = wx.StaticText(panel_tema, label="Alapértelmezett rendezés")
         self.rendezes_valaszto = wx.Choice(panel_tema, choices=[nev for _, nev in self.RENDEZESI_OPOK])
         
         akt_rend = config.get("alapertelmezett_rendezes", "cim")

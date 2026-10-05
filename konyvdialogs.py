@@ -10,6 +10,10 @@ from constants import MEZO_DEFINICIOK
 # DeziderataReszletekDialog.on_szerkesztes) ugyanazt az egyezés-vizsgálatot
 # használjuk, mint amit a Deziderata.on_edit már használ.
 from data_manager import is_same_book
+# Egy könyv PDF-be exportálása (az Exportálás gombhoz). A főablakból
+# (main_frame) szándékosan nem importálunk semmit: a dialogs.py közös
+# segédmodul, így nem alakul ki körkörös import.
+from dialogs import exportal_egy_konyv
 
 class KonyvReszletekDialog(wx.Dialog):
     """Könyv adatainak kizárólagos megjelenítése (Olvasó mód - NVDA kompatibilis)."""
@@ -68,6 +72,10 @@ class KonyvReszletekDialog(wx.Dialog):
             btn_szerkesztes.Bind(wx.EVT_BUTTON, self.on_szerkesztes)
             btn_sizer.Add(btn_szerkesztes, 0, wx.RIGHT, 10)
 
+        btn_export = wx.Button(self, label="Exportálás PDF-be")
+        btn_export.Bind(wx.EVT_BUTTON, self.on_exportalas)
+        btn_sizer.Add(btn_export, 0, wx.RIGHT, 10)
+
         btn_bezaras = wx.Button(self, wx.ID_CANCEL, "Bezárás")
         btn_sizer.Add(btn_bezaras, 0)
 
@@ -79,6 +87,11 @@ class KonyvReszletekDialog(wx.Dialog):
 
         # Fókusz áthelyezése a szövegmezőre, hogy az NVDA azonnal olvashassa
         wx.CallAfter(self.olvaso_panel.SetFocus)
+
+    def on_exportalas(self, event):
+        """Az éppen megnyitott könyv exportálása; a dialógus nyitva marad."""
+        exportal_egy_konyv(self, self.konyv_adatok)
+        self.olvaso_panel.SetFocus()
 
     def on_szerkesztes(self, event):
         """Átvált szerkesztő módra egy szerkesztő dialógus megnyitásával.

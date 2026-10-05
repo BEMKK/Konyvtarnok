@@ -4,6 +4,57 @@ from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
+from datetime import date
+from xml.sax.saxutils import escape
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import A4, landscape
+from reportlab.lib.styles import ParagraphStyle
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from konyv_lista import KonyvListaCtrl
+
+# FONT_NEV: az a név, amivel az adatlap-exportnál már regisztráltad a TTF-et
+# (pdfmetrics.registerFont). Ha az nem modulszintű, ugyanazt a hívást ide is be lehet tenni.
+FONT_NEV = "Alap"
+
+
+def katalogus_pdf(utvonal, konyvek, oszlopok):
+    defs = KonyvListaCtrl.OSZLOP_DEFINICIOK
+    oszlopok = [k for k in oszlopok if k in defs]
+
+    # Sok oszlopnál automatikusan kisebb betű, hogy ne kelljen a felhasználóra bízni
+    n = len(oszlopok)
+    meret = 8 if n <= 7 else 7 if n <= 10 else 6
+
+    cella = ParagraphStyle("cella", fontName=FONT_NEV, fontSize=meret, leading=meret + 2)
+    fejlec = ParagraphStyle("fejlec", parent=cella, textColor=colors.white)
+    cim = ParagraphStyle("cim", fontName=FONT_NEV, fontSize=12, leading=15)
+
+    adat = [[Paragraph(escape(defs[k][0]), fejlec) for k in oszlopok]]
+    for kv in konyvek:
+        adat.append([Paragraph(escape(str(kv.get(k) or "")), cella) for k in oszlopok])
+
+    doc = SimpleDocTemplate(utvonal, pagesize=landscape(A4), title="Katalóguslap",
+                            leftMargin=30, rightMargin=30, topMargin=30, bottomMargin=40)
+    suly = [defs[k][1] for k in oszlopok]
+    szelessegek = [doc.width * s / sum(suly) for s in suly]
+
+    tabla = Table(adat, colWidths=szelessegek, repeatRows=1)
+    tabla.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#444444")),
+        ("GRID", (0, 0), (-1, -1), 0.4, colors.grey),
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f2f2f2")]),
+    ]))
+
+    def oldalszam(canvas, doc):
+        canvas.setFont(FONT_NEV, 8)
+        canvas.drawRightString(doc.pagesize[0] - 30, 20, f"{doc.page}. oldal")
+
+    fejsor = Paragraph(
+        f"Katalóguslap – {len(konyvek)} tétel – {date.today():%Y.%m.%d.}", cim)
+    doc.build([fejsor, Spacer(1, 8), tabla],
+              onFirstPage=oldalszam, onLaterPages=oldalszam)
+
 # A mezők sorrendjét és feliratait a constants.py-ból importáljuk, hogy
 # ugyanaz az egyetlen forrás írja le őket, mint a konyvdialogs.py-beli
 # adatlap/szerkesztő dialógusokét - lásd a constants.py megjegyzését.

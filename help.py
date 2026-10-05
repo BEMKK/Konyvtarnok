@@ -68,7 +68,9 @@ class HelpNotebookDialog(wx.Dialog):
                 "2. Állományjegyzék mentése JSON-ba (Biztonsági mentés):\n"
                 "  A teljes állományjegyzék exportálható szerkeszthető, SHA integritásvédelem nélküli JSON fájlba a Fájl -> Állományjegyzék mentése JSON fájlba... menüpontban (Ctrl + Shift + M). Ez kiválóan alkalmas biztonsági mentésre. A JSON fájl alapértelmezetten az \"allomanyjegyzek.json\" nevet kapja.\n\n"
                 "3. Állományjegyzék betöltése JSON-ból:\n"
-                "  Egy korábban elmentett JSON állományjegyzék beolvasásához használja a Fájl -> Állományjegyzék betöltése JSON fájlból... menüpontot (Ctrl + Shift + B). A mentett JSON fájlból csak azok a könyvek kerülnek felvételre, amelyek még nem szerepelnek a listában.\n\nFONTOS: nyers, azaz SHA aláírás nélküli, exportált JSON-t soha ne helyezzen a program mappájába! A program ugyanis az ilyen fájlokat nem tölti be és nem kezeli! Amennyiben az állományjegyzék vagy a dezideráta csak nyers formátumban áll rendelkezésére, használja a megfelelő modul JSON importálás funkcióját a fenti módon.\n"
+                "  Egy korábban elmentett JSON állományjegyzék beolvasásához használja a Fájl -> Állományjegyzék betöltése JSON fájlból... menüpontot (Ctrl + Shift + B). A mentett JSON fájlból csak azok a könyvek kerülnek felvételre, amelyek még nem szerepelnek a listában.\n\nFONTOS: nyers, azaz SHA aláírás nélküli, exportált JSON-t soha ne helyezzen a program mappájába! A program ugyanis az ilyen fájlokat nem tölti be és nem kezeli! Amennyiben az állományjegyzék vagy a dezideráta csak nyers formátumban áll rendelkezésére, használja a megfelelő modul JSON importálás funkcióját a fenti módon.\n\n"
+                "4. Katalóguslap mentése PDF fájlba:\n"
+                "  A program főablakában megjelenő listát a látható oszlopokkal PDF fájlba mentheti.\nEhhez kattintson az eszköztár Katalógus mentése gombjára, vagy a menüből válassza a Katalóguslap mentése pdf-be lehetőséget.\nHa nagyon sok oszlop van a listában, a program automatikusan csökkenti a PDF betűméretét.\n"
             ),
                         (
                 "Dezideráta-kezelő",
@@ -143,6 +145,7 @@ class HelpNotebookDialog(wx.Dialog):
                 "  Ctrl + Shift + E      - Egy vagy több könyvadatlap exportálása PDF fájlba\n"
                 "  Ctrl + Shift + B      - Állományjegyzék betöltése JSON fájlból\n"
                 "  Ctrl + Shift + M      - Állományjegyzék mentése JSON fájlba\n"
+                "  Ctrl + Shift + C                - Katalóguslap mentése PDF fájlba\n"
                 "  Ctrl + F              - Élő keresősáv fókuszba helyezése\n"
                 "  Ctrl + K              - Keresés az állományban párbeszédablak megnyitása\n"
                 "  Ctrl + T              - Állománystatisztika megnyitása\n"

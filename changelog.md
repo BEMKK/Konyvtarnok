@@ -4,6 +4,13 @@ A projekten végrehajtott lényegi változtatások dokumentációja.
 
 
 
+## [3.8.0] - 2026-10-05
+
+- Új funkció a katalóguslap exportálása.
+- Hozzáadva a könyvadatlap exportálása funkció a könyv adatlapjához és a popup menühöz.
+
+
+
 ## [3.7.0] - 2026-10-04
 
 - A KönyvTárnok-kereső mostantól támogatja az "és" szókapcsolatot, vagyis egy sor akkor is találat, ha a keresett kifejezés szavai több oszlopban szerepelnek.
