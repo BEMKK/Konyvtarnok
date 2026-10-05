@@ -1,20 +1,34 @@
 import os
 import logging
-from reportlab.lib.pagesizes import A4
-from reportlab.pdfgen import canvas
-from reportlab.pdfbase import pdfmetrics
-from reportlab.pdfbase.ttfonts import TTFont
 from datetime import date
 from xml.sax.saxutils import escape
+
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib.styles import ParagraphStyle
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.pdfgen import canvas
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
-from konyv_lista import KonyvListaCtrl
 
-# FONT_NEV: az a név, amivel az adatlap-exportnál már regisztráltad a TTF-et
-# (pdfmetrics.registerFont). Ha az nem modulszintű, ugyanazt a hívást ide is be lehet tenni.
-FONT_NEV = "Alap"
+from konyv_lista import KonyvListaCtrl
+# A mezők sorrendjét és feliratait a constants.py-ból importáljuk, hogy
+# ugyanaz az egyetlen forrás írja le őket, mint a konyvdialogs.py-beli
+# adatlap/szerkesztő dialógusokét - lásd a constants.py megjegyzését.
+from constants import BIBLIOGRAFIAI_MEZO_DEFINICIOK, PELDANY_MEZO_DEFINICIOK
+
+# Betöltjük az Arial betűtípust a PDF-hez, hogy az összes magyar ékezet (ő, ű is) működjön
+try:
+    pdfmetrics.registerFont(TTFont('Arial', 'arial.ttf'))
+    PDF_FONT = 'Arial'
+except Exception as e:
+    logging.warning(f"Nem sikerült betölteni az Arial betűtípust, visszatérés Helveticára: {e}")
+    PDF_FONT = 'Helvetica'
+
+# A "Példány rövid leírása" mező felirata is a constants.py PELDANY_MEZO_DEFINICIOK
+# listájából származik, nem szabad kézzel megismételni: így egy átnevezés után sem
+# veszik el a kétsoros megjelenítés az export_konyv_pdf-ben.
+ROVID_LEIRAS_FELIRAT = dict(PELDANY_MEZO_DEFINICIOK).get("rovid_leiras", "Példány rövid leírása:")
 
 
 def katalogus_pdf(utvonal, konyvek, oszlopok):
@@ -25,9 +39,9 @@ def katalogus_pdf(utvonal, konyvek, oszlopok):
     n = len(oszlopok)
     meret = 8 if n <= 7 else 7 if n <= 10 else 6
 
-    cella = ParagraphStyle("cella", fontName=FONT_NEV, fontSize=meret, leading=meret + 2)
+    cella = ParagraphStyle("cella", fontName=PDF_FONT, fontSize=meret, leading=meret + 2)
     fejlec = ParagraphStyle("fejlec", parent=cella, textColor=colors.white)
-    cim = ParagraphStyle("cim", fontName=FONT_NEV, fontSize=12, leading=15)
+    cim = ParagraphStyle("cim", fontName=PDF_FONT, fontSize=12, leading=15)
 
     adat = [[Paragraph(escape(defs[k][0]), fejlec) for k in oszlopok]]
     for kv in konyvek:
@@ -47,36 +61,13 @@ def katalogus_pdf(utvonal, konyvek, oszlopok):
     ]))
 
     def oldalszam(canvas, doc):
-        canvas.setFont(FONT_NEV, 8)
+        canvas.setFont(PDF_FONT, 8)
         canvas.drawRightString(doc.pagesize[0] - 30, 20, f"{doc.page}. oldal")
 
     fejsor = Paragraph(
         f"Katalóguslap – {len(konyvek)} tétel – {date.today():%Y.%m.%d.}", cim)
     doc.build([fejsor, Spacer(1, 8), tabla],
               onFirstPage=oldalszam, onLaterPages=oldalszam)
-
-# A mezők sorrendjét és feliratait a constants.py-ból importáljuk, hogy
-# ugyanaz az egyetlen forrás írja le őket, mint a konyvdialogs.py-beli
-# adatlap/szerkesztő dialógusokét - lásd a constants.py megjegyzését.
-from constants import BIBLIOGRAFIAI_MEZO_DEFINICIOK, PELDANY_MEZO_DEFINICIOK
-
-# A "Példány rövid leírása" mező felirata is a constants.py PELDANY_MEZO_DEFINICIOK
-# listájából származik, nem szabad itt még egyszer, kézzel leírni - korábban ez a
-# felirat szó szerint (kézzel megismételve) szerepelt itt lentebb, az
-# export_konyv_pdf-ben lévő kétsoros-tördelési speciális esetben. Ha valaki a
-# constants.py-ban átnevezné ezt a feliratot, az a duplikált string miatt
-# csendben elszakadt volna tőle, és a "Példány rövid leírása" mező elvesztette
-# volna a kétsoros (felirat/érték külön sorba tördelt) megjelenítését anélkül,
-# hogy bárki észrevette volna.
-ROVID_LEIRAS_FELIRAT = dict(PELDANY_MEZO_DEFINICIOK).get("rovid_leiras", "Példány rövid leírása:")
-
-# Betöltjük az Arial betűtípust a PDF-hez, hogy az összes magyar ékezet (ő, ű is) működjön
-try:
-    pdfmetrics.registerFont(TTFont('Arial', 'arial.ttf'))
-    PDF_FONT = 'Arial'
-except Exception as e:
-    logging.warning(f"Nem sikerült betölteni az Arial betűtípust, visszatérés Helveticára: {e}")
-    PDF_FONT = 'Helvetica'
 
 def export_konyv_pdf(konyv, fajlnev):
     """PDF export a könyv címe alapján, ékezetes tartalommal."""

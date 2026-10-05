@@ -1,5 +1,5 @@
 APP_NAME = "KönyvTárnok"
-APP_VERSION = "3.8.0"
+APP_VERSION = "3.8.1"
 APP_STAGE = ""
 APP_TITLE = APP_NAME
 

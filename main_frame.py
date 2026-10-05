@@ -10,7 +10,7 @@ from settings import BeallitasokDialog
 from konyvdialogs import KonyvReszletekDialog, KonyvSzerkesztoDialog
 from statisztika import StatisztikaDialog
 from help import HelpNotebookDialog
-from export_manager import tomeges_export_pdf
+from export_manager import tomeges_export_pdf, katalogus_pdf
 from config_manager import load_settings, save_settings
 from theme_manager import apply_theme
 from konyvtarnok_kereso import KonyvtarnokKeresoApp
