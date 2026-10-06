@@ -73,10 +73,10 @@ class Deziderata(wx.Frame):
         # --- Gombok ---
         btn_box = wx.BoxSizer(wx.HORIZONTAL)
 
-        self.btn_add = wx.Button(panel, label="Új tétel hozzáadása")
-        self.btn_edit = wx.Button(panel, label="Tétel szerkesztése")
-        self.btn_allomany = wx.Button(panel, label="Felvétel az állományba")
-        self.btn_delete = wx.Button(panel, label="Tétel eltávolítása")
+        self.btn_add = wx.Button(panel, label="Új tétel")
+        self.btn_edit = wx.Button(panel, label="Szerkesztés")
+        self.btn_allomany = wx.Button(panel, label="Állományba vétel")
+        self.btn_delete = wx.Button(panel, label="Törlés")
 
         btn_box.Add(self.btn_add, 0, wx.ALL, 5)
         btn_box.Add(self.btn_edit, 0, wx.ALL, 5)
@@ -117,7 +117,7 @@ class Deziderata(wx.Frame):
         item_allomany = menu_items.Append(wx.ID_ANY, "Tétel állományba vétele\tCTRL+F")
         item_delete = menu_items.Append(wx.ID_DELETE, "Tétel eltávolítása\tDelete")
         menu_items.AppendSeparator()
-        item_import = menu_items.Append(wx.ID_ANY, "Dezideráta betöltése...\tCtrl+SHIFT+B")
+        item_import = menu_items.Append(wx.ID_ANY, "Dezideráta betöltése JSON fájlból...\tCtrl+SHIFT+B")
         item_export = menu_items.Append(wx.ID_ANY, "Dezideráta mentése szerkeszthető JSON fájlba...\tCtrl+SHIFT+M")
         item_exit = menu_items.Append(wx.ID_EXIT, "Kilépés\tCtrl+W")
 

@@ -67,10 +67,10 @@ class Konyvtarnok(wx.Frame):
         gomb_uj = wx.Button(panel, label="Új könyv")
         gomb_uj.SetBitmap(bmp_uj)
 
-        gomb_szerk = wx.Button(panel, label="Kijelölt könyv szerkesztése")
-        gomb_torol = wx.Button(panel, label="Kijelöltek törlése")
+        gomb_szerk = wx.Button(panel, label="Szerkesztés")
+        gomb_torol = wx.Button(panel, label="Törlés")
         gomb_torol.SetBitmap(bmp_torol)
-        gomb_katalogus = wx.Button(panel, label="Katalóguslap exportálása")
+        gomb_katalogus = wx.Button(panel, label="Katalógus export")
 
         kereso_cimke = wx.StaticText(panel, label="Keresés:")
         self.kereso_ctrl = wx.SearchCtrl(panel, size=(220, -1))
