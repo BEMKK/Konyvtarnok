@@ -47,3 +47,21 @@ class MenuBar(wx.MenuBar):
         self.nevjegy = help_menu.Append(wx.ID_ABOUT, '&Névjegy\tCTRL+SHIFT+N', 'Megjeleníti a névjegy ablakot')
 
         self.Append(help_menu, '&Súgó')
+
+
+class DeziderataMenuBar(wx.MenuBar):
+    def __init__(self):
+        super().__init__()
+
+        tetel_menu = wx.Menu()
+        self.uj_tetel = tetel_menu.Append(wx.ID_NEW, "Új tétel hozzáadása\tCTRL+N")
+        self.szerk = tetel_menu.Append(wx.ID_EDIT, "Tétel szerkesztése\tCTRL+E")
+        self.allomanyba = tetel_menu.Append(wx.ID_ANY, "Tétel állományba vétele\tCTRL+F")
+        self.torles = tetel_menu.Append(wx.ID_DELETE, "Tétel eltávolítása\tDelete")
+        tetel_menu.AppendSeparator()
+        self.katalogus = tetel_menu.Append(wx.ID_ANY, "Katalóguslap exportálása PDF-be...\tCtrl+Shift+C")
+        self.json_import = tetel_menu.Append(wx.ID_ANY, "Dezideráta betöltése JSON fájlból...\tCtrl+SHIFT+B")
+        self.json_export = tetel_menu.Append(wx.ID_ANY, "Dezideráta mentése szerkeszthető JSON fájlba...\tCtrl+SHIFT+M")
+        self.kilepes = tetel_menu.Append(wx.ID_EXIT, "Kilépés\tCtrl+W")
+
+        self.Append(tetel_menu, "Tételek")

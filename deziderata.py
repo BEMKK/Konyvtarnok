@@ -27,6 +27,7 @@ from konyvdialogs import (
 )
 from gyors_kereses import GyorsListaKereso, osszes_kijelolt_index
 from export_manager import katalogus_mentese
+from menu_bar import DeziderataMenuBar
 # A magyar_rendezesi_kulcs és az alkalmazas_alapmappa az utils.py-ba
 # kerültek át: tisztán szövegfeldolgozó, illetve az alkalmazás mappáját
 # meghatározó, wx-től független logika (utóbbit korábban a
@@ -151,31 +152,18 @@ class Deziderata(wx.Frame):
         panel.SetSizer(vbox)
 
         # --- Menüsor ---
-        menubar = wx.MenuBar()
-        menu_items = wx.Menu()
-
-        item_add = menu_items.Append(wx.ID_NEW, "Új tétel hozzáadása\tCTRL+N")
-        item_edit = menu_items.Append(wx.ID_EDIT, "Tétel szerkesztése\tCTRL+E")
-        item_allomany = menu_items.Append(wx.ID_ANY, "Tétel állományba vétele\tCTRL+F")
-        item_delete = menu_items.Append(wx.ID_DELETE, "Tétel eltávolítása\tDelete")
-        menu_items.AppendSeparator()
-        item_katalogus = menu_items.Append(wx.ID_ANY, "Katalóguslap exportálása PDF-be...\tCtrl+Shift+C")
-        item_import = menu_items.Append(wx.ID_ANY, "Dezideráta betöltése JSON fájlból...\tCtrl+SHIFT+B")
-        item_export = menu_items.Append(wx.ID_ANY, "Dezideráta mentése szerkeszthető JSON fájlba...\tCtrl+SHIFT+M")
-        item_exit = menu_items.Append(wx.ID_EXIT, "Kilépés\tCtrl+W")
-
-        menubar.Append(menu_items, "Tételek")
-        self.SetMenuBar(menubar)
+        menusor = DeziderataMenuBar()
+        self.SetMenuBar(menusor)
 
         # --- Események ---
-        self.Bind(wx.EVT_MENU, self.on_add, item_add)
-        self.Bind(wx.EVT_MENU, self.on_edit, item_edit)
-        self.Bind(wx.EVT_MENU, self.on_atemeles_allomanyba, item_allomany)
-        self.Bind(wx.EVT_MENU, self.on_delete, item_delete)
-        self.Bind(wx.EVT_MENU, self.on_import_json, item_import)
-        self.Bind(wx.EVT_MENU, self.on_export_json, item_export)
-        self.Bind(wx.EVT_MENU, self.on_katalogus_export, item_katalogus)
-        self.Bind(wx.EVT_MENU, self.on_exit, item_exit)
+        self.Bind(wx.EVT_MENU, self.on_add, menusor.uj_tetel)
+        self.Bind(wx.EVT_MENU, self.on_edit, menusor.szerk)
+        self.Bind(wx.EVT_MENU, self.on_atemeles_allomanyba, menusor.allomanyba)
+        self.Bind(wx.EVT_MENU, self.on_delete, menusor.torles)
+        self.Bind(wx.EVT_MENU, self.on_import_json, menusor.json_import)
+        self.Bind(wx.EVT_MENU, self.on_export_json, menusor.json_export)
+        self.Bind(wx.EVT_MENU, self.on_katalogus_export, menusor.katalogus)
+        self.Bind(wx.EVT_MENU, self.on_exit, menusor.kilepes)
 
         self.btn_add.Bind(wx.EVT_BUTTON, self.on_add)
         self.btn_edit.Bind(wx.EVT_BUTTON, self.on_edit)
