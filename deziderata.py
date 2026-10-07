@@ -26,6 +26,7 @@ from konyvdialogs import (
     EditItemDialog,
 )
 from gyors_kereses import GyorsListaKereso, osszes_kijelolt_index
+from export_manager import katalogus_mentese
 # A magyar_rendezesi_kulcs és az alkalmazas_alapmappa az utils.py-ba
 # kerültek át: tisztán szövegfeldolgozó, illetve az alkalmazás mappáját
 # meghatározó, wx-től független logika (utóbbit korábban a
@@ -45,6 +46,34 @@ except Exception:
 APP_NAME = "KönyvTárnok Dezideráta-kezelő"
 BASE_DIR = alkalmazas_alapmappa()
 DATA_FILE = os.path.join(BASE_DIR, "deziderata.json")
+
+# A lista (és a katalóguslap) oszlopai: kulcsok sorrendben, valamint a PDF-beli
+# oszlopszélesség relatív súlya. A feliratok a DEZIDERATA_MEZO_DEFINICIOK-ból
+# jönnek (lásd katalogus_oszlop_definiciok).
+LISTA_OSZLOP_KULCSOK = [
+    "cim", "szerzo", "egyeb_szemelyek", "kiado",
+    "hely", "ev", "priority", "status",
+]
+LISTA_OSZLOP_SULYOK = {
+    "cim": 5, "szerzo": 3, "egyeb_szemelyek": 3, "kiado": 3,
+    "hely": 2, "ev": 1, "priority": 1, "status": 2,
+}
+# A régi (angol kulcsos) rekordok kezelése
+_REGI_KULCSOK = {"cim": "title", "szerzo": "author", "kiado": "publisher",
+                 "hely": "place", "ev": "year"}
+
+
+def katalogus_oszlop_definiciok():
+    """{kulcs: (felirat, súly)} a katalogus_pdf számára; a feliratok a
+    DEZIDERATA_MEZO_DEFINICIOK-ból származnak (kettőspont nélkül)."""
+    feliratok = dict(DEZIDERATA_MEZO_DEFINICIOK)
+    return {k: (feliratok[k].rstrip(":"), LISTA_OSZLOP_SULYOK[k])
+            for k in LISTA_OSZLOP_KULCSOK}
+
+
+def lista_ertek(item, kulcs):
+    """Egy tétel mezőjének megjelenítendő szövege (régi kulcsokra is visszaesve)."""
+    return str(item.get(kulcs, item.get(_REGI_KULCSOK.get(kulcs, kulcs), "")) or "")
 
 # ==============================================================================
 # FŐABLAK ÉS ALKALMAZÁS LOGIKA
@@ -77,11 +106,13 @@ class Deziderata(wx.Frame):
         self.btn_edit = wx.Button(panel, label="Szerkesztés")
         self.btn_allomany = wx.Button(panel, label="Állományba vétel")
         self.btn_delete = wx.Button(panel, label="Törlés")
+        self.btn_katalogus = wx.Button(panel, label="Katalógus export")
 
         btn_box.Add(self.btn_add, 0, wx.ALL, 5)
         btn_box.Add(self.btn_edit, 0, wx.ALL, 5)
         btn_box.Add(self.btn_allomany, 0, wx.ALL, 5)
         btn_box.Add(self.btn_delete, 0, wx.ALL, 5)
+        btn_box.Add(self.btn_katalogus, 0, wx.ALL, 5)
 
         vbox.Add(btn_box, 0, wx.LEFT | wx.TOP, 5)
 
@@ -94,10 +125,6 @@ class Deziderata(wx.Frame):
         # karbantartott listát tartanánk ugyanezekre a feliratokra - korábban
         # ez a két lista egymástól függetlenül létezett, ezért egy feliratot
         # csak az egyik helyen átnevezve a kettő csendben szétcsúszott volna.
-        LISTA_OSZLOP_KULCSOK = [
-            "cim", "szerzo", "egyeb_szemelyek", "kiado",
-            "hely", "ev", "priority", "status",
-        ]
         mezo_feliratok = dict(DEZIDERATA_MEZO_DEFINICIOK)
         columns = [mezo_feliratok[kulcs].rstrip(":") for kulcs in LISTA_OSZLOP_KULCSOK]
 
@@ -117,6 +144,7 @@ class Deziderata(wx.Frame):
         item_allomany = menu_items.Append(wx.ID_ANY, "Tétel állományba vétele\tCTRL+F")
         item_delete = menu_items.Append(wx.ID_DELETE, "Tétel eltávolítása\tDelete")
         menu_items.AppendSeparator()
+        item_katalogus = menu_items.Append(wx.ID_ANY, "Katalóguslap exportálása PDF-be...\tCtrl+Shift+C")
         item_import = menu_items.Append(wx.ID_ANY, "Dezideráta betöltése JSON fájlból...\tCtrl+SHIFT+B")
         item_export = menu_items.Append(wx.ID_ANY, "Dezideráta mentése szerkeszthető JSON fájlba...\tCtrl+SHIFT+M")
         item_exit = menu_items.Append(wx.ID_EXIT, "Kilépés\tCtrl+W")
@@ -131,12 +159,14 @@ class Deziderata(wx.Frame):
         self.Bind(wx.EVT_MENU, self.on_delete, item_delete)
         self.Bind(wx.EVT_MENU, self.on_import_json, item_import)
         self.Bind(wx.EVT_MENU, self.on_export_json, item_export)
+        self.Bind(wx.EVT_MENU, self.on_katalogus_export, item_katalogus)
         self.Bind(wx.EVT_MENU, self.on_exit, item_exit)
 
         self.btn_add.Bind(wx.EVT_BUTTON, self.on_add)
         self.btn_edit.Bind(wx.EVT_BUTTON, self.on_edit)
         self.btn_allomany.Bind(wx.EVT_BUTTON, self.on_atemeles_allomanyba)
         self.btn_delete.Bind(wx.EVT_BUTTON, self.on_delete)
+        self.btn_katalogus.Bind(wx.EVT_BUTTON, self.on_katalogus_export)
         
         # Gyorskeresés (gépeléssel ugrás a listában)
         self.gyors_kereses = GyorsListaKereso()
@@ -276,23 +306,10 @@ class Deziderata(wx.Frame):
         self.rendez_listat()
         self.list.DeleteAllItems()
         for item in self.items:
-            cim = item.get("cim", item.get("title", ""))
-            szerzo = item.get("szerzo", item.get("author", ""))
-            egyeb_szemelyek = item.get("egyeb_szemelyek", "")
-            kiado = item.get("kiado", item.get("publisher", ""))
-            hely = item.get("hely", item.get("place", ""))
-            ev = str(item.get("ev", item.get("year", "")))
-            priority = item.get("priority", "")
-            status = item.get("status", "")
-
-            index = self.list.InsertItem(self.list.GetItemCount(), cim)
-            self.list.SetItem(index, 1, szerzo)
-            self.list.SetItem(index, 2, egyeb_szemelyek)
-            self.list.SetItem(index, 3, kiado)
-            self.list.SetItem(index, 4, hely)
-            self.list.SetItem(index, 5, ev)
-            self.list.SetItem(index, 6, priority)
-            self.list.SetItem(index, 7, status)
+            ertekek = [lista_ertek(item, k) for k in LISTA_OSZLOP_KULCSOK]
+            index = self.list.InsertItem(self.list.GetItemCount(), ertekek[0])
+            for oszlop, ertek in enumerate(ertekek[1:], start=1):
+                self.list.SetItem(index, oszlop, ertek)
 
         self.FrissitStatusBar()
 
@@ -503,6 +520,16 @@ class Deziderata(wx.Frame):
                 "Siker",
                 wx.OK | wx.ICON_INFORMATION
             )
+
+    def on_katalogus_export(self, event):
+        """A teljes dezideráta-lista exportálása katalóguslapként (PDF).
+        Csak olvas, ezért betöltési hiba után sem kell letiltani."""
+        sorok = [{k: lista_ertek(it, k) for k in LISTA_OSZLOP_KULCSOK}
+                 for it in self.items]  # a self.items már rendezett
+        katalogus_mentese(self, sorok, LISTA_OSZLOP_KULCSOK,
+                          defs=katalogus_oszlop_definiciok(),
+                          cim_szoveg="Dezideráta-lap",
+                          alap_fajlnev="dezideratalap.pdf")
 
     def on_exit(self, event):
         self.Close()

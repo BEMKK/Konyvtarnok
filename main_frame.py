@@ -10,7 +10,7 @@ from settings import BeallitasokDialog
 from konyvdialogs import KonyvReszletekDialog, KonyvSzerkesztoDialog
 from statisztika import StatisztikaDialog
 from help import HelpNotebookDialog
-from export_manager import tomeges_export_pdf, katalogus_pdf
+from export_manager import tomeges_export_pdf, katalogus_mentese
 from config_manager import load_settings, save_settings
 from theme_manager import apply_theme
 from konyvtarnok_kereso import KonyvtarnokKeresoApp
@@ -684,40 +684,8 @@ class Konyvtarnok(wx.Frame):
         ment_dlg.Destroy()
 
     def OnKatalogusExport(self, event):
-        konyvek = list(self.lista.jelenlegi_adatok)
-        oszlopok = list(self.lista.aktiv_oszlopok)
-        if not konyvek or not oszlopok:
-            wx.MessageBox("A katalóguslapot nem lehet exportálni: a lista vagy az oszlopkészlet üres.",
-                          "Katalóguslap mentése", wx.OK | wx.ICON_WARNING)
-            return
-
-        config = load_settings()
-        dlg = wx.FileDialog(
-            self, "Katalóguslap mentése PDF-be",
-            defaultDir=config.get("last_json_dir", ""),
-            defaultFile="katalogus.pdf",
-            wildcard="PDF fájl (*.pdf)|*.pdf",
-            style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT)
-        if dlg.ShowModal() != wx.ID_OK:
-            dlg.Destroy()
-            return
-        utvonal = dlg.GetPath()
-        dlg.Destroy()
-
-        config["last_json_dir"] = os.path.dirname(utvonal)
-        save_settings(config)
-
-        try:
-            with wx.BusyCursor():
-                katalogus_pdf(utvonal, konyvek, oszlopok)
-        except Exception as e:
-            logging.error("Hiba a katalóguslap készítésekor", exc_info=True)
-            wx.MessageBox(f"Hiba történt a PDF készítésekor:\n{e}", "Hiba", wx.OK | wx.ICON_ERROR)
-            return
-
-        if wx.MessageBox("A katalóguslap elkészült. Megnyitja most?", "Katalóguslap",
-                         wx.YES_NO | wx.ICON_QUESTION) == wx.YES:
-            os.startfile(utvonal)
+        katalogus_mentese(self, list(self.lista.jelenlegi_adatok),
+                          list(self.lista.aktiv_oszlopok))
 
     def on_kereses_dialógus_megnyitasa(self, event):
         dlg = KeresoDialog(self)

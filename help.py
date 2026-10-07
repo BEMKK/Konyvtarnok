@@ -70,7 +70,7 @@ class HelpNotebookDialog(wx.Dialog):
                 "3. Állományjegyzék betöltése JSON-ból:\n"
                 "  Egy korábban elmentett JSON állományjegyzék beolvasásához használja a Fájl -> Állományjegyzék betöltése JSON fájlból... menüpontot (Ctrl + Shift + B). A mentett JSON fájlból csak azok a könyvek kerülnek felvételre, amelyek még nem szerepelnek a listában.\n\nFONTOS: nyers, azaz SHA aláírás nélküli, exportált JSON-t soha ne helyezzen a program mappájába! A program ugyanis az ilyen fájlokat nem tölti be és nem kezeli! Amennyiben az állományjegyzék vagy a dezideráta csak nyers formátumban áll rendelkezésére, használja a megfelelő modul JSON importálás funkcióját a fenti módon.\n\n"
                 "4. Katalóguslap mentése PDF fájlba:\n"
-                "  A program főablakában megjelenő listát a látható oszlopokkal PDF fájlba mentheti.\nEhhez kattintson az eszköztár Katalógus mentése gombjára, vagy a menüből válassza a Katalóguslap mentése pdf-be lehetőséget.\nHa nagyon sok oszlop van a listában, a program automatikusan csökkenti a PDF betűméretét.\n"
+                "  A program főablakában megjelenő listát a látható oszlopokkal PDF fájlba mentheti.\nEhhez kattintson az eszköztár Katalógus export gombjára, vagy a menüből válassza a Katalóguslap mentése pdf-be lehetőséget.\nHa nagyon sok oszlop van a listában, a program automatikusan csökkenti a PDF betűméretét.\n"
             ),
                         (
                 "Dezideráta-kezelő",
@@ -86,7 +86,9 @@ class HelpNotebookDialog(wx.Dialog):
                 "5. Tétel felvétele a fő könyvállományba:\n"
                 "  Ha egy beszerzendő könyvet sikerült megvásárolni/megszerezni, a kijelölt tételt a Ctrl + F billentyűkombinációval vagy a 'Felvétel az állományba' gombbal közvetlenül átemelheti a fő katalógusba. Átemeléskor a program megkérdezi, hogy biztosan át szeretné e emelni a tételt. Amennyiben ezt szeretné, kattintson az Igen gombra.\n\n"
                 "6. Dezideráta adatok mentése és betöltése:\n"
-                "  A dezideráta jegyzék exportálható szerkeszthető, azaz SHA integritásvédelem nélküli JSON fájlba (Ctrl + Shift + M) és bármikor visszatölthető (Ctrl + Shift + B) a Tételek menüből. JSON fájl betöltése esetén csak azok a kötetek kerülnek importálásra, amelyek még nem szerepelnek a jegyzékben. Mentéskor a fájl neve alapértelmezetten \"deziderata.json\"\n"
+                "  A dezideráta jegyzék exportálható szerkeszthető, azaz SHA integritásvédelem nélküli JSON fájlba (Ctrl + Shift + M) és bármikor visszatölthető (Ctrl + Shift + B) a Tételek menüből. JSON fájl betöltése esetén csak azok a kötetek kerülnek importálásra, amelyek még nem szerepelnek a jegyzékben. Mentéskor a fájl neve alapértelmezetten \"deziderata.json\"\n\n"
+                "7. Katalóguslap mentése:\n"
+                "  Az állományhoz hasonlóan a Deziderátáról is készíthető PDF katalóguslap.\nEhhez a főablakban megszokott módon használhatja a Ctrl + Shift + C billentyűparancsot, az eszköztár Katalógus export gombját, vagy a megfelelő menüpontot.\n"
             ),
             (
                 "KönyvTárnok kereső",
@@ -173,6 +175,7 @@ class HelpNotebookDialog(wx.Dialog):
                 "  Ctrl + A              - Összes tétel kijelölése\n"
                 "  Delete                - Kijelölt tétel(ek) törlése\n"
                 "  Ctrl + F              - Kijelölt tétel(ek) felvétele a fő könyvállományba\n"
+                "  Ctrl + Shift + C                - Katalóguslap mentése PDF fájlba\n"
                 "  Ctrl + Shift + B      - Dezideráta-jegyzék betöltése JSON fájlból\n"
                 "  Ctrl + Shift + M      - Dezideráta-jegyzék mentése JSON fájlba\n"
                 "  Ctrl + W        - Ablak bezárása\n\n"

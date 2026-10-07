@@ -4,6 +4,12 @@ A projekten végrehajtott lényegi változtatások dokumentációja.
 
 
 
+## [3.9.0] - 2026-10-07
+
+- Katalóguslap exportálása a Dezideráta-kezelőben.
+
+
+
 ## [3.8.1] - 2026-10-05
 
 - Javítva a Katalóguslap mentési hibája.
