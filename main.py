@@ -1,7 +1,4 @@
 import sys
-import os
-import subprocess
-import platform
 import traceback
 import logging
 import wx
@@ -18,6 +15,9 @@ from main_frame import Konyvtarnok
 # data_manager.py, a deziderata.py és ez a fájl (get_exe_dir) egymástól
 # függetlenül, szó szerint megegyező formában tartalmazta.
 from utils import masolas_vagolapra_szoveg, alkalmazas_alapmappa
+# A fájl megnyitása az alapértelmezett alkalmazással (platformfüggetlenül) szintén
+# közös függvény: ugyanezt használja az export_manager is.
+from utils import fajl_megnyitasa
 # A "futó exe önfrissítése" folyamat két horgot igényel a program
 # indításánál és megjelenésénél - lásd update.py a részletes leírásért.
 from update import cleanup_old_exe, kezel_update_ready_jelzes
@@ -114,13 +114,7 @@ class HibaAblak(wx.Dialog):
 
     def on_open(self, event):
         try:
-            rendszer = platform.system()
-            if rendszer == 'Windows':
-                os.startfile(str(self.log_path))
-            elif rendszer == 'Darwin':
-                subprocess.run(['open', str(self.log_path)], check=True)
-            else:
-                subprocess.run(['xdg-open', str(self.log_path)], check=True)
+            fajl_megnyitasa(self.log_path)
         except Exception as e:
             wx.MessageBox(
                 f"Nem sikerült megnyitni a napló fájlt:\n{e}",

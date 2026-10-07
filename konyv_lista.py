@@ -1,6 +1,6 @@
 import wx
 
-from constants import DEFAULT_LATHATO_OSZLOPOK
+from constants import DEFAULT_LATHATO_OSZLOPOK, OSZLOP_DEFINICIOK, OSZLOP_SULYOK
 from gyors_kereses import GyorsListaKereso, osszes_kijelolt_index
 # A rendezési/dátumfeldolgozó segédfüggvények (magyar_rendezesi_kulcs,
 # konyv_mezo_rendezesi_kulcs) az utils.py-ba kerültek át, mert tisztán
@@ -17,22 +17,11 @@ from utils import magyar_rendezesi_kulcs, konyv_mezo_rendezesi_kulcs
 
 
 class KonyvListaCtrl(wx.ListCtrl):
-    OSZLOP_DEFINICIOK = {
-        "cim": ("Cím", 200),
-        "alcim": ("Alcím", 180),
-        "szerzo": ("Összeállító", 180),
-        "egyeb_szemelyek": ("Egyéb személyek", 150),
-        "kiado": ("Kiadó", 180),
-        "hely": ("Kiadás helye", 110),
-        "ev": ("Kiadás éve", 90),
-        "oldalszam": ("Oldalszám", 80),
-        "meretek": ("Méret", 90),
-        "kotes": ("Kötés", 90),
-        "rovid_cim": ("Rövid cím", 120),
-        "bekerult": ("Bekerült", 100),
-        "forras": ("Forrás", 80),
-        "status": ("Státusz", 100)
-    }
+    # Az oszlopdefiníciók és a súlyok a constants.py-ban élnek (egyetlen
+    # forrás); osztályszintű néven azért érhetők el itt is, hogy a
+    # KonyvListaCtrl.OSZLOP_DEFINICIOK-ra hivatkozó kód változatlanul működjön.
+    OSZLOP_DEFINICIOK = OSZLOP_DEFINICIOK
+    SULYOK = OSZLOP_SULYOK
 
     def __init__(self, parent, db, aktiv_oszlopok=None):
         super().__init__(parent, style=wx.LC_REPORT | wx.LC_VIRTUAL | wx.BORDER_SUNKEN | wx.LC_HRULES | wx.LC_VRULES)
@@ -188,23 +177,16 @@ class KonyvListaCtrl(wx.ListCtrl):
 
         szerel_szelesseg = self.GetClientSize().width - wx.SystemSettings.GetMetric(wx.SYS_VSCROLL_X)
         
-        SULYOK = {
-            "cim": 3.0, "alcim": 2.5, "szerzo": 2.0, "egyeb_szemelyek": 2.0,
-            "kiado": 2.0, "rovid_cim": 1.5, "hely": 1.0, "bekerult": 0.8,
-            "status": 0.8, "ev": 0.5, "oldalszam": 0.5, "meretek": 0.5,
-            "kotes": 0.5, "forras": 0.5
-        }
-        
         osszes_alap = sum(self.OSZLOP_DEFINICIOK[k][1] for k in self.aktiv_oszlopok if k in self.OSZLOP_DEFINICIOK)
         
         if osszes_alap > 0 and szerel_szelesseg > osszes_alap:
             maradek_hely = szerel_szelesseg - osszes_alap
-            osszes_suly = sum(SULYOK.get(k, 1.0) for k in self.aktiv_oszlopok if k in self.OSZLOP_DEFINICIOK)
+            osszes_suly = sum(self.SULYOK.get(k, 1.0) for k in self.aktiv_oszlopok if k in self.OSZLOP_DEFINICIOK)
             
             for i, kulcs in enumerate(self.aktiv_oszlopok):
                 if kulcs in self.OSZLOP_DEFINICIOK:
                     alap = self.OSZLOP_DEFINICIOK[kulcs][1]
-                    suly = SULYOK.get(kulcs, 1.0)
+                    suly = self.SULYOK.get(kulcs, 1.0)
                     plusz_szelesseg = int(maradek_hely * (suly / osszes_suly))
                     self.SetColumnWidth(i, alap + plusz_szelesseg)
         else:

@@ -3,7 +3,7 @@ from theme_manager import apply_theme_from_settings
 
 class KeresoDialog(wx.Dialog):
     def __init__(self, parent):
-        super().__init__(parent, title="Keresés és szűrés", size=(350, 180))
+        super().__init__(parent, title="Keresés és szűrés")
         
         main_sizer = wx.BoxSizer(wx.VERTICAL)
         input_sizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -22,6 +22,7 @@ class KeresoDialog(wx.Dialog):
         ok_button = wx.Button(self, wx.ID_OK, label="Keresés")
         cancel_button = wx.Button(self, wx.ID_CANCEL, label="Mégse")
 
+        ok_button.SetDefault()
         btn_sizer.AddButton(ok_button)
         btn_sizer.AddButton(cancel_button)
         
@@ -37,8 +38,12 @@ class KeresoDialog(wx.Dialog):
         )
         main_sizer.Add(btn_sizer, 0, wx.EXPAND | wx.ALL, 5)
 
-        self.SetSizer(main_sizer)
-        
+        # Az ablak mérete a tartalomhoz igazodik (nagyobb betűméretnél vagy
+        # magasabb DPI-nél sem vágódnak le a vezérlők); a minimális
+        # szélesség biztosítja, hogy a beviteli mező ne legyen túl keskeny.
+        self.SetMinSize((350, -1))
+        self.SetSizerAndFit(main_sizer)
+
         self.CentreOnParent()
 
     def get_search_text(self):

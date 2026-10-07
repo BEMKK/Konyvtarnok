@@ -1,6 +1,5 @@
 import wx
-from constants import DEFAULT_LATHATO_OSZLOPOK
-from konyv_lista import KonyvListaCtrl
+from constants import DEFAULT_LATHATO_OSZLOPOK, ELERHETO_OSZLOPOK
 from theme_manager import get_theme_names, apply_theme
 
 class BeallitasokDialog(wx.Dialog):
@@ -23,16 +22,12 @@ class BeallitasokDialog(wx.Dialog):
         ("monthly", "Havonta")
     ]
 
-    # A jelölőnégyzetek felirata mostantól a KonyvListaCtrl.OSZLOP_DEFINICIOK
-    # (konyv_lista.py) szótárból származik, ami a lista tényleges
-    # oszlopfejléceit is meghatározza. Korábban ez a lista itt külön, kézzel
-    # volt megismételve, aminek következtében néhány felirat (pl. "Méretek"
-    # a lista tényleges "Méret" fejléce helyett, vagy "Bekerülés" a
-    # "Bekerült" helyett) eltért a könyvlistában ténylegesen látott
-    # oszlopnévtől.
-    ELERHETO_OSZLOPOK = [
-        (kulcs, adat[0]) for kulcs, adat in KonyvListaCtrl.OSZLOP_DEFINICIOK.items()
-    ]
+    # A jelölőnégyzetek (kulcs, felirat) párjai a constants.ELERHETO_OSZLOPOK
+    # listából származnak (ami a lista tényleges oszlopfejléceit adja), így
+    # a beállítások ablakhoz már nem kell behúzni a KonyvListaCtrl-t.
+    # Osztályszintű néven a régi BeallitasokDialog.ELERHETO_OSZLOPOK hivatkozások
+    # is működnek.
+    ELERHETO_OSZLOPOK = ELERHETO_OSZLOPOK
 
     def __init__(self, parent, config):
         """A `config` a hívó által betöltött beállítás-szótár (load_settings()

@@ -23,6 +23,7 @@ import os
 import sys
 import datetime
 import logging
+import platform
 from collections import defaultdict
 
 # ==============================================================================
@@ -428,3 +429,18 @@ def masolas_vagolapra_szoveg(szoveg):
         logging.warning(f"wx.TheClipboard használata sikertelen: {e}")
     return masolas_win32_vagolapra(szoveg)
 
+def fajl_megnyitasa(utvonal):
+    """Megnyitja a fájlt a rendszer alapértelmezett alkalmazásával.
+
+    Windowson os.startfile, macOS-en `open`, egyébként `xdg-open`. Siker
+    esetén nem ad vissza semmit; ha nem sikerült, kivételt dob (OSError /
+    subprocess.CalledProcessError), amit a hívó jeleníthet meg.
+    """
+    utvonal = str(utvonal)
+    rendszer = platform.system()
+    if rendszer == "Windows":
+        os.startfile(utvonal)
+    elif rendszer == "Darwin":
+        subprocess.run(["open", utvonal], check=True)
+    else:
+        subprocess.run(["xdg-open", utvonal], check=True)

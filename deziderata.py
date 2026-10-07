@@ -47,16 +47,27 @@ APP_NAME = "KönyvTárnok Dezideráta-kezelő"
 BASE_DIR = alkalmazas_alapmappa()
 DATA_FILE = os.path.join(BASE_DIR, "deziderata.json")
 
-# A lista (és a katalóguslap) oszlopai: kulcsok sorrendben, valamint a PDF-beli
-# oszlopszélesség relatív súlya. A feliratok a DEZIDERATA_MEZO_DEFINICIOK-ból
-# jönnek (lásd katalogus_oszlop_definiciok).
+# A lista (és a katalóguslap) oszlopai: kulcsok sorrendben. A feliratok a
+# DEZIDERATA_MEZO_DEFINICIOK-ból jönnek (lásd katalogus_oszlop_definiciok).
 LISTA_OSZLOP_KULCSOK = [
     "cim", "szerzo", "egyeb_szemelyek", "kiado",
     "hely", "ev", "priority", "status",
 ]
-LISTA_OSZLOP_SULYOK = {
-    "cim": 5, "szerzo": 3, "egyeb_szemelyek": 3, "kiado": 3,
-    "hely": 2, "ev": 1, "priority": 1, "status": 2,
+# kulcs: (alap szélesség pixelben, kitöltési súly átméretezéskor).
+# Ugyanazt a felépítést követi, mint a főlista constants.OSZLOP_DEFINICIOK /
+# OSZLOP_SULYOK párosa: az alap szélesség az ablak oszlopainak kiindulási
+# szélessége ÉS a PDF-katalóguslap oszlopainak aránya is (a katalogus_pdf
+# a defs értékeit egymáshoz viszonyítva használja), a súly pedig azt adja
+# meg, hogy az ablak átméretezésekor a többletszélességből mekkora részt kap.
+LISTA_OSZLOP_ADATOK = {
+    "cim":             (200, 3.0),
+    "szerzo":          (130, 2.0),
+    "egyeb_szemelyek": (120, 2.0),
+    "kiado":           (140, 2.0),
+    "hely":            (100, 1.0),
+    "ev":              ( 80, 0.5),
+    "priority":        ( 85, 0.8),
+    "status":          (130, 1.5),
 }
 # A régi (angol kulcsos) rekordok kezelése
 _REGI_KULCSOK = {"cim": "title", "szerzo": "author", "kiado": "publisher",
@@ -64,10 +75,11 @@ _REGI_KULCSOK = {"cim": "title", "szerzo": "author", "kiado": "publisher",
 
 
 def katalogus_oszlop_definiciok():
-    """{kulcs: (felirat, súly)} a katalogus_pdf számára; a feliratok a
+    """{kulcs: (felirat, alap szélesség)} a katalogus_pdf számára (a főlista
+    OSZLOP_DEFINICIOK-jával azonos alakban); a feliratok a
     DEZIDERATA_MEZO_DEFINICIOK-ból származnak (kettőspont nélkül)."""
     feliratok = dict(DEZIDERATA_MEZO_DEFINICIOK)
-    return {k: (feliratok[k].rstrip(":"), LISTA_OSZLOP_SULYOK[k])
+    return {k: (feliratok[k].rstrip(":"), LISTA_OSZLOP_ADATOK[k][0])
             for k in LISTA_OSZLOP_KULCSOK}
 
 
@@ -82,7 +94,7 @@ def lista_ertek(item, kulcs):
 
 class Deziderata(wx.Frame):
     def __init__(self, parent=None):
-        super().__init__(parent, title=f"{APP_NAME}", size=(900, 500))
+        super().__init__(parent, title=f"{APP_NAME}", size=(1050, 500))
 
         # Adatmodell: a tételek listája (szótárakból álló listaként)
         self.items = []
@@ -128,8 +140,11 @@ class Deziderata(wx.Frame):
         mezo_feliratok = dict(DEZIDERATA_MEZO_DEFINICIOK)
         columns = [mezo_feliratok[kulcs].rstrip(":") for kulcs in LISTA_OSZLOP_KULCSOK]
 
-        for idx, col in enumerate(columns):
-            self.list.InsertColumn(idx, col, width=120)
+        for idx, (kulcs, col) in enumerate(zip(LISTA_OSZLOP_KULCSOK, columns)):
+            self.list.InsertColumn(idx, col, width=LISTA_OSZLOP_ADATOK[kulcs][0])
+
+        # Átméretezéskor a főlistához hasonlóan elosztjuk a többletszélességet
+        self.list.Bind(wx.EVT_SIZE, self.on_lista_atmeretezes)
 
         vbox.Add(self.list, 1, wx.EXPAND | wx.ALL, 5)
 
@@ -301,6 +316,27 @@ class Deziderata(wx.Frame):
         db_szam = self.list.GetItemCount()
         self.statusbar.SetStatusText(f"Dezideráta tételeinek száma: {db_szam}.")
 
+    def on_lista_atmeretezes(self, event):
+        event.Skip()
+        self.IgazitOszlopSzelesseg()
+
+    def IgazitOszlopSzelesseg(self):
+        """Az oszlopok alap szélességéhez hozzáadja a lista szélességéből
+        megmaradó helyet az oszlopok súlyának arányában (a főlista
+        KonyvListaCtrl.IgazitOszlopSzelesseg-ével azonos módon). Ha a lista
+        nem elég széles az alap szélességekhez, azok maradnak, és a lista
+        vízszintesen görgethető."""
+        szerel_szelesseg = (self.list.GetClientSize().width
+                            - wx.SystemSettings.GetMetric(wx.SYS_VSCROLL_X))
+        osszes_alap = sum(LISTA_OSZLOP_ADATOK[k][0] for k in LISTA_OSZLOP_KULCSOK)
+        osszes_suly = sum(LISTA_OSZLOP_ADATOK[k][1] for k in LISTA_OSZLOP_KULCSOK)
+
+        maradek_hely = max(szerel_szelesseg - osszes_alap, 0)
+        for i, kulcs in enumerate(LISTA_OSZLOP_KULCSOK):
+            alap, suly = LISTA_OSZLOP_ADATOK[kulcs]
+            plusz = int(maradek_hely * (suly / osszes_suly))
+            self.list.SetColumnWidth(i, alap + plusz)
+
     def refresh_list(self):
         """Frissíti a ListCtrl elemét a tételek ábécérendbe rendezése után."""
         self.rendez_listat()
@@ -311,6 +347,8 @@ class Deziderata(wx.Frame):
             for oszlop, ertek in enumerate(ertekek[1:], start=1):
                 self.list.SetItem(index, oszlop, ertek)
 
+        # A görgetősáv megjelenése/eltűnése a hasznos szélességet módosíthatja
+        self.IgazitOszlopSzelesseg()
         self.FrissitStatusBar()
 
     # --- ESEMÉNYKEZELŐK ---

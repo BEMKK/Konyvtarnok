@@ -4,6 +4,14 @@ A projekten végrehajtott lényegi változtatások dokumentációja.
 
 
 
+## [3.9.1] - 2026-10-07
+
+- PDF fájlok tördelésének javítása.
+- Javítva az oszlopszélességi hiba a Dezideráta-kezelő ablakában és katalóguslapján.
+- Kisebb uix és kódjavítások.
+
+
+
 ## [3.9.0] - 2026-10-07
 
 - Katalóguslap exportálása a Dezideráta-kezelőben.
