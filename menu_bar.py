@@ -5,7 +5,7 @@ class MenuBar(wx.MenuBar):
         super().__init__()
         
         fajl_menu = wx.Menu()
-        self.uj_konyv = fajl_menu.Append(wx.ID_NEW, '&Új\tCtrl+N', 'Új könyv hozzáadása')
+        self.uj_konyv = fajl_menu.Append(wx.ID_NEW, '&Új könyv\tCtrl+N', 'Új könyv hozzáadása')
         fajl_menu.AppendSeparator()
         self.szerk = fajl_menu.Append(wx.ID_EDIT, '&Szerkesztés\tCtrl+E', 'Kijelölt könyv szerkesztése')
         self.torles = fajl_menu.Append(wx.ID_DELETE, '&Törlés\tDelete', 'Kijelölt könyvek törlése')
@@ -47,7 +47,7 @@ class MenuBar(wx.MenuBar):
 
         help_menu = wx.Menu()
         self.help = help_menu.Append(wx.ID_ANY, '&Súgó és billentyűparancsok\tF1', 'Az alkalmazás súgója és billentyűparancsai')
-        self.frissites = help_menu.Append(wx.ID_ANY, '&Frissítések keresése...\tCTRL+SHIFT+F', 'Új verzió keresése a GitHub-on')
+        self.frissites = help_menu.Append(wx.ID_ANY, '&Frissítés ellenőrzése...\tCTRL+SHIFT+F', 'Új verzió keresése a GitHub-on')
         help_menu.AppendSeparator()
         self.Ujdonsagok = help_menu.Append(wx.ID_ANY, '&Újdonságok\tCTRL+SHIFT+U', 'Megjeleníti az aktuális verzió újdonságait')
         self.nevjegy = help_menu.Append(wx.ID_ABOUT, '&Névjegy\tCTRL+SHIFT+N', 'Megjeleníti a névjegy ablakot')
