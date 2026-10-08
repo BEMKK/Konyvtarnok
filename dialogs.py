@@ -78,9 +78,7 @@ class UjdonsagokDialog(wx.Dialog):
         main_sizer.Add(wx.StaticLine(self), 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 15)
         
         ujdonsagok_lista = [
-            "PDF fájlok tördelésének javítása.",
-            "Javítva az oszlopszélességi hiba a Dezideráta-kezelő ablakában és katalóguslapján.",
-            "Kisebb uix javítások."
+            "A főablak és a Dezideráta-kezelő menüjének átrendezése, egységesítése és javítása."
         ]
 
         szoveg_box = wx.BoxSizer(wx.VERTICAL)

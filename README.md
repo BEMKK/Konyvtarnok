@@ -1,6 +1,6 @@
 # KönyvTárnok
 
-> **Verzió:** 3.9.1
+> **Verzió:** 3.10.0
 
 ## Leírás
 

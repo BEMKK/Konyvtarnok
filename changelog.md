@@ -4,6 +4,12 @@ A projekten végrehajtott lényegi változtatások dokumentációja.
 
 
 
+## [3.10.0] - 2026-10-08
+
+- A főablak és a Dezideráta-kezelő menüjének átrendezése, egységesítése és javítása.
+
+
+
 ## [3.9.1] - 2026-10-07
 
 - PDF fájlok tördelésének javítása.
