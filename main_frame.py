@@ -152,6 +152,7 @@ class Konyvtarnok(wx.Frame):
         self.Bind(wx.EVT_MENU, self.OnMegis, menusor.redo)
         self.Bind(wx.EVT_MENU_OPEN, self.OnMenuNyitas)
         self.Bind(wx.EVT_MENU, self.OnMindentKijelol, menusor.select_all)
+        self.Bind(wx.EVT_MENU, self.OnEgyikSemKijelol, menusor.select_none)
         self.Bind(wx.EVT_MENU, lambda e: self.OnRendezes("cim"), menusor.cim)
         self.Bind(wx.EVT_MENU, lambda e: self.OnRendezes("szerzo"), menusor.szerzo)
         self.Bind(wx.EVT_MENU, lambda e: self.OnRendezes("kiado"), menusor.kiado)
@@ -429,9 +430,33 @@ class Konyvtarnok(wx.Frame):
         self.statusbar.SetStatusText(f"{darab} könyv a vágólapra másolva.")
 
     def OnMindentKijelol(self, event):
+        # A menü Ctrl+A gyorsbillentyűje elveszi a billentyűt a kereső
+        # szövegmezőtől is, ezért ott a mező saját kijelölését végezzük.
+        fokusz = self.FindFocus()
+        if isinstance(fokusz, (wx.TextCtrl, wx.SearchCtrl)):
+            fokusz.SelectAll()
+            return
         self.lista.SetFocus()
         for i in range(self.lista.GetItemCount()):
             self.lista.Select(i, True)
+
+    def OnEgyikSemKijelol(self, event):
+        """Szerkesztés > Kijelölés > Egyik sem (Ctrl+Shift+A).
+
+        Kereső szövegmezőben a mező szövegkijelölését szünteti meg (a kurzor
+        a helyén marad), egyébként a lista összes kijelölését.
+        """
+        fokusz = self.FindFocus()
+        if isinstance(fokusz, (wx.TextCtrl, wx.SearchCtrl)):
+            pont = fokusz.GetInsertionPoint()
+            fokusz.SetSelection(pont, pont)
+            return
+        if not self.lista.GetKijeloltIndexek():
+            self.statusbar.SetStatusText("Nincs kijelölt könyv.")
+            return
+        self.lista.SetFocus()
+        self.lista.KijelolesMegszuntetese()
+        self.statusbar.SetStatusText("Kijelölés megszüntetve.")
 
     # --- VISSZAVONÁS / MÉGIS ---
 

@@ -4,6 +4,14 @@ A projekten végrehajtott lényegi változtatások dokumentációja.
 
 
 
+## [3.12.0] - 2026-10-10
+
+- Kijelölés menüpont és gomb a KönyvTárnok-keresőben.
+- Összes oszlop kijelölésére szolgáló jelölőnégyzet a KönyvTárnok-keresőben a kereséshez.
+- Kijelölés törlése funkció mindhárom modulban.
+
+
+
 ## [3.11.0] - 2026-10-09
 
 - A főablakhoz hasonló UUID alapú azonosítás a Dezideráta-kezelőben.

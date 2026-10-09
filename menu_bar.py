@@ -26,7 +26,10 @@ class MenuBar(wx.MenuBar):
         self.undo = edit_menu.Append(wx.ID_ANY, "Visszavonás\tCtrl+Z", "Utolsó művelet visszavonása")
         self.redo = edit_menu.Append(wx.ID_ANY, "Mégis\tCtrl+Y", "Visszavont művelet ismételt alkalmazása")
         self.copy = edit_menu.Append(wx.ID_ANY, "Másolás\tCtrl+C", "Kijelölt elemek vágólapra másolása")
-        self.select_all = edit_menu.Append(wx.ID_ANY, "Összes kijelölése\tCtrl+A", "Összes elem kijelölése a listában")
+        select_menu = wx.Menu()
+        self.select_all = select_menu.Append(wx.ID_ANY, "Összes elem\tCtrl+A", "Összes elem kijelölése a listában")
+        self.select_none = select_menu.Append(wx.ID_ANY, "Egyik sem\tCtrl+Shift+A")
+        edit_menu.AppendSubMenu(select_menu, '&Kijelölés')
 
         self.Append(edit_menu, "Szerkesztés")
 
@@ -85,7 +88,10 @@ class DeziderataMenuBar(wx.MenuBar):
         self.undo = edit_menu.Append(wx.ID_ANY, "Visszavonás\tCtrl+Z", "Utolsó művelet visszavonása")
         self.redo = edit_menu.Append(wx.ID_ANY, "Mégis\tCtrl+Y", "Visszavont művelet ismételt alkalmazása")
         self.copy = edit_menu.Append(wx.ID_ANY, "Másolás\tCtrl+C", "Kijelölt elemek vágólapra másolása")
-        self.select_all = edit_menu.Append(wx.ID_ANY, "Összes kijelölése\tCtrl+A", "Összes elem kijelölése a listában")
+        select_menu = wx.Menu()
+        self.select_all = select_menu.Append(wx.ID_ANY, "Összes elem\tCtrl+A", "Összes elem kijelölése a listában")
+        self.select_none = select_menu.Append(wx.ID_ANY, "Egyik sem\tCtrl+Shift+A")
+        edit_menu.AppendSubMenu(select_menu, '&Kijelölés')
 
         self.Append(edit_menu, "Szerkesztés")
 
@@ -94,9 +100,17 @@ class KeresoMenuBar(wx.MenuBar):
         super().__init__()
         
         fajl_menu = wx.Menu()
-        self.copy = fajl_menu.Append(wx.ID_ANY, "Másolás\tCtrl+C")
         self.deziderata = fajl_menu.Append(wx.ID_ANY, "Átemelés a Deziderátába\tCtrl+D")
         self.allomany = fajl_menu.Append(wx.ID_ANY, "Átemelés az állományba\tCtrl+F")
         self.kilepes = fajl_menu.Append(wx.ID_EXIT, "Kilépés\tCtrl+W")
 
         self.Append(fajl_menu, "Fájl")
+
+        edit_menu = wx.Menu()
+        self.copy = edit_menu.Append(wx.ID_ANY, "Másolás\tCtrl+C")
+        select_menu = wx.Menu()
+        self.select_all = select_menu.Append(wx.ID_ANY, "Összes elem\tCtrl+A", "Összes elem kijelölése a listában")
+        self.select_none = select_menu.Append(wx.ID_ANY, "Egyik sem\tCtrl+Shift+A")
+        edit_menu.AppendSubMenu(select_menu, '&Kijelölés')
+
+        self.Append(edit_menu, "Szerkesztés")

@@ -314,10 +314,20 @@ class KonyvtarnokKeresoApp(wx.Frame):
         self.checkboxok = {}
         checkbox_sizer = wx.BoxSizer(wx.HORIZONTAL)
 
+        self.cb_osszes_oszlop = None
         if self.oszlopok:
+            # "Összes oszlop" jelölőnégyzet az oszlop-jelölőnégyzetek előtt:
+            # bejelölése minden oszlopot kijelöl, a pipa kivétele pedig
+            # mindegyikből kiveszi a pipát.
+            self.cb_osszes_oszlop = wx.CheckBox(self.panel, label="Összes oszlop")
+            self.cb_osszes_oszlop.SetValue(True)
+            self.cb_osszes_oszlop.Bind(wx.EVT_CHECKBOX, self.on_osszes_oszlop)
+            checkbox_sizer.Add(self.cb_osszes_oszlop, flag=wx.RIGHT, border=10)
+
             for oszlop in self.oszlopok:
                 cb = wx.CheckBox(self.panel, label=str(oszlop))
                 cb.SetValue(True)
+                cb.Bind(wx.EVT_CHECKBOX, self.on_oszlop_checkbox)
                 checkbox_sizer.Add(cb, flag=wx.RIGHT, border=10)
                 self.checkboxok[oszlop] = cb
         else:
@@ -360,6 +370,9 @@ class KonyvtarnokKeresoApp(wx.Frame):
 
         # --- Gombsor ---
         btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.btn_osszes_kijelolese = wx.Button(
+            self.panel, label="Összes kijelölése"
+        )
         self.btn_masolas_vagolapra = wx.Button(
             self.panel, label="Másolás vágólapra"
         )
@@ -370,12 +383,16 @@ class KonyvtarnokKeresoApp(wx.Frame):
             self.panel, label="Átemelés a Deziderátába"
         )
 
+        btn_sizer.Add(self.btn_osszes_kijelolese, 0, wx.RIGHT, 10)
         btn_sizer.Add(self.btn_masolas_vagolapra, 0, wx.RIGHT, 10)
         btn_sizer.Add(self.btn_atemeles_allomanyba, 0, wx.RIGHT, 10)
         btn_sizer.Add(self.btn_atemeles_deziderataba, 0, wx.RIGHT, 10)
 
         fő_sizer.Add(btn_sizer, 0, wx.ALIGN_LEFT | wx.ALL, 10)
 
+        self.btn_osszes_kijelolese.Bind(
+            wx.EVT_BUTTON, lambda e: self.osszes_kijelolese()
+        )
         self.btn_masolas_vagolapra.Bind(
             wx.EVT_BUTTON, lambda e: self.masolas_vagolapra()
         )
@@ -397,11 +414,29 @@ class KonyvtarnokKeresoApp(wx.Frame):
         # alapértelmezett témával villanjon fel, mielőtt a beállított téma
         # (pl. sötét/pasztell) alkalmazásra kerülne.
 
+    def on_osszes_oszlop(self, event):
+        """Az "Összes oszlop" jelölőnégyzet: minden oszlop-jelölőnégyzetet
+        a saját állapotára állítja (bejelölve mind be, pipa nélkül mind ki)."""
+        ertek = self.cb_osszes_oszlop.GetValue()
+        for cb in self.checkboxok.values():
+            cb.SetValue(ertek)
+
+    def on_oszlop_checkbox(self, event):
+        """Egy oszlop-jelölőnégyzet változásakor az "Összes oszlop" jelölőnégyzet
+        követi az állapotot: csak akkor van bejelölve, ha minden oszlop be van."""
+        if self.cb_osszes_oszlop is not None:
+            self.cb_osszes_oszlop.SetValue(
+                all(cb.GetValue() for cb in self.checkboxok.values())
+            )
+        event.Skip()
+
     def menu_esemenyek_bekotese(self, menusor):
         """A menüsor elemeinek bekötése. A gyorsbillentyűket (Ctrl+C,
-        Ctrl+D, Ctrl+F, Ctrl+W) maguk a menüelemek hordozzák, ezért külön
+        Ctrl+A, Ctrl+D, Ctrl+F, Ctrl+W) maguk a menüelemek hordozzák, ezért külön
         gyorsítótábla nem szükséges."""
         self.Bind(wx.EVT_MENU, self.on_menu_masolas, menusor.copy)
+        self.Bind(wx.EVT_MENU, self.on_menu_osszes_kijelolese, menusor.select_all)
+        self.Bind(wx.EVT_MENU, self.on_menu_egyik_sem_kijelolese, menusor.select_none)
         self.Bind(wx.EVT_MENU, self.on_menu_deziderata, menusor.deziderata)
         self.Bind(wx.EVT_MENU, self.on_menu_allomany, menusor.allomany)
         self.Bind(wx.EVT_MENU, self.on_kilepes, menusor.kilepes)
@@ -415,6 +450,51 @@ class KonyvtarnokKeresoApp(wx.Frame):
             fokusz.Copy()
             return
         self.masolas_vagolapra()
+
+    def on_menu_osszes_kijelolese(self, event):
+        """Szerkesztés > Kijelölés > Összes elem. Ha a keresőmezőben áll a
+        fókusz, annak szövegét jelöli ki (különben a menü Ctrl+A-ja elnyelné
+        a szokásos szövegkijelölést), egyébként a találatok összes sorát."""
+        fokusz = self.FindFocus()
+        if isinstance(fokusz, wx.TextCtrl):
+            fokusz.SelectAll()
+            return
+        self.osszes_kijelolese()
+
+    def on_menu_egyik_sem_kijelolese(self, event):
+        """Szerkesztés > Kijelölés > Egyik sem. Ha a keresőmezőben áll a
+        fókusz, annak szövegkijelölését szünteti meg (a kurzor a helyén
+        marad), egyébként a találatok kijelölését."""
+        fokusz = self.FindFocus()
+        if isinstance(fokusz, wx.TextCtrl):
+            pont = fokusz.GetInsertionPoint()
+            fokusz.SetSelection(pont, pont)
+            return
+        self.egyik_sem_kijelolese()
+
+    def egyik_sem_kijelolese(self):
+        """Megszünteti a találati táblázat összes kijelölését. A fókusz a
+        táblázatban marad, ahol a felhasználó tartott."""
+        if self.tablazat.GetSelectedItemCount() == 0:
+            self.SetStatusText("Nincs kijelölt találat.")
+            return
+        self.tablazat.SetItemState(-1, 0, wx.LIST_STATE_SELECTED)
+        self.SetStatusText("Kijelölés megszüntetve.")
+
+    def osszes_kijelolese(self):
+        """Kijelöli a találati táblázat összes sorát. A gomb, a menü és a
+        táblázatbeli Ctrl+A is ezt hívja, hogy ugyanúgy viselkedjenek."""
+        darab = self.tablazat.GetItemCount()
+        if darab == 0:
+            self.SetStatusText("Nincs kijelölhető találat.")
+            return
+        self.tablazat.Freeze()
+        try:
+            for i in range(darab):
+                self.tablazat.Select(i, on=True)
+        finally:
+            self.tablazat.Thaw()
+        self.SetStatusText(f"Összes találat kijelölve ({darab} db)")
 
     def on_menu_deziderata(self, event):
         """Fájl > Átemelés a Deziderátába."""
@@ -603,8 +683,10 @@ class KonyvtarnokKeresoApp(wx.Frame):
         elif control_lenyomva and kod == ord("D"):
             self.atemeles_deziderataba()
         elif control_lenyomva and kod == ord("A"):
-            for i in range(self.tablazat.GetItemCount()):
-                self.tablazat.Select(i, on=True)
+            if event.ShiftDown():
+                self.egyik_sem_kijelolese()
+            else:
+                self.osszes_kijelolese()
         elif kod == wx.WXK_SPACE:
             # A szóköz billentyű ne nyissa meg a helyi menüt, de adja hozzá a keresési pufferhez
             self.feldolgoz_kereso_karakter(' ')

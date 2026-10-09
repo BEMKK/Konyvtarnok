@@ -78,11 +78,9 @@ class UjdonsagokDialog(wx.Dialog):
         main_sizer.Add(wx.StaticLine(self), 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 15)
         
         ujdonsagok_lista = [
-            "A főablakhoz hasonló UUID alapú azonosítás a Dezideráta-kezelőben.",
-            "Új, szerkesztés menü a főablakban és a Dezideráta-kezelőben.",
-            "Mostantól a Dezideráta-kezelő és az állomány listájának tételei is vágólapra másolhatók.",
-            "Menüsor a KönyvTárnok-keresőben",
-            "Visszavonás és mégis funkció a főablakban és a Dezideráta-kezelőben."
+            "Kijelölés menüpont és gomb a KönyvTárnok-keresőben.",
+            "Összes oszlop kijelölésére szolgáló jelölőnégyzet a KönyvTárnok-keresőben a kereséshez.",
+            "Kijelölés törlése funkció mindhárom modulban."
         ]
 
         szoveg_box = wx.BoxSizer(wx.VERTICAL)

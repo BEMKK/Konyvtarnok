@@ -307,6 +307,7 @@ class Deziderata(wx.Frame):
         self.Bind(wx.EVT_MENU, self.on_exit, menusor.kilepes)
         self.Bind(wx.EVT_MENU, self.OnMasolas, menusor.copy)
         self.Bind(wx.EVT_MENU, self.OnMindentKijelol, menusor.select_all)
+        self.Bind(wx.EVT_MENU, self.OnEgyikSemKijelol, menusor.select_none)
         self.Bind(wx.EVT_MENU, self.OnVisszavonas, menusor.undo)
         self.Bind(wx.EVT_MENU, self.OnMegis, menusor.redo)
         self.Bind(wx.EVT_MENU_OPEN, self.OnMenuNyitas)
@@ -535,6 +536,18 @@ class Deziderata(wx.Frame):
     def OnMindentKijelol(self, event=None):
         for i in range(self.list.GetItemCount()):
             self.list.Select(i, True)
+
+    def OnEgyikSemKijelol(self, event=None):
+        """Szerkesztés > Kijelölés > Egyik sem (Ctrl+Shift+A).
+
+        Egyetlen hívással (-1 = minden elem) szünteti meg a kijelölést; a
+        fókusz a helyén marad.
+        """
+        if self.list.GetItemCount() == 0 or self.list.GetSelectedItemCount() == 0:
+            self.statusbar.SetStatusText("Nincs kijelölt tétel.")
+            return
+        self.list.SetItemState(-1, 0, wx.LIST_STATE_SELECTED)
+        self.statusbar.SetStatusText("Kijelölés megszüntetve.")
 
     # --- VISSZAVONÁS / MÉGIS ---
 

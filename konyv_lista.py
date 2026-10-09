@@ -83,6 +83,17 @@ class KonyvListaCtrl(wx.ListCtrl):
             sorok.append("\t".join(cellak))
         return "\n".join(sorok)
 
+    def KijelolesMegszuntetese(self):
+        """Minden kijelölés megszüntetése (Szerkesztés > Kijelölés > Egyik sem).
+
+        Egyetlen hívással (-1 = minden elem) dolgozik, a virtuális listán sem
+        kell soronként végigmenni. A fókuszt szándékosan meghagyja, így a
+        billentyűzetes navigáció onnan folytatódik, ahol a felhasználó tartott.
+        """
+        if self.GetItemCount() == 0:
+            return
+        self.SetItemState(-1, 0, wx.LIST_STATE_SELECTED)
+
     def GetKonyvByRowIndex(self, index):
         if 0 <= index < len(self.jelenlegi_adatok):
             return self.jelenlegi_adatok[index]
