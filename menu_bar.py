@@ -22,6 +22,14 @@ class MenuBar(wx.MenuBar):
         
         self.Append(fajl_menu, '&Fájl')
 
+        edit_menu = wx.Menu()
+        self.undo = edit_menu.Append(wx.ID_ANY, "Visszavonás\tCtrl+Z", "Utolsó művelet visszavonása")
+        self.redo = edit_menu.Append(wx.ID_ANY, "Mégis\tCtrl+Y", "Visszavont művelet ismételt alkalmazása")
+        self.copy = edit_menu.Append(wx.ID_ANY, "Másolás\tCtrl+C", "Kijelölt elemek vágólapra másolása")
+        self.select_all = edit_menu.Append(wx.ID_ANY, "Összes kijelölése\tCtrl+A", "Összes elem kijelölése a listában")
+
+        self.Append(edit_menu, "Szerkesztés")
+
         view_menu = wx.Menu()
         ord_menu = wx.Menu()
         self.cim = ord_menu.Append(wx.ID_ANY, '&Cím szerint\tALT+C', 'Rendezés cím szerint')
@@ -69,6 +77,26 @@ class DeziderataMenuBar(wx.MenuBar):
         self.json_import = fajl_menu.Append(wx.ID_ANY, "Betöltés JSON fájlból\tCtrl+SHIFT+B")
         self.json_export = fajl_menu.Append(wx.ID_ANY, "Jegyzék mentése JSON fájlba\tCtrl+SHIFT+M")
         fajl_menu.AppendSeparator()
+        self.kilepes = fajl_menu.Append(wx.ID_EXIT, "Kilépés\tCtrl+W")
+
+        self.Append(fajl_menu, "Fájl")
+
+        edit_menu = wx.Menu()
+        self.undo = edit_menu.Append(wx.ID_ANY, "Visszavonás\tCtrl+Z", "Utolsó művelet visszavonása")
+        self.redo = edit_menu.Append(wx.ID_ANY, "Mégis\tCtrl+Y", "Visszavont művelet ismételt alkalmazása")
+        self.copy = edit_menu.Append(wx.ID_ANY, "Másolás\tCtrl+C", "Kijelölt elemek vágólapra másolása")
+        self.select_all = edit_menu.Append(wx.ID_ANY, "Összes kijelölése\tCtrl+A", "Összes elem kijelölése a listában")
+
+        self.Append(edit_menu, "Szerkesztés")
+
+class KeresoMenuBar(wx.MenuBar):
+    def __init__(self):
+        super().__init__()
+        
+        fajl_menu = wx.Menu()
+        self.copy = fajl_menu.Append(wx.ID_ANY, "Másolás\tCtrl+C")
+        self.deziderata = fajl_menu.Append(wx.ID_ANY, "Átemelés a Deziderátába\tCtrl+D")
+        self.allomany = fajl_menu.Append(wx.ID_ANY, "Átemelés az állományba\tCtrl+F")
         self.kilepes = fajl_menu.Append(wx.ID_EXIT, "Kilépés\tCtrl+W")
 
         self.Append(fajl_menu, "Fájl")

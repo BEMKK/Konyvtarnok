@@ -44,7 +44,9 @@ class HelpNotebookDialog(wx.Dialog):
                 "4. Összes elem kijelölése:\n"
                 "  A főlista összes kötetének egyidejű kijelöléséhez nyomja meg a Ctrl + A billentyűkombinációt.\n\n"
                 "5. Gyorskeresés a listában:\n"
-                "  Amikor a könyvlista fókuszban van, a kezdőbetű vagy szótag begépelésével is kijelölheti a kívánt kötetet.\n"
+                "  Amikor a könyvlista fókuszban van, a kezdőbetű vagy szótag begépelésével is kijelölheti a kívánt kötetet.\n\n"
+                "6. Visszavonás és ismétlés:\n"
+                "  A legutóbbi művelet visszavonásához használja a Szerkesztés menü Visszavonás parancsát, vagy a Ctrl+Z billentyűparancsot.\nA művelet ismételt végrehajtásához válassza a menü Mégis menüpontját, vagy használja a Ctrl+Y billentyűket.\n"
             ),
             (
                 "Keresés és statisztika",
@@ -88,7 +90,9 @@ class HelpNotebookDialog(wx.Dialog):
                 "6. Dezideráta adatok mentése és betöltése:\n"
                 "  A dezideráta jegyzék exportálható szerkeszthető, azaz SHA integritásvédelem nélküli JSON fájlba (Ctrl + Shift + M) és bármikor visszatölthető (Ctrl + Shift + B) a Tételek menüből. JSON fájl betöltése esetén csak azok a kötetek kerülnek importálásra, amelyek még nem szerepelnek a jegyzékben. Mentéskor a fájl neve alapértelmezetten \"deziderata.json\"\n\n"
                 "7. Katalóguslap mentése:\n"
-                "  Az állományhoz hasonlóan a Deziderátáról is készíthető PDF katalóguslap.\nEhhez a főablakban megszokott módon használhatja a Ctrl + Shift + C billentyűparancsot, az eszköztár Katalógus export gombját, vagy a megfelelő menüpontot.\n"
+                "  Az állományhoz hasonlóan a Deziderátáról is készíthető PDF katalóguslap.\nEhhez a főablakban megszokott módon használhatja a Ctrl + Shift + C billentyűparancsot, az eszköztár Katalógus export gombját, vagy a megfelelő menüpontot.\n\n"
+                "8. Visszavonás és ismétlés:\n"
+                "  A legutóbbi művelet visszavonásához használja a Szerkesztés menü Visszavonás parancsát, vagy a Ctrl+Z billentyűparancsot.\nA művelet ismételt végrehajtásához válassza a menü Mégis menüpontját, vagy használja a Ctrl+Y billentyűket.\n"
             ),
             (
                 "KönyvTárnok kereső",
@@ -166,6 +170,8 @@ class HelpNotebookDialog(wx.Dialog):
                 "  Ctrl + Shift + N      - Névjegy megjelenítése\n"
                 "  Ctrl + Shift + F      - Frissítések keresése\n"
                 "  ESC                   - Párbeszédablakok bezárása\n"
+                "  Ctrl + Z        - Utolsó művelet visszavonása.\n"
+                "  Ctrl + Y        - Visszavont művelet ismételt végrehajtása.\n"
                 "  Ctrl + W              - Ablak bezárása\n\n"
                 "   2. A Dezideráta-kezelő billentyűparancsai:\n"
                 "  Enter                 - Kijelölt tétel adatlapjának megnyitása\n"
@@ -178,6 +184,8 @@ class HelpNotebookDialog(wx.Dialog):
                 "  Ctrl + Shift + C                - Katalóguslap mentése PDF fájlba\n"
                 "  Ctrl + Shift + B      - Dezideráta-jegyzék betöltése JSON fájlból\n"
                 "  Ctrl + Shift + M      - Dezideráta-jegyzék mentése JSON fájlba\n"
+                "  Ctrl + Z        - Utolsó művelet visszavonása.\n"
+                "  Ctrl + Y        - Visszavont művelet ismételt végrehajtása.\n"
                 "  Ctrl + W        - Ablak bezárása\n\n"
                 "   3. A KönyvTárnok kereső billentyűparancsai:\n"
                 "  Enter a keresőmezőben - Találatok keresése és megjelenítése\n"

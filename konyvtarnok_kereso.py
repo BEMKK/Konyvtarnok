@@ -1,8 +1,13 @@
 import wx
 import logging
+from contextlib import nullcontext
 from types import SimpleNamespace
 from theme_manager import apply_theme_from_settings
-from deziderata import DATA_FILE as DEZIDERATA_DATA_FILE
+from deziderata import (
+    DATA_FILE as DEZIDERATA_DATA_FILE,
+    deziderata_tetelek_hozzaadasa,
+    tetelek_idjainak_potlasa,
+)
 from data_manager import (
     load_hmac_json,
     save_hmac_json,
@@ -19,6 +24,7 @@ from data_manager import (
 )
 from gyors_kereses import GyorsListaKereso, osszes_kijelolt_index
 from utils import masolas_vagolapra_szoveg
+from menu_bar import KeresoMenuBar
 
 # A Státusz oszlop sorainak háttérszíne (RGB). Ha egy tétel mindkét helyen
 # szerepel, az "Állományban" szín az erősebb jelzés.
@@ -54,13 +60,14 @@ class KonyvtarnokKeresoApp(wx.Frame):
         # UI elemek létrehozása
         self.init_ui()
 
+        menusor = KeresoMenuBar()
+        self.SetMenuBar(menusor)
+        self.menu_esemenyek_bekotese(menusor)
+
         # Status bar létrehozása az ablak alján
         self.CreateStatusBar()
         osszesen = len(self.adatok) if self.adatok else 0
         self.SetStatusText(f"Keresés {osszesen} kötet adataiban")
-
-        # Gyorsbillentyű tábla a Ctrl+W bezáráshoz
-        self.init_shortcuts()
 
         # Téma alkalmazása - a Show()-t csak EZUTÁN hívjuk (lásd az init_ui
         # végén lévő kommentet).
@@ -390,15 +397,32 @@ class KonyvtarnokKeresoApp(wx.Frame):
         # alapértelmezett témával villanjon fel, mielőtt a beállított téma
         # (pl. sötét/pasztell) alkalmazásra kerülne.
 
-    def init_shortcuts(self):
-        """Gyorsbillentyűk beállítása (Ctrl+W a kilépéshez)."""
-        KILEPES_ID = wx.NewIdRef()
-        self.Bind(wx.EVT_MENU, self.on_kilepes, id=KILEPES_ID)
+    def menu_esemenyek_bekotese(self, menusor):
+        """A menüsor elemeinek bekötése. A gyorsbillentyűket (Ctrl+C,
+        Ctrl+D, Ctrl+F, Ctrl+W) maguk a menüelemek hordozzák, ezért külön
+        gyorsítótábla nem szükséges."""
+        self.Bind(wx.EVT_MENU, self.on_menu_masolas, menusor.copy)
+        self.Bind(wx.EVT_MENU, self.on_menu_deziderata, menusor.deziderata)
+        self.Bind(wx.EVT_MENU, self.on_menu_allomany, menusor.allomany)
+        self.Bind(wx.EVT_MENU, self.on_kilepes, menusor.kilepes)
 
-        accel_tbl = wx.AcceleratorTable(
-            [(wx.ACCEL_CTRL, ord("W"), KILEPES_ID)]
-        )
-        self.SetAcceleratorTable(accel_tbl)
+    def on_menu_masolas(self, event):
+        """Fájl > Másolás. Ha a keresőmezőben áll a fókusz, annak saját
+        szövegét másolja (különben a menü Ctrl+C-je elnyelné a szokásos
+        szövegmásolást), egyébként a kijelölt találatokat."""
+        fokusz = self.FindFocus()
+        if isinstance(fokusz, wx.TextCtrl):
+            fokusz.Copy()
+            return
+        self.masolas_vagolapra()
+
+    def on_menu_deziderata(self, event):
+        """Fájl > Átemelés a Deziderátába."""
+        self.atemeles_deziderataba()
+
+    def on_menu_allomany(self, event):
+        """Fájl > Átemelés az állományba."""
+        self.atemeles_allomanyba()
 
     def on_kilepes(self, event):
         self.Close()
@@ -639,6 +663,13 @@ class KonyvtarnokKeresoApp(wx.Frame):
                 wx.OK | wx.ICON_ERROR,
             )
 
+    def _undo_csoport(self, leiras):
+        """Visszavonható lépés a dezideráta módosítására ZÁRT ablaknál (a
+        nyitott ablak a tetelek_felvetele-ben maga rögzíti). Zárt ablaknál a
+        lépés a főablak verembe kerül."""
+        undo = getattr(getattr(self.parent, "db", None), "undo", None)
+        return undo.muvelet(leiras, ["deziderata"]) if undo is not None else nullcontext()
+
     def atemeles_allomanyba(self):
         if not self.parent or not hasattr(self.parent, "db"):
             wx.MessageBox(
@@ -740,50 +771,69 @@ class KonyvtarnokKeresoApp(wx.Frame):
         if not kerj_tomeges_atemeles_megerositest(self, db, "találatot", "a deziderátába"):
             return
 
-        json_fajl = DEZIDERATA_DATA_FILE
+        # A felvételre szánt tételek: a forrás eredeti dictjéből, fehérlistásan
+        # (lásd deziderata_tetel_forras_dictbol). Az id-t és a duplikátum-
+        # szűrést a deziderata.deziderata_tetelek_hozzaadasa adja, ugyanaz
+        # nyitott és zárt Dezideráta-ablaknál.
+        uj_tetelek = [
+            deziderata_tetel_forras_dictbol(self._sor_eredeti_dict(sor_idx))
+            for sor_idx in kijelolt_indexek
+        ]
 
+        frame = getattr(self.parent, "deziderata_frame", None)
         try:
-            adat, ervenyes = load_hmac_json(json_fajl)
-        except Exception as e:
-            logging.error(f"Hiba a dezideráta adatbázis beolvasásakor: {e}", exc_info=True)
-            wx.MessageBox(f"Hiba a dezideráta beolvasásakor:\n{e}", "Hiba", wx.OK | wx.ICON_ERROR)
-            return
+            frame_nyitva = frame is not None and bool(frame)  # megsemmisült wx ablak -> False
+        except RuntimeError:
+            frame_nyitva = False
 
-        if not ervenyes:
-            wx.MessageBox(
-                "A dezideráta-jegyzék integritás-ellenőrzése sikertelen: a fájl megsérülhetett "
-                "vagy jogosulatlanul módosították.\n\nAz átemelés emiatt megszakadt.",
-                "Integritási hiba", wx.OK | wx.ICON_ERROR
-            )
-            return
+        if frame_nyitva and not getattr(frame, "_mentes_tiltva", False):
+            # NYITOTT, használható ablak: a memóriabeli listáját módosítjuk
+            # (a mentést és a lista frissítését is ő végzi), nem a lemezről
+            # olvasott másolatot írjuk felül - így nem veszhet el egy még
+            # el nem mentett/épp szerkesztett állapot, és az id-k egyeznek.
+            eredmeny = frame.tetelek_felvetele(uj_tetelek)
+            if eredmeny is None:
+                return  # a hibát (letiltás / mentési hiba) az ablak már jelezte
+            sikeres, visszautasitott = eredmeny
+        else:
+            # ZÁRT ablak (vagy betöltési hiba miatt letiltott ablak): a
+            # fájlt közvetlenül, HMAC-ellenőrzéssel olvassuk és írjuk.
+            json_fajl = DEZIDERATA_DATA_FILE
+            try:
+                adat, ervenyes = load_hmac_json(json_fajl)
+            except Exception as e:
+                logging.error(f"Hiba a dezideráta adatbázis beolvasásakor: {e}", exc_info=True)
+                wx.MessageBox(f"Hiba a dezideráta beolvasásakor:\n{e}", "Hiba", wx.OK | wx.ICON_ERROR)
+                return
 
-        deziderata_lista = [x for x in adat if isinstance(x, dict)] if isinstance(adat, list) else []
+            if not ervenyes:
+                wx.MessageBox(
+                    "A dezideráta-jegyzék integritás-ellenőrzése sikertelen: a fájl megsérülhetett "
+                    "vagy jogosulatlanul módosították.\n\nAz átemelés emiatt megszakadt.",
+                    "Integritási hiba", wx.OK | wx.ICON_ERROR
+                )
+                return
 
-        sikeres = 0
-        visszautasitott = 0
+            with self._undo_csoport("átemelés a deziderátába"):
+                deziderata_lista = [x for x in adat if isinstance(x, dict)] if isinstance(adat, list) else []
+                # A meglévő, még id nélküli tételek is megkapják az id-t.
+                tetelek_idjainak_potlasa(deziderata_lista)
+                sikeres, visszautasitott, _ = deziderata_tetelek_hozzaadasa(
+                    deziderata_lista, uj_tetelek
+                )
 
-        for sor_idx in kijelolt_indexek:
-            alap_adat = deziderata_tetel_forras_dictbol(self._sor_eredeti_dict(sor_idx))
-
-            if alap_adat["cim"].strip():
-                mar_letezik = any(is_same_book(alap_adat, item) for item in deziderata_lista)
-                if not mar_letezik:
-                    deziderata_lista.append(alap_adat)
-                    sikeres += 1
-                else:
-                    visszautasitott += 1
-
-        if not save_hmac_json(json_fajl, deziderata_lista):
-            wx.MessageBox(
-                "Hiba történt a dezideráta mentése közben.",
-                "Hiba",
-                wx.OK | wx.ICON_ERROR,
-            )
-            return
-
-        if hasattr(self.parent, "deziderata_frame") and self.parent.deziderata_frame is not None:
-            self.parent.deziderata_frame.items = deziderata_lista
-            self.parent.deziderata_frame.refresh_list()
+                if sikeres:
+                    if not save_hmac_json(json_fajl, deziderata_lista):
+                        wx.MessageBox(
+                            "Hiba történt a dezideráta mentése közben.",
+                            "Hiba",
+                            wx.OK | wx.ICON_ERROR,
+                        )
+                        return
+                    # Letiltott (de még nyitott) ablaknál a most érvényes fájlt
+                    # újratöltjük, ami fel is oldja a letiltást.
+                    if frame_nyitva:
+                        frame.load_data()
 
         # Az átemelt sorok azonnal "Deziderátában" jelzést kapnak.
         self.frissit_statuszokat()

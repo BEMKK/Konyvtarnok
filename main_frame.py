@@ -16,10 +16,11 @@ from theme_manager import apply_theme
 from konyvtarnok_kereso import KonyvtarnokKeresoApp
 from menu_bar import MenuBar
 from konyv_lista import KonyvListaCtrl
-from deziderata import Deziderata
+from deziderata import Deziderata, DeziderataFajlTarolo
 from data_manager import additiv_lista_import, szoveg_szuro_egyezik, szuresi_talalatok, MentesiHiba
-from utils import statisztikai_szures
+from utils import statisztikai_szures, masolas_vagolapra_szoveg
 from update import check_for_updates_async
+from undo_manager import frissit_undo_menu, szovegmezo_visszavonas
 
 
 class Konyvtarnok(wx.Frame):
@@ -52,6 +53,7 @@ class Konyvtarnok(wx.Frame):
             logging.error(f"Nem sikerült betölteni az alkalmazás ikonját: {e}")
 
         menusor = MenuBar()
+        self.menusor = menusor
         self.SetMenuBar(menusor)
 
         self.statusbar = self.CreateStatusBar()
@@ -132,7 +134,6 @@ class Konyvtarnok(wx.Frame):
         # kétszer egyetlen billentyűlenyomásra (pl. a törlés-megerősítő
         # ablak kétszeri megjelenését okozva).
         accel_tbl = wx.AcceleratorTable([
-            (wx.ACCEL_CTRL, ord('A'), id_mindent_kijelol),
             (wx.ACCEL_CTRL, ord('F'), id_kereso_fokusz),
         ])
         self.SetAcceleratorTable(accel_tbl)
@@ -146,6 +147,11 @@ class Konyvtarnok(wx.Frame):
         self.Bind(wx.EVT_MENU, self.OnJsonImport, menusor.json_import)
         self.Bind(wx.EVT_MENU, self.OnJsonExport, menusor.json_export)
         self.Bind(wx.EVT_MENU, self.OnKatalogusExport, menusor.katalogus)
+        self.Bind(wx.EVT_MENU, self.OnMasolas, menusor.copy)
+        self.Bind(wx.EVT_MENU, self.OnVisszavonas, menusor.undo)
+        self.Bind(wx.EVT_MENU, self.OnMegis, menusor.redo)
+        self.Bind(wx.EVT_MENU_OPEN, self.OnMenuNyitas)
+        self.Bind(wx.EVT_MENU, self.OnMindentKijelol, menusor.select_all)
         self.Bind(wx.EVT_MENU, lambda e: self.OnRendezes("cim"), menusor.cim)
         self.Bind(wx.EVT_MENU, lambda e: self.OnRendezes("szerzo"), menusor.szerzo)
         self.Bind(wx.EVT_MENU, lambda e: self.OnRendezes("kiado"), menusor.kiado)
@@ -188,6 +194,12 @@ class Konyvtarnok(wx.Frame):
         # if self.lista.GetItemCount() > 0:
         #     self.lista.Select(0)
             
+        # Visszavonás/mégis: a könyvlista újrarajzolása akkor is, ha a
+        # lépést a Dezideráta-ablakból vonták vissza; a dezideráta tárolója
+        # pedig nyitott ablaknál az ablak, zártnál közvetlenül a fájl.
+        self.db.nezet_frissito = self._nezet_frissitese_visszavonas_utan
+        self.db.undo_regiszter.tarolo_regisztral("deziderata", self._deziderata_undo_tarolo)
+
         self.FrissitStatusBar()
         self.Show()
         wx.CallAfter(check_for_updates_async, parent=self, is_manual=False)
@@ -355,8 +367,11 @@ class Konyvtarnok(wx.Frame):
             # valójában sosem lett elmentve. Most megszakítjuk a törlést és
             # jelezzük a hibát, amint az első ilyen eset előfordul.
             try:
-                for konyv_id in torlendo_id_k:
-                    self.db.konyv_torlese_by_id(konyv_id)
+                undo_leiras = (f"{len(torlendo_id_k)} könyv törlése"
+                               if len(torlendo_id_k) > 1 else "könyv törlése")
+                with self.db.undo.muvelet(undo_leiras):
+                    for konyv_id in torlendo_id_k:
+                        self.db.konyv_torlese_by_id(konyv_id)
             except MentesiHiba as e:
                 wx.MessageBox(
                     f"Hiba történt a törlés mentése közben:\n{e}\n\n"
@@ -391,10 +406,126 @@ class Konyvtarnok(wx.Frame):
 
         kerdes.Destroy()
 
+    def OnMasolas(self, event):
+        """Szerkesztés > Másolás (Ctrl+C): a kijelölt könyvek a vágólapra.
+
+        A menü Ctrl+C gyorsbillentyűje elveszi a billentyűt a beviteli
+        mezőktől is, ezért ha a fókusz a kereső szövegmezőben van, a mező
+        saját másolását végezzük el, nem a lista kijelölését.
+        """
+        fokusz = self.FindFocus()
+        if isinstance(fokusz, (wx.TextCtrl, wx.SearchCtrl)):
+            if fokusz.CanCopy():
+                fokusz.Copy()
+            return
+
+        szoveg = self.lista.GetKijeloltSzoveg()
+        if not szoveg:
+            return
+        if not masolas_vagolapra_szoveg(szoveg):
+            wx.MessageBox("Nem sikerült megnyitni a vágólapot.", "Hiba", wx.OK | wx.ICON_ERROR)
+            return
+        darab = self.lista.GetSelectedItemCount()
+        self.statusbar.SetStatusText(f"{darab} könyv a vágólapra másolva.")
+
     def OnMindentKijelol(self, event):
         self.lista.SetFocus()
         for i in range(self.lista.GetItemCount()):
             self.lista.Select(i, True)
+
+    # --- VISSZAVONÁS / MÉGIS ---
+
+    def _deziderata_undo_tarolo(self):
+        """A dezideráta undo-tárolója: nyitott ablaknál az ablak (memória),
+        zártnál közvetlenül a deziderata.json (így a Dezideráta-kezelőből
+        indult átemelés a főablakból akkor is visszavonható, ha az ablakot
+        közben bezárták)."""
+        frame = self.deziderata_frame
+        if frame is not None:
+            try:
+                if bool(frame):
+                    return frame.undo_tarolo
+            except RuntimeError:
+                pass
+        return DeziderataFajlTarolo(frissito=self.frissit_kereso_statuszokat)
+
+    def OnMenuNyitas(self, event):
+        """Menü megnyitásakor a Visszavonás/Mégis tételek feliratába beírja a
+        soron következő lépés leírását."""
+        frissit_undo_menu(self.menusor.undo, self.menusor.redo,
+                          self.db.undo, self.FindFocus())
+        event.Skip()
+
+    def OnVisszavonas(self, event):
+        self._visszavonas_vagy_megis(ismet=False)
+
+    def OnMegis(self, event):
+        self._visszavonas_vagy_megis(ismet=True)
+
+    def _visszavonas_vagy_megis(self, ismet):
+        # A menü Ctrl+Z / Ctrl+Y gyorsbillentyűje elveszi a billentyűt a
+        # beviteli mezőktől is: a kereső mezőben a mező saját szövegét vonjuk
+        # vissza, nem az állományt (lásd OnMasolas is).
+        if szovegmezo_visszavonas(self.FindFocus(), ismet):
+            return
+
+        kezelo = self.db.undo
+        leiras = kezelo.ismetlendo_leiras() if ismet else kezelo.visszavonando_leiras()
+        if leiras is None:
+            self.statusbar.SetStatusText(
+                "Nincs mit újra alkalmazni." if ismet else "Nincs visszavonható művelet."
+            )
+            return
+
+        # A lépés minden érintett oldalát (állomány, adott esetben a
+        # dezideráta is) a regiszter alkalmazza, és a nézeteket is frissíti.
+        if not (kezelo.ismet() if ismet else kezelo.visszavon()):
+            wx.MessageBox(
+                "A művelet nem hajtható végre (a változás nem menthető), ezért "
+                "az adatok a korábbi állapotukban maradtak.",
+                "Mentési hiba", wx.OK | wx.ICON_ERROR, self,
+            )
+            return
+        self.statusbar.SetStatusText(
+            f"Újra alkalmazva: {leiras}." if ismet else f"Visszavonva: {leiras}."
+        )
+
+    def _nezet_frissitese_visszavonas_utan(self, kijelolendo_idk, kijelol=True):
+        """Újraépíti a listát a visszaállított adatokból, megőrizve az aktív
+        szűrést; kijelol=True esetén kijelöli az érintett (visszakerült/
+        megváltozott) könyveket és ide viszi a fókuszt."""
+        self.teljes_adatlista = []
+        if self.aktiv_szurt_lista is not None:
+            predikatum = self.aktiv_szuro_predikatum
+            if predikatum is not None:
+                def _illeszkedik(konyv):
+                    try:
+                        return bool(predikatum(konyv))
+                    except Exception:
+                        return False
+                self.aktiv_szurt_lista = [k for k in self.db.konyvek if _illeszkedik(k)]
+            else:
+                korabbi_idk = {k.get("id") for k in self.aktiv_szurt_lista}
+                self.aktiv_szurt_lista = [
+                    k for k in self.db.konyvek if k.get("id") in korabbi_idk
+                ]
+            self.lista.FeltoltLista(self.aktiv_szurt_lista)
+            self._frissit_szuro_cimke_darabszamot(len(self.aktiv_szurt_lista))
+        else:
+            self.lista.FeltoltLista()
+        self.FrissitStatusBar()
+
+        if not kijelol:
+            return
+        self.lista.SetFocus()
+        if kijelolendo_idk:
+            halmaz = set(kijelolendo_idk)
+            indexek = [i for i, azon in self.lista.sor_id_terkep.items() if azon in halmaz]
+            if indexek:
+                for i in indexek:
+                    self.lista.Select(i)
+                self.lista.Focus(indexek[0])
+                self.lista.EnsureVisible(indexek[0])
 
     def OnListaDuplaKlikk(self, event):
         self.MegnyitReszletek(szerkesztesre=False)
@@ -624,7 +755,8 @@ class Konyvtarnok(wx.Frame):
             return False
 
         try:
-            hozzaadva, kihagyva = additiv_lista_import(kivalasztott_utvonal, _hozzaad)
+            with self.db.undo.muvelet("JSON importálás"):
+                hozzaadva, kihagyva = additiv_lista_import(kivalasztott_utvonal, _hozzaad)
         except ValueError as e:
             wx.MessageBox(str(e), "Hiba", wx.OK | wx.ICON_ERROR)
             return

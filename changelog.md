@@ -4,6 +4,16 @@ A projekten végrehajtott lényegi változtatások dokumentációja.
 
 
 
+## [3.11.0] - 2026-10-09
+
+- A főablakhoz hasonló UUID alapú azonosítás a Dezideráta-kezelőben.
+- Új, szerkesztés menü a főablakban és a Dezideráta-kezelőben.
+- Mostantól a Dezideráta-kezelő és az állomány listájának tételei is vágólapra másolhatók.
+- Menüsor a KönyvTárnok-keresőben
+- Visszavonás és mégis funkció a főablakban és a Dezideráta-kezelőben.
+
+
+
 ## [3.10.0] - 2026-10-08
 
 - A főablak és a Dezideráta-kezelő menüjének átrendezése, egységesítése és javítása.

@@ -9,7 +9,6 @@ from constants import MEZO_DEFINICIOK
 # A kijelölés/fókusz szerkesztés utáni visszaállításához (lásd
 # DeziderataReszletekDialog.on_szerkesztes) ugyanazt az egyezés-vizsgálatot
 # használjuk, mint amit a Deziderata.on_edit már használ.
-from data_manager import is_same_book
 # Egy könyv PDF-be exportálása (az Exportálás gombhoz). A főablakból
 # (main_frame) szándékosan nem importálunk semmit: a dialogs.py közös
 # segédmodul, így nem alakul ki körkörös import.
@@ -351,36 +350,20 @@ class DeziderataReszletekDialog(wx.Dialog):
     def on_szerkesztes(self, event):
         """Átvált szerkesztő módra a szerkesztő dialógus megnyitásával.
 
-        A mentés (refresh_list()) után a Deziderata.on_edit-tel megegyező
-        módon visszaállítjuk a kijelölést és a fókuszt a szerkesztett
-        tételen - a refresh_list() ugyanis törli és újraépíti a lista
-        minden sorát, ami enélkül kijelölés/fókusz és görgetési pozíció
-        nélkül hagyná a listát. Az új sorindexet (amely a Cím szerinti
-        újrarendezés miatt eltérhet a szerkesztés előttitől) ugyanazzal az
-        is_same_book egyezés-vizsgálattal keressük meg, amit a
-        Deziderata.on_edit is használ, hogy a két útvonal viselkedése ne
-        térjen el egymástól.
+        A tételt id alapján azonosítjuk, nem a sorindexe alapján: a mentést,
+        az újrarajzolást és a tétel újrakijelölését a Dezideráta-kezelő
+        tetel_modositasa metódusa végzi - ugyanaz, mint a Deziderata.on_edit-
+        nél -, hogy a két útvonal viselkedése ne térjen el egymástól, és a
+        tétel id-je ne vesszen el a szerkesztéskor.
         """
         self.EndModal(wx.ID_OK)
         szulo = self.GetParent()
+        szerkesztett_id = self.item_data.get("id")
         dlg = EditItemDialog(szulo, data=self.item_data, index=self.index)
-        if dlg.ShowModal() == wx.ID_OK:
-            updated_data = dlg.get_data()
-            if self.index is not None and hasattr(szulo, "items"):
-                szulo.items[self.index] = updated_data
-                szulo.save_data()
-                szulo.refresh_list()
-
-                target_idx = -1
-                for idx, item in enumerate(szulo.items):
-                    if is_same_book(item, updated_data):
-                        target_idx = idx
-                        break
-                if target_idx == -1 and hasattr(szulo, "list") and szulo.list.GetItemCount() > 0:
-                    target_idx = min(self.index, szulo.list.GetItemCount() - 1)
-
-                if target_idx != -1 and hasattr(szulo, "select_and_focus"):
-                    szulo.select_and_focus(target_idx)
+        if dlg.ShowModal() == wx.ID_OK and hasattr(szulo, "tetel_modositasa"):
+            szulo.tetel_modositasa(
+                szerkesztett_id, dlg.get_data(), eredeti_sorindex=self.index
+            )
         dlg.Destroy()
 
 
@@ -507,7 +490,10 @@ class BaseItemDialog(wx.Dialog):
         new_data = self.get_data()
         if hasattr(self.GetParent(), "is_duplicate"):
             current_idx = getattr(self, "current_index", None)
-            if self.GetParent().is_duplicate(new_data, exclude_idx=current_idx):
+            current_id = getattr(self, "current_id", None)
+            if self.GetParent().is_duplicate(
+                new_data, exclude_idx=current_idx, exclude_id=current_id
+            ):
                 wx.MessageBox(
                     "Ez a tétel már szerepel a dezideráta-jegyzékben!\n(Ugyanaz a cím, szerző, kiadó, hely és év)",
                     "Duplikátum",
@@ -541,6 +527,9 @@ class AddItemDialog(BaseItemDialog):
 class EditItemDialog(BaseItemDialog):
     def __init__(self, parent, data, index=None):
         self.current_index = index
+        # A szerkesztett tétel azonosítója: a duplikátum-ellenőrzés ez alapján
+        # hagyja ki saját magát (az index csak tartalék).
+        self.current_id = data.get("id")
         title_text = data.get("cim", data.get("title", ""))
         dialog_title = f"Szerkesztés: {title_text}" if title_text else "Tétel szerkesztése"
         super().__init__(parent, title=dialog_title, data=data)

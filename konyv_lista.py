@@ -58,6 +58,31 @@ class KonyvListaCtrl(wx.ListCtrl):
     def GetKijeloltIndexek(self):
         return osszes_kijelolt_index(self)
 
+    def GetKijeloltSzoveg(self):
+        """A kijelölt sorok tabulátorral tagolt szövege a LÁTHATÓ oszlopokkal.
+
+        A lista virtuális (LC_VIRTUAL), ezért a GetItemText nem használható:
+        az értékeket ugyanonnan olvassuk, ahonnan az OnGetItemText is, így
+        pontosan azt kapjuk, amit a felhasználó a képernyőn lát (az oszlopok
+        sorrendje is az aktuális). Üres kijelölésnél üres szöveget ad.
+        """
+        sorok = []
+        for idx in sorted(self.GetKijeloltIndexek()):
+            if not (0 <= idx < len(self.jelenlegi_adatok)):
+                continue
+            konyv = self.jelenlegi_adatok[idx]
+            cellak = []
+            for kulcs in self.aktiv_oszlopok:
+                if kulcs not in self.OSZLOP_DEFINICIOK:
+                    continue
+                ertek = konyv.get(kulcs, "")
+                ertek = "" if ertek is None else str(ertek)
+                # A cellán belüli tabulátor/sortörés szétverné a sor- és
+                # oszlopszerkezetet a beillesztéskor.
+                cellak.append(" ".join(ertek.split()))
+            sorok.append("\t".join(cellak))
+        return "\n".join(sorok)
+
     def GetKonyvByRowIndex(self, index):
         if 0 <= index < len(self.jelenlegi_adatok):
             return self.jelenlegi_adatok[index]

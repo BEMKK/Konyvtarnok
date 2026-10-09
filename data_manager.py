@@ -5,6 +5,8 @@ import os
 import sys
 import logging
 import uuid
+import functools
+from contextlib import nullcontext
 import wx
 
 # Az alkalmazás alapmappájának (exe melletti, ill. szkript-mappa)
@@ -15,6 +17,7 @@ import wx
 # eltér, mert az egy csomagolt, olvasásra szánt erőforrásfájlt keres, nem
 # az írható adatfájlok mappáját - ezért az szándékosan külön maradt.)
 from utils import alkalmazas_alapmappa
+from undo_manager import UndoRegiszter, UndoKezelo, ListaTarolo
 
 _BASE_DIR = alkalmazas_alapmappa()
 
@@ -183,16 +186,22 @@ def konyvek_tomeges_felvetele(db, konyv_adatok_listaja, utani_frissites_fv=None)
     # frissítő függvényén keresztül még ekkor is frissítjük a addig
     # ténylegesen sikeresen felvett tételekkel, hogy a felhasználó lássa,
     # meddig jutott a művelet.
+    # Az egész tömeges felvétel EGY visszavonható lépés (a db.undo-ban). Ha a
+    # hívó már nagyobb csoportot nyitott (pl. a Dezideráta átemelése, ami a
+    # dezideráta oldalát is magában foglalja), ez abba beleolvad.
+    undo = getattr(db, "undo", None)
+    csoport = undo.muvelet("könyvek felvétele") if undo is not None else nullcontext()
     try:
-        for idx, konyv_adat in enumerate(konyv_adatok_listaja):
-            if not str(konyv_adat.get("cim", "")).strip():
-                continue
-            if db.uj_konyv_hozzaadasa(konyv_adat):
-                sikeres += 1
-                sikeres_indexek.append(idx)
-                uj_konyv_objektumok.append(db.konyvek[-1])
-            else:
-                elutasitott += 1
+        with csoport:
+            for idx, konyv_adat in enumerate(konyv_adatok_listaja):
+                if not str(konyv_adat.get("cim", "")).strip():
+                    continue
+                if db.uj_konyv_hozzaadasa(konyv_adat):
+                    sikeres += 1
+                    sikeres_indexek.append(idx)
+                    uj_konyv_objektumok.append(db.konyvek[-1])
+                else:
+                    elutasitott += 1
     finally:
         if utani_frissites_fv is not None:
             utani_frissites_fv(uj_konyv_objektumok)
@@ -415,10 +424,51 @@ def tetelek_egyeznek(tetel1, tetel2, mezo_aliasok=None):
     return True
 
 
+def _undo_lepes(leiras):
+    """Dekorátor: a módosító metódus hívása egy visszavonható lépés. Ha egy
+    nagyobb művelet (import, tömeges felvétel/törlés, átemelés) már csoportot
+    nyitott, a belső hívások beleolvadnak abba."""
+    def dekorator(fv):
+        @functools.wraps(fv)
+        def burkolt(self, *args, **kwargs):
+            with self.undo.muvelet(leiras):
+                return fv(self, *args, **kwargs)
+        return burkolt
+    return dekorator
+
+
+class AdatbazisTarolo(ListaTarolo):
+    """Az állomány (db.konyvek) undo-tárolója."""
+
+    def __init__(self, db):
+        self.db = db
+
+    def lista(self):
+        return self.db.konyvek
+
+    def mentes(self):
+        return self.db.AdatokMentese()
+
+    def frissit(self, valtozas, kijelol):
+        if self.db.nezet_frissito is not None:
+            self.db.nezet_frissito(valtozas.erintett_idk(), kijelol)
+
+
 class KonyvAdatbazis:
     def __init__(self, fajlnev=None):
         self.fajlnev = fajlnev or DEFAULT_ADATBAZIS_FAJL
         self.konyvek = []
+        # A főablak állítja be: a könyvlista újrarajzolása egy visszavonás/
+        # mégis után, f(kijelolendo_idk, kijelol) alakban (a lista akkor is
+        # frissül, ha a visszavonást a Dezideráta-ablakból indították).
+        self.nezet_frissito = None
+        # Visszavonás/mégis: az adatbázison él, így minden módosítást
+        # elkap, bárhonnan (főablak, szerkesztő dialógus, Dezideráta-kezelő
+        # átemelése, KönyvTárnok-kereső) is érkezik. A regiszter közös a
+        # Dezideráta-kezelővel, így az átemelések kapcsolt lépések.
+        self.undo_regiszter = UndoRegiszter()
+        self.undo_regiszter.tarolo_regisztral("allomany", lambda: AdatbazisTarolo(self))
+        self.undo = UndoKezelo(self.undo_regiszter, ["allomany"], elsodleges=True)
         self.AdatokBetoltese()
 
     def is_duplikalat(self, uj_adatok):
@@ -431,6 +481,7 @@ class KonyvAdatbazis:
         return any(tetelek_egyeznek(uj_adatok, konyv) for konyv in self.konyvek)
 
     def AdatokBetoltese(self):
+        self.undo.torol()
         try:
             adat, ervenyes = load_hmac_json(self.fajlnev)
         except Exception as e:
@@ -476,6 +527,7 @@ class KonyvAdatbazis:
         return save_hmac_json(self.fajlnev, self.konyvek)
 
     # --- ID ALAPÚ MENTÉS ---
+    @_undo_lepes("könyv módosítása")
     def konyv_mentese_by_id(self, konyv_id, uj_adatok):
         """Frissíti a konyv_id azonosítójú könyvet uj_adatok-kal.
 
@@ -505,6 +557,7 @@ class KonyvAdatbazis:
                 return True
         return False
 
+    @_undo_lepes("könyv felvétele")
     def uj_konyv_hozzaadasa(self, uj_adatok, engedelyez_duplikaciót=False):
         """Felveszi az uj_adatok könyvet az állományba.
 
@@ -535,6 +588,7 @@ class KonyvAdatbazis:
         return True
 
     # --- ID ALAPÚ TÖRLES ---
+    @_undo_lepes("könyv törlése")
     def konyv_torlese_by_id(self, konyv_id):
         """Törli a konyv_id azonosítójú könyvet az állományból.
 

@@ -2,6 +2,7 @@ import json
 import locale
 import logging
 import os
+import uuid
 import webbrowser
 import wx
 from config_manager import load_settings, save_settings
@@ -28,12 +29,15 @@ from konyvdialogs import (
 from gyors_kereses import GyorsListaKereso, osszes_kijelolt_index
 from export_manager import katalogus_mentese
 from menu_bar import DeziderataMenuBar
+from undo_manager import (
+    UndoRegiszter, UndoKezelo, ListaTarolo, rekordlista_masolata, frissit_undo_menu,
+)
 # A magyar_rendezesi_kulcs és az alkalmazas_alapmappa az utils.py-ba
 # kerültek át: tisztán szövegfeldolgozó, illetve az alkalmazás mappáját
 # meghatározó, wx-től független logika (utóbbit korábban a
 # config_manager.py, a data_manager.py, a deziderata.py és a main.py is
 # egymástól függetlenül, szó szerint megegyező formában tartalmazta).
-from utils import magyar_rendezesi_kulcs, alkalmazas_alapmappa
+from utils import magyar_rendezesi_kulcs, alkalmazas_alapmappa, masolas_vagolapra_szoveg
 
 # Magyar locale beállítása
 try:
@@ -88,6 +92,125 @@ def lista_ertek(item, kulcs):
     """Egy tétel mezőjének megjelenítendő szövege (régi kulcsokra is visszaesve)."""
     return str(item.get(kulcs, item.get(_REGI_KULCSOK.get(kulcs, kulcs), "")) or "")
 
+def uj_tetel_id():
+    """Új, egyedi azonosító egy dezideráta-tételnek. A tételeket - a főlista
+    könyveihez (KonyvListaCtrl.sor_id_terkep) hasonlóan - ez az "id" mező
+    azonosítja, nem a listabeli sorindexük vagy a mezőik egyezése."""
+    return str(uuid.uuid4())  # ugyanaz a formátum, mint a KonyvAdatbazis-ban
+
+
+def tetelek_idjainak_potlasa(tetelek):
+    """Minden dict tételnek egyedi "id"-t ad, ha még nincs neki (régi fájl,
+    a KönyvTárnok-kereső által beszúrt tétel, JSON import), illetve ha az id
+    egy korábbi tételével ütközik. True-t ad, ha módosított valamit."""
+    latott = set()
+    valtozott = False
+    for item in tetelek:
+        if not isinstance(item, dict):
+            continue
+        tetel_id = item.get("id")
+        if not tetel_id or tetel_id in latott:
+            tetel_id = uj_tetel_id()
+            item["id"] = tetel_id
+            valtozott = True
+        latott.add(tetel_id)
+    return valtozott
+
+
+def deziderata_tetelek_hozzaadasa(lista, uj_tetelek):
+    """Duplikátum-szűrten, egyedi id-vel hozzáfűzi az uj_tetelek elemeit a
+    lista végéhez. Közös a nyitott Dezideráta-kezelő (Deziderata.
+    tetelek_felvetele) és a KönyvTárnok-kereső zárt ablakos ága számára.
+
+    Visszatérés: (sikeres_db, visszautasitott_db, felvett_tetelek). A cím
+    nélküli tételeket szó nélkül kihagyja (sem sikeres, sem visszautasított)."""
+    sikeres = 0
+    visszautasitott = 0
+    felvett = []
+    for tetel in uj_tetelek:
+        if not str(lista_ertek(tetel, "cim")).strip():
+            continue
+        if any(is_same_book(tetel, meglevo) for meglevo in lista
+               if isinstance(meglevo, dict)):
+            visszautasitott += 1
+            continue
+        uj = dict(tetel)
+        uj["id"] = uj_tetel_id()
+        lista.append(uj)
+        felvett.append(uj)
+        sikeres += 1
+    return sikeres, visszautasitott, felvett
+
+
+# ==============================================================================
+# VISSZAVONÁS-TÁROLÓK (lásd undo_manager.py)
+# ==============================================================================
+class DeziderataTarolo(ListaTarolo):
+    """A NYITOTT Dezideráta-ablak tétellistájának undo-tárolója."""
+
+    def __init__(self, frame):
+        self.frame = frame
+
+    def lista(self):
+        return self.frame.items
+
+    def masolat(self):
+        # Betöltési hiba miatt letiltott állapotban az items üres, a lemezen
+        # lévő adat viszont nem: ilyenkor nem rögzítünk lépést.
+        if self.frame._mentes_tiltva:
+            return None
+        return super().masolat()
+
+    def mentes(self):
+        return self.frame.save_data()
+
+    def frissit(self, valtozas, kijelol):
+        self.frame.refresh_list()
+        if kijelol:
+            self.frame._kijelol_idk(valtozas.erintett_idk())
+
+
+class DeziderataFajlTarolo(ListaTarolo):
+    """A ZÁRT Dezideráta-jegyzék undo-tárolója: a deziderata.json-t közvetlenül,
+    HMAC-ellenőrzéssel olvassa és írja (ugyanúgy, mint a KönyvTárnok-kereső
+    zárt ablakos átemelése)."""
+
+    def __init__(self, frissito=None):
+        self._frissito = frissito
+        self._adat = None
+
+    @staticmethod
+    def _betolt():
+        adat, ervenyes = load_hmac_json(DATA_FILE)
+        if not ervenyes:
+            raise ValueError("A dezideráta-fájl HMAC-aláírása érvénytelen.")
+        return [x for x in adat if isinstance(x, dict)] if isinstance(adat, list) else []
+
+    def masolat(self):
+        try:
+            lista = self._betolt()
+        except Exception:
+            logging.error("A dezideráta-fájl nem olvasható az undo-hoz.", exc_info=True)
+            return None
+        # A régi, id nélküli tételek id-it itt véglegesítjük, különben a
+        # lépés előtti és utáni állapot id-ei nem lennének összevethetők.
+        if tetelek_idjainak_potlasa(lista) and not save_hmac_json(DATA_FILE, lista):
+            return None
+        return rekordlista_masolata(lista)
+
+    def lista(self):
+        self._adat = self._betolt()
+        tetelek_idjainak_potlasa(self._adat)
+        return self._adat
+
+    def mentes(self):
+        return save_hmac_json(DATA_FILE, self._adat)
+
+    def frissit(self, valtozas, kijelol):
+        if self._frissito is not None:
+            self._frissito()
+
+
 # ==============================================================================
 # FŐABLAK ÉS ALKALMAZÁS LOGIKA
 # ==============================================================================
@@ -99,6 +222,23 @@ class Deziderata(wx.Frame):
 
         # Adatmodell: a tételek listája (szótárakból álló listaként)
         self.items = []
+
+        # sorindex -> tétel id (a főlista KonyvListaCtrl.sor_id_terkep-jének
+        # megfelelője); a refresh_list építi újra minden frissítéskor.
+        self.sor_id_terkep = {}
+
+        # Visszavonás/mégis (lásd undo_manager.py). Ha a főablak gyermeke
+        # vagyunk, annak adatbázisával közös regisztert használunk: az
+        # állományba átemelés így EGY, mindkét oldalt érintő lépés, amely
+        # bármelyik ablakból visszavonható. Önállóan futva saját regiszter.
+        szulo_db = getattr(parent, "db", None)
+        onallo = not hasattr(szulo_db, "undo_regiszter")
+        regiszter = UndoRegiszter() if onallo else szulo_db.undo_regiszter
+        self.undo_tarolo = DeziderataTarolo(self)
+        if onallo:
+            regiszter.tarolo_regisztral("deziderata", lambda: self.undo_tarolo)
+        self.undo = UndoKezelo(regiszter, ["deziderata"], elsodleges=onallo)
+        self.Bind(wx.EVT_CLOSE, self.on_close)
 
         # True, ha a deziderata.json betöltése nem sikerült (olvasási hiba,
         # ismeretlen formátum vagy érvénytelen HMAC-aláírás). Ilyenkor az
@@ -153,6 +293,7 @@ class Deziderata(wx.Frame):
 
         # --- Menüsor ---
         menusor = DeziderataMenuBar()
+        self.menusor = menusor
         self.SetMenuBar(menusor)
 
         # --- Események ---
@@ -164,6 +305,11 @@ class Deziderata(wx.Frame):
         self.Bind(wx.EVT_MENU, self.on_export_json, menusor.json_export)
         self.Bind(wx.EVT_MENU, self.on_katalogus_export, menusor.katalogus)
         self.Bind(wx.EVT_MENU, self.on_exit, menusor.kilepes)
+        self.Bind(wx.EVT_MENU, self.OnMasolas, menusor.copy)
+        self.Bind(wx.EVT_MENU, self.OnMindentKijelol, menusor.select_all)
+        self.Bind(wx.EVT_MENU, self.OnVisszavonas, menusor.undo)
+        self.Bind(wx.EVT_MENU, self.OnMegis, menusor.redo)
+        self.Bind(wx.EVT_MENU_OPEN, self.OnMenuNyitas)
 
         self.btn_add.Bind(wx.EVT_BUTTON, self.on_add)
         self.btn_edit.Bind(wx.EVT_BUTTON, self.on_edit)
@@ -200,12 +346,67 @@ class Deziderata(wx.Frame):
 
         self.items.sort(key=get_sort_key)
 
+    # --- ID ALAPÚ AZONOSÍTÁS ---
+
+    def _biztosit_idk(self):
+        return tetelek_idjainak_potlasa(self.items)
+
+    def GetKijeloltIdk(self):
+        """A kijelölt sorok tétel-id-i (a lista sorrendjében)."""
+        return [self.sor_id_terkep[i] for i in osszes_kijelolt_index(self.list)
+                if i in self.sor_id_terkep]
+
+    def _id_sorindexhez(self, sorindex):
+        return self.sor_id_terkep.get(sorindex)
+
+    def _sorindex_idhoz(self, tetel_id):
+        """A tétel jelenlegi sora a listában (-1, ha nincs ilyen)."""
+        if tetel_id is None:
+            return -1
+        for sorindex, azonosito in self.sor_id_terkep.items():
+            if azonosito == tetel_id:
+                return sorindex
+        return -1
+
+    def _tetel_idhoz(self, tetel_id):
+        if tetel_id is None:
+            return None
+        for item in self.items:
+            if isinstance(item, dict) and item.get("id") == tetel_id:
+                return item
+        return None
+
+    def _pozicio_idhoz(self, tetel_id):
+        """A tétel helye a self.items listában (-1, ha nincs ilyen)."""
+        for pozicio, item in enumerate(self.items):
+            if isinstance(item, dict) and item.get("id") == tetel_id:
+                return pozicio
+        return -1
+
+    def GetTetelByRowIndex(self, sorindex):
+        """A főlista GetKonyvByRowIndex-ének megfelelője."""
+        return self._tetel_idhoz(self._id_sorindexhez(sorindex))
+
+    def _torles_idk_alapjan(self, idk):
+        torlendo = set(idk)
+        self.items = [
+            item for item in self.items
+            if not (isinstance(item, dict) and item.get("id") in torlendo)
+        ]
+
     # --- DUPLIKÁCIÓ ELLENŐRZŐ SEGÉDFÜGGVÉNY ---
 
-    def is_duplicate(self, candidate, exclude_idx=None):
-        """Megnézi, hogy a jelölt tétel létezik-e már a listában."""
-        for idx, item in enumerate(self.items):
-            if exclude_idx is not None and idx == exclude_idx:
+    def is_duplicate(self, candidate, exclude_idx=None, exclude_id=None):
+        """Megnézi, hogy a jelölt tétel létezik-e már a listában.
+
+        A kihagyandó (épp szerkesztett) tételt id alapján azonosítjuk
+        (exclude_id). Az exclude_idx (sorindex) paramétert a meglévő
+        párbeszédablakok miatt még elfogadjuk, de itt azonnal id-re
+        fordítjuk."""
+        if exclude_id is None and exclude_idx is not None:
+            exclude_id = self._id_sorindexhez(exclude_idx)
+        for item in self.items:
+            if exclude_id is not None and isinstance(item, dict) and item.get("id") == exclude_id:
                 continue
             if is_same_book(candidate, item):
                 return True
@@ -277,14 +478,16 @@ class Deziderata(wx.Frame):
         # betöltési hiba után semmiképp sem írhatjuk felül a fájlt.
         if self._mentes_tiltva:
             logging.error("A dezideráta mentése letiltva (sikertelen betöltés után).")
-            return
+            return False
+        # Régi (id nélküli) tételeknél az id itt kerül véglegesen a fájlba.
+        self._biztosit_idk()
         if not save_hmac_json(DATA_FILE, self.items):
             wx.MessageBox(
                 "Hiba az adatok mentésekor.",
                 "Hiba",
                 wx.OK | wx.ICON_ERROR,
             )
-            return
+            return False
 
         # Ha a "KönyvTárnok kereső" ablak nyitva van, a találatai között
         # szereplő "Deziderátában" jelzések a most mentett változás miatt
@@ -293,6 +496,7 @@ class Deziderata(wx.Frame):
         szulo = self.GetParent()
         if szulo is not None and hasattr(szulo, "frissit_kereso_statuszokat"):
             szulo.frissit_kereso_statuszokat()
+        return True
 
     def FrissitStatusBar(self):
         """Frissíti a status bar szövegét az elemek száma alapján."""
@@ -303,6 +507,87 @@ class Deziderata(wx.Frame):
             return
         db_szam = self.list.GetItemCount()
         self.statusbar.SetStatusText(f"Dezideráta tételeinek száma: {db_szam}.")
+
+    def OnMasolas(self, event=None):
+        """Szerkesztés > Másolás (Ctrl+C): a kijelölt tételek a vágólapra.
+
+        Soronként egy sor, az oszlopok tabulátorral elválasztva (minden
+        oszlop látható ebben a listában).
+        """
+        indexek = sorted(osszes_kijelolt_index(self.list))
+        if not indexek:
+            return
+
+        oszlopok_szama = self.list.GetColumnCount()
+        sorok = []
+        for sor_idx in indexek:
+            cellak = [
+                " ".join(self.list.GetItemText(sor_idx, col).split())
+                for col in range(oszlopok_szama)
+            ]
+            sorok.append("\t".join(cellak))
+
+        if not masolas_vagolapra_szoveg("\n".join(sorok)):
+            wx.MessageBox("Nem sikerült megnyitni a vágólapot.", "Hiba", wx.OK | wx.ICON_ERROR)
+            return
+        self.statusbar.SetStatusText(f"{len(indexek)} tétel a vágólapra másolva.")
+
+    def OnMindentKijelol(self, event=None):
+        for i in range(self.list.GetItemCount()):
+            self.list.Select(i, True)
+
+    # --- VISSZAVONÁS / MÉGIS ---
+
+    def on_close(self, event):
+        # A saját vermek elvesznek; a főablakkal közös (kapcsolt) lépések a
+        # főablak vermében megmaradnak, és zárt ablaknál a fájlra alkalmazódnak.
+        self.undo.bezar()
+        event.Skip()
+
+    def OnMenuNyitas(self, event):
+        frissit_undo_menu(self.menusor.undo, self.menusor.redo, self.undo)
+        event.Skip()
+
+    def OnVisszavonas(self, event=None):
+        self._visszavonas_vagy_megis(ismet=False)
+
+    def OnMegis(self, event=None):
+        self._visszavonas_vagy_megis(ismet=True)
+
+    def _visszavonas_vagy_megis(self, ismet):
+        if not self._szerkesztes_engedelyezett():
+            return
+        leiras = self.undo.ismetlendo_leiras() if ismet else self.undo.visszavonando_leiras()
+        if leiras is None:
+            self.statusbar.SetStatusText(
+                "Nincs mit újra alkalmazni." if ismet else "Nincs visszavonható művelet."
+            )
+            return
+
+        # Kapcsolt lépésnél (pl. átemelés az állományba) a főablak
+        # könyvlistáját is a regiszter frissíti.
+        if not (self.undo.ismet() if ismet else self.undo.visszavon()):
+            wx.MessageBox(
+                "A művelet nem hajtható végre (a változás nem menthető), ezért "
+                "az adatok a korábbi állapotukban maradtak.",
+                "Mentési hiba", wx.OK | wx.ICON_ERROR, self,
+            )
+            self.list.SetFocus()
+            return
+        self.statusbar.SetStatusText(
+            f"Újra alkalmazva: {leiras}." if ismet else f"Visszavonva: {leiras}."
+        )
+
+    def _kijelol_idk(self, idk):
+        """A megadott id-jű tételek kijelölése (az elsőre fókuszálva)."""
+        indexek = [self._sorindex_idhoz(i) for i in idk]
+        indexek = [i for i in indexek if i != -1]
+        for i in indexek:
+            self.list.Select(i)
+        if indexek:
+            self.list.Focus(indexek[0])
+            self.list.EnsureVisible(indexek[0])
+        self.list.SetFocus()
 
     def on_lista_atmeretezes(self, event):
         event.Skip()
@@ -327,7 +612,12 @@ class Deziderata(wx.Frame):
 
     def refresh_list(self):
         """Frissíti a ListCtrl elemét a tételek ábécérendbe rendezése után."""
+        self._biztosit_idk()
         self.rendez_listat()
+        self.sor_id_terkep = {
+            idx: item.get("id") for idx, item in enumerate(self.items)
+            if isinstance(item, dict)
+        }
         self.list.DeleteAllItems()
         for item in self.items:
             ertekek = [lista_ertek(item, k) for k in LISTA_OSZLOP_KULCSOK]
@@ -376,11 +666,63 @@ class Deziderata(wx.Frame):
             )
             return
 
-        selected_data = self.items[selected_idx]
+        selected_data = self.GetTetelByRowIndex(selected_idx)
+        if selected_data is None:
+            return
         dlg = DeziderataReszletekDialog(self, item_data=selected_data, index=selected_idx)
         dlg.ShowModal()
         dlg.Destroy()
         self.list.SetFocus()
+
+    def tetel_modositasa(self, szerkesztett_id, updated_data, eredeti_sorindex=None):
+        """Egy tétel adatainak lecserélése id alapján, mentés, újrarajzolás és
+        a tétel újrakijelölése. A Deziderata.on_edit és a
+        DeziderataReszletekDialog "Szerkesztés" gombja is ezt hívja, hogy a
+        két útvonal viselkedése ne térjen el. True, ha a csere megtörtént."""
+        if not self._szerkesztes_engedelyezett():
+            return False
+        pozicio = self._pozicio_idhoz(szerkesztett_id)
+        if pozicio == -1:
+            wx.MessageBox(
+                "A szerkesztett tétel közben megváltozott vagy eltűnt a "
+                "jegyzékből, ezért a módosítás nem menthető.",
+                "Hiba", wx.OK | wx.ICON_ERROR, self,
+            )
+            return False
+        # A párbeszédablak get_data()-ja nem adja vissza az id-t (és az
+        # esetleges ismeretlen mezőket sem): a tétel azonosítóját megőrizzük.
+        updated_data["id"] = szerkesztett_id
+        with self.undo.muvelet("tétel módosítása"):
+            self.items[pozicio] = updated_data
+            self.save_data()
+            self.refresh_list()
+
+        target_idx = self._sorindex_idhoz(szerkesztett_id)
+        if (target_idx == -1 and eredeti_sorindex is not None
+                and self.list.GetItemCount() > 0):
+            target_idx = min(eredeti_sorindex, self.list.GetItemCount() - 1)
+        self.select_and_focus(target_idx)
+        return True
+
+    def tetelek_felvetele(self, uj_tetelek):
+        """Új tételek felvétele kívülről (KönyvTárnok-kereső) a MEGNYITOTT
+        ablak memóriabeli listájába: duplikátum-szűrés, id-k kiosztása,
+        mentés és frissítés. Visszatérés: (sikeres, visszautasitott), vagy
+        None, ha a szerkesztés le van tiltva / a mentés nem sikerült (utóbbi
+        esetben a memóriabeli lista a művelet előtti állapotra áll vissza)."""
+        if not self._szerkesztes_engedelyezett():
+            return None
+        with self.undo.muvelet("átemelés a deziderátába"):
+            sikeres, visszautasitott, felvett = deziderata_tetelek_hozzaadasa(
+                self.items, uj_tetelek
+            )
+            if sikeres:
+                if not self.save_data():
+                    self._torles_idk_alapjan([t["id"] for t in felvett])
+                    self.refresh_list()
+                    return None
+                self.refresh_list()
+        return sikeres, visszautasitott
 
     def on_add(self, event):
         if not self._szerkesztes_engedelyezett():
@@ -388,15 +730,13 @@ class Deziderata(wx.Frame):
         dlg = AddItemDialog(self)
         if dlg.ShowModal() == wx.ID_OK:
             data = dlg.get_data()
-            self.items.append(data)
-            self.save_data()
-            self.refresh_list()
-            target_idx = -1
-            for idx, item in enumerate(self.items):
-                if is_same_book(item, data):
-                    target_idx = idx
-                    break
-        
+            data["id"] = uj_tetel_id()
+            with self.undo.muvelet("új tétel felvétele"):
+                self.items.append(data)
+                self.save_data()
+                self.refresh_list()
+            target_idx = self._sorindex_idhoz(data["id"])
+
             if target_idx != -1:
                 self.select_and_focus(target_idx)
             else:
@@ -415,24 +755,14 @@ class Deziderata(wx.Frame):
             )
             return
 
-        selected_data = self.items[selected_idx]
+        selected_data = self.GetTetelByRowIndex(selected_idx)
+        if selected_data is None:
+            return
+        szerkesztett_id = selected_data.get("id")
         dlg = EditItemDialog(self, selected_data, index=selected_idx)
         if dlg.ShowModal() == wx.ID_OK:
-            updated_data = dlg.get_data()
-            self.items[selected_idx] = updated_data
-            self.save_data()
-            self.refresh_list()
-
-            target_idx = -1
-            for idx, item in enumerate(self.items):
-                if is_same_book(item, updated_data):
-                    target_idx = idx
-                    break
-
-            if target_idx == -1 and self.list.GetItemCount() > 0:
-                target_idx = min(selected_idx, self.list.GetItemCount() - 1)
-
-            self.select_and_focus(target_idx)
+            self.tetel_modositasa(szerkesztett_id, dlg.get_data(),
+                                  eredeti_sorindex=selected_idx)
 
         dlg.Destroy()
 
@@ -441,6 +771,7 @@ class Deziderata(wx.Frame):
         if not self._szerkesztes_engedelyezett():
             return
         selected_indices = osszes_kijelolt_index(self.list)
+        selected_ids = self.GetKijeloltIdk()
 
         if not selected_indices:
             wx.MessageBox(
@@ -464,11 +795,10 @@ class Deziderata(wx.Frame):
         )
 
         if confirm == wx.YES:
-            for index in sorted(selected_indices, reverse=True):
-                del self.items[index]
-
-            self.save_data()
-            self.refresh_list()
+            with self.undo.muvelet(f"{db} tétel törlése" if db > 1 else "tétel törlése"):
+                self._torles_idk_alapjan(selected_ids)
+                self.save_data()
+                self.refresh_list()
             osszesen = self.list.GetItemCount()
             if osszesen > 0:
                 uj_idx = min(selected_indices[0], osszesen - 1)
@@ -526,12 +856,17 @@ class Deziderata(wx.Frame):
 
             def _hozzaad(item):
                 if not self.is_duplicate(item):
+                    # Az importált fájl id-je egy másik gépről/állományból
+                    # jöhet, és ütközhetne a meglévőkkel: mindig újat adunk.
+                    if isinstance(item, dict):
+                        item["id"] = uj_tetel_id()
                     self.items.append(item)
                     return True
                 return False
 
             try:
-                hozzaadva, kihagyva = additiv_lista_import(pathname, _hozzaad)
+                with self.undo.muvelet("JSON importálás"):
+                    hozzaadva, kihagyva = additiv_lista_import(pathname, _hozzaad)
             except ValueError as e:
                 wx.MessageBox(str(e), "Hiba", wx.OK | wx.ICON_ERROR)
                 return
@@ -572,6 +907,7 @@ class Deziderata(wx.Frame):
             return
 
         kijelolt_indexek = osszes_kijelolt_index(self.list)
+        kijelolt_idk = self.GetKijeloltIdk()
 
         if not kijelolt_indexek:
             wx.MessageBox(
@@ -587,9 +923,12 @@ class Deziderata(wx.Frame):
 
         parent_frame = self.GetParent()
 
+        # Az allomany_rekord_dezideratabol fehérlistás: id nélküli rekordot ad,
+        # az állomány a felvételkor (uj_konyv_hozzaadasa) maga ad neki id-t,
+        # amit a kapott dictbe vissza is ír - ezt használjuk lent.
         konyv_adatok = [
-            allomany_rekord_dezideratabol(self.items[idx])
-            for idx in kijelolt_indexek
+            allomany_rekord_dezideratabol(self._tetel_idhoz(tetel_id))
+            for tetel_id in kijelolt_idk
         ]
 
         # A lista frissítését a főablak szűrés-megőrző segédmetódusára
@@ -614,27 +953,43 @@ class Deziderata(wx.Frame):
         # meghiúsul, a data_manager.MentesiHiba kivételt kapjuk - ezt
         # szándékosan külön kezeljük, hogy ne keveredjen össze a
         # duplikátum miatti elutasítással (lásd data_manager.MentesiHiba).
-        try:
-            sikeres, visszautasitott, sikeres_relativ_indexek, _ = konyvek_tomeges_felvetele(
-                parent_frame.db, konyv_adatok, utani_frissites_fv=_frissites
-            )
-        except MentesiHiba as e:
-            wx.MessageBox(
-                f"Hiba történt az állományjegyzék mentése közben:\n{e}\n\n"
-                "A már sikeresen felvett tételek megmaradnak, de a további "
-                "kijelölt tételek felvétele emiatt megszakadt.",
-                "Mentési hiba",
-                wx.OK | wx.ICON_ERROR,
-                self,
-            )
-            return
+        # Az átemelés EGY, kapcsolt visszavonási lépés: a könyvek felvétele
+        # az állományban ÉS a tételek törlése innen. Bármelyik ablakból
+        # visszavonva mindkét oldal visszaáll (lásd undo_manager.py).
+        with self.undo.muvelet("átemelés az állományba", ["allomany", "deziderata"]):
+            try:
+                sikeres, visszautasitott, sikeres_relativ_indexek, _ = konyvek_tomeges_felvetele(
+                    parent_frame.db, konyv_adatok, utani_frissites_fv=_frissites
+                )
+            except MentesiHiba as e:
+                # A megszakadásig már felvett tételek az állományban maradnak, ezért
+                # a dezideráta-jegyzékből is el kell távolítani őket (különben
+                # duplikátumként ott maradnának). A felvett rekordok id-t kaptak.
+                felvett_allomany_idk = {k.get("id") for k in parent_frame.db.konyvek}
+                mar_felvett_idk = [
+                    tetel_id for tetel_id, rekord in zip(kijelolt_idk, konyv_adatok)
+                    if rekord.get("id") and rekord.get("id") in felvett_allomany_idk
+                ]
+                if mar_felvett_idk:
+                    self._torles_idk_alapjan(mar_felvett_idk)
+                    self.save_data()
+                    self.refresh_list()
+                wx.MessageBox(
+                    f"Hiba történt az állományjegyzék mentése közben:\n{e}\n\n"
+                    "A már sikeresen felvett tételek megmaradnak az állományban "
+                    "(és kikerültek a dezideráta-jegyzékből), de a további "
+                    "kijelölt tételek felvétele emiatt megszakadt.",
+                    "Mentési hiba",
+                    wx.OK | wx.ICON_ERROR,
+                    self,
+                )
+                return
 
-        if sikeres > 0:
-            sikeres_indexek = [kijelolt_indexek[i] for i in sikeres_relativ_indexek]
-            for idx in sorted(sikeres_indexek, reverse=True):
-                del self.items[idx]
-            self.save_data()
-            self.refresh_list()
+            if sikeres > 0:
+                sikeres_idk = [kijelolt_idk[i] for i in sikeres_relativ_indexek]
+                self._torles_idk_alapjan(sikeres_idk)
+                self.save_data()
+                self.refresh_list()
 
         mutass_tomeges_atemeles_eredmenyt(
             self, sikeres, visszautasitott, "az állományhoz", "az állományban"
@@ -663,12 +1018,8 @@ class Deziderata(wx.Frame):
 
     def on_key_down(self, event):
         keycode = event.GetKeyCode()
-        control_down = event.ControlDown()
 
-        if control_down and keycode == ord('A'):
-            for i in range(self.list.GetItemCount()):
-                self.list.Select(i, on=True)
-        elif keycode in (wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER):
+        if keycode in (wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER):
             self.on_reszletek(event)
         elif keycode == wx.WXK_SPACE:
             # A szóköz billentyű ne nyissa meg a részleteket, de adja hozzá a keresési pufferhez
@@ -692,4 +1043,4 @@ class App(wx.App):
 
 if __name__ == "__main__":
     app = App(False)
-    app.MainLoop()
+    app.MainLoop()
