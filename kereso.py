@@ -17,19 +17,21 @@ class KeresoDialog(wx.Dialog):
         # Pontos egyezés jelölőnégyzet
         self.exact_match_cb = wx.CheckBox(self, label="Csak pontos egyezés")
 
-        # Gombok (OK és Mégse)
-        btn_sizer = wx.StdDialogButtonSizer()
+        # Gombok
         ok_button = wx.Button(self, wx.ID_OK, label="Keresés")
+        clear_button = wx.Button(self, wx.ID_ANY, label="Mező ürítése")
         cancel_button = wx.Button(self, wx.ID_CANCEL, label="Mégse")
 
         ok_button.SetDefault()
-        btn_sizer.AddButton(ok_button)
-        btn_sizer.AddButton(cancel_button)
-        
-        # Téma alkalmazása Realize előtt
-        apply_theme_from_settings(self)
+        clear_button.Bind(wx.EVT_BUTTON, self.on_clear)
 
-        btn_sizer.Realize()
+        # A tabulátoros sorrend megegyezik a hozzáadás sorrendjével:
+        # Keresés -> Mező ürítése -> Mégse
+        btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        btn_sizer.AddStretchSpacer(1)
+        btn_sizer.Add(ok_button, 0, wx.ALL, 5)
+        btn_sizer.Add(clear_button, 0, wx.ALL, 5)
+        btn_sizer.Add(cancel_button, 0, wx.ALL, 5)
 
         # Összeállítás
         main_sizer.Add(input_sizer, 0, wx.EXPAND | wx.ALL, 5)
@@ -37,6 +39,9 @@ class KeresoDialog(wx.Dialog):
             self.exact_match_cb, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 10
         )
         main_sizer.Add(btn_sizer, 0, wx.EXPAND | wx.ALL, 5)
+
+        # Téma alkalmazása, miután minden vezérlő létrejött
+        apply_theme_from_settings(self)
 
         # Az ablak mérete a tartalomhoz igazodik (nagyobb betűméretnél vagy
         # magasabb DPI-nél sem vágódnak le a vezérlők); a minimális
@@ -56,3 +61,8 @@ class KeresoDialog(wx.Dialog):
 
     def on_enter(self, event):
         self.EndModal(wx.ID_OK)
+
+    def on_clear(self, event):
+        """Kiüríti a keresőmezőt, és visszaadja rá a fókuszt."""
+        self.text_ctrl.Clear()
+        self.text_ctrl.SetFocus()

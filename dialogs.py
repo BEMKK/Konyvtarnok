@@ -80,7 +80,11 @@ class UjdonsagokDialog(wx.Dialog):
         ujdonsagok_lista = [
             "Kijelölés menüpont és gomb a KönyvTárnok-keresőben.",
             "Összes oszlop kijelölésére szolgáló jelölőnégyzet a KönyvTárnok-keresőben a kereséshez.",
-            "Kijelölés törlése funkció mindhárom modulban."
+            "Kijelölés törlése funkció mindhárom modulban.",
+            "Keresőmező ürítése gomb a főablak Kereső Dialogban.",
+            "A katalóguslap exportálásának billentyűparancsa mostantól Ctrl+K a főablakban és a Deziderátában egyaránt.",
+            "A főablak Keresőablaka a Ctrl+Shift+F billentyűkombinációval érhető el.",
+            "Javítások és kiegészítések a súgóban."
         ]
 
         szoveg_box = wx.BoxSizer(wx.VERTICAL)

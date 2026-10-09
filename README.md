@@ -76,6 +76,7 @@ python main.py
 ├─ constants.py                # Alkalmazás‑állandók (név, verzió, állapot, alapértelmezett oszlopok, stb.)
 ├─ gyors_kereses.py                # A lista gépelés közbeni szűrése mindhárom modulban
 ├─ utils.py                # Rendezési és állománystatisztikai segédfügvények
+├─ undo_manager                # Visszavonás és ismétlés funkció kezelése
 ├─ ikon.ico                    # Alkalmazásikon
 ├─ Enekeskonyvek_adatai.json   # KönyvTárnok kereső referencia‑adatbázisa
 ├─ Futtatas.bat                # Indító script

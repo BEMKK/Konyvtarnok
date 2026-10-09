@@ -6,9 +6,13 @@ A projekten végrehajtott lényegi változtatások dokumentációja.
 
 ## [3.12.0] - 2026-10-10
 
+- Keresőmező ürítése gomb a főablak Kereső dialog-ban.
+- A katalóguslap exportálásának billentyűparancsa mostantól Ctrl+K a főablakban és a Deziderátában egyaránt.
+- A főablak Keresőablaka a Ctrl+Shift+F billentyűkombinációval érhető el.
 - Kijelölés menüpont és gomb a KönyvTárnok-keresőben.
 - Összes oszlop kijelölésére szolgáló jelölőnégyzet a KönyvTárnok-keresőben a kereséshez.
 - Kijelölés törlése funkció mindhárom modulban.
+- Javítások és kiegészítések a súgóban.
 
 
 

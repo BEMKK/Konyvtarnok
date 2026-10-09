@@ -43,9 +43,11 @@ class HelpNotebookDialog(wx.Dialog):
                 "  Egy vagy több könyv állományból való törléséhez jelölje ki a kívánt tételeket a listában, majd nyomja meg a Delete billentyűt, kattintson a 'Kijelöltek törlése' gombra, vagy válassza a Fájl -> Könyv(ek) eltávolítása menüpontot. A rendszer a törlés előtt megerősítést kér.\n\n"
                 "4. Összes elem kijelölése:\n"
                 "  A főlista összes kötetének egyidejű kijelöléséhez nyomja meg a Ctrl + A billentyűkombinációt.\n\n"
-                "5. Gyorskeresés a listában:\n"
+                "5. Másolás a vágólapra:\n"
+                "  A lista kijelölt elemeit vágólapra másolhatja tabulátorral elválasztott szövegként, hasonlóan a KönyvTárnok-keresőhöz.\nA kijelölt elemek másolásához használja a Szerkesztés menü Másolás menüpontját, vagy nyomja meg a Ctrl + C billentyűparancsot.\n"
+                "6. Gyorskeresés a listában:\n"
                 "  Amikor a könyvlista fókuszban van, a kezdőbetű vagy szótag begépelésével is kijelölheti a kívánt kötetet.\n\n"
-                "6. Visszavonás és ismétlés:\n"
+                "7. Visszavonás és ismétlés:\n"
                 "  A legutóbbi művelet visszavonásához használja a Szerkesztés menü Visszavonás parancsát, vagy a Ctrl+Z billentyűparancsot.\nA művelet ismételt végrehajtásához válassza a menü Mégis menüpontját, vagy használja a Ctrl+Y billentyűket.\n"
             ),
             (
@@ -54,7 +56,7 @@ class HelpNotebookDialog(wx.Dialog):
                 "1. Élő keresősáv a főablakban:\n"
                 "  A főablak felső részén található keresőmezővel (Ctrl + F) gépelés közben azonnal szűrheti az állományt. A rendszer a könyvek minden adatmezőjében (cím, szerző, kiadó, év stb.) keres.\n\n"
                 "2. Részletes keresés párbeszédablak:\n"
-                "  Az Eszközök -> Keresés az állományban menüponttal vagy a Ctrl + K billentyűkombinációval megnyitható keresőablakban pontos vagy részleges egyezésre is kereshet a teljes adatbázisban.\n\n"
+                "  Az Eszközök -> Keresés és szűrés menüponttal vagy a Ctrl + Shift + F billentyűkombinációval megnyitható keresőablakban pontos vagy részleges egyezésre is kereshet a teljes adatbázisban.\n\n"
                 "3. Szűrés törlése:\n"
                 "  Aktív szűrés vagy keresés esetén a lista feletti 'Szűrés törlése' gomb aktívvá válik, rákattintva visszaállíthatja a teljes könyvállomány megjelenítését.\n\n"
                 "4. Állománystatisztika készítése:\n"
@@ -72,7 +74,7 @@ class HelpNotebookDialog(wx.Dialog):
                 "3. Állományjegyzék betöltése JSON-ból:\n"
                 "  Egy korábban elmentett JSON állományjegyzék beolvasásához használja a Fájl -> Állományjegyzék betöltése JSON fájlból... menüpontot (Ctrl + Shift + B). A mentett JSON fájlból csak azok a könyvek kerülnek felvételre, amelyek még nem szerepelnek a listában.\n\nFONTOS: nyers, azaz SHA aláírás nélküli, exportált JSON-t soha ne helyezzen a program mappájába! A program ugyanis az ilyen fájlokat nem tölti be és nem kezeli! Amennyiben az állományjegyzék vagy a dezideráta csak nyers formátumban áll rendelkezésére, használja a megfelelő modul JSON importálás funkcióját a fenti módon.\n\n"
                 "4. Katalóguslap mentése PDF fájlba:\n"
-                "  A program főablakában megjelenő listát a látható oszlopokkal PDF fájlba mentheti.\nEhhez kattintson az eszköztár Katalógus export gombjára, vagy a menüből válassza a Katalóguslap mentése pdf-be lehetőséget.\nHa nagyon sok oszlop van a listában, a program automatikusan csökkenti a PDF betűméretét.\n"
+                "  A program főablakában megjelenő listát a látható oszlopokkal PDF fájlba mentheti.\nEhhez kattintson az eszköztár Katalógus export gombjára, vagy a menüből válassza a Katalóguslap mentése pdf-be lehetőséget.\nHasználhatja a Ctrl + K billentyűparancsot is.\nHa nagyon sok oszlop van a listában, a program automatikusan csökkenti a PDF betűméretét.\n"
             ),
                         (
                 "Dezideráta-kezelő",
@@ -90,9 +92,11 @@ class HelpNotebookDialog(wx.Dialog):
                 "6. Dezideráta adatok mentése és betöltése:\n"
                 "  A dezideráta jegyzék exportálható szerkeszthető, azaz SHA integritásvédelem nélküli JSON fájlba (Ctrl + Shift + M) és bármikor visszatölthető (Ctrl + Shift + B) a Tételek menüből. JSON fájl betöltése esetén csak azok a kötetek kerülnek importálásra, amelyek még nem szerepelnek a jegyzékben. Mentéskor a fájl neve alapértelmezetten \"deziderata.json\"\n\n"
                 "7. Katalóguslap mentése:\n"
-                "  Az állományhoz hasonlóan a Deziderátáról is készíthető PDF katalóguslap.\nEhhez a főablakban megszokott módon használhatja a Ctrl + Shift + C billentyűparancsot, az eszköztár Katalógus export gombját, vagy a megfelelő menüpontot.\n\n"
+                "  Az állományhoz hasonlóan a Deziderátáról is készíthető PDF katalóguslap.\nEhhez a főablakban megszokott módon használhatja a Ctrl + K billentyűparancsot, az eszköztár Katalógus export gombját, vagy a megfelelő menüpontot.\n\n"
                 "8. Visszavonás és ismétlés:\n"
                 "  A legutóbbi művelet visszavonásához használja a Szerkesztés menü Visszavonás parancsát, vagy a Ctrl+Z billentyűparancsot.\nA művelet ismételt végrehajtásához válassza a menü Mégis menüpontját, vagy használja a Ctrl+Y billentyűket.\n"
+                "9. Másolás a vágólapra:\n"
+                "  A lista kijelölt elemeit vágólapra másolhatja tabulátorral elválasztott szövegként, hasonlóan a KönyvTárnok-keresőhöz.\nA kijelölt elemek másolásához használja a Szerkesztés menü Másolás menüpontját, vagy nyomja meg a Ctrl + C billentyűparancsot.\n"
             ),
             (
                 "KönyvTárnok kereső",
@@ -151,9 +155,10 @@ class HelpNotebookDialog(wx.Dialog):
                 "  Ctrl + Shift + E      - Egy vagy több könyvadatlap exportálása PDF fájlba\n"
                 "  Ctrl + Shift + B      - Állományjegyzék betöltése JSON fájlból\n"
                 "  Ctrl + Shift + M      - Állományjegyzék mentése JSON fájlba\n"
-                "  Ctrl + Shift + C                - Katalóguslap mentése PDF fájlba\n"
+                "  Ctrl + K                - Katalóguslap mentése PDF fájlba\n"
+                "  Ctrl + C            - Kijelölt könyv vágólapra másolása a látható oszlopokkal\n"
                 "  Ctrl + F              - Élő keresősáv fókuszba helyezése\n"
-                "  Ctrl + K              - Keresés az állományban párbeszédablak megnyitása\n"
+                "  Ctrl + Shift + F              - Keresés és szűrés párbeszédablak megnyitása\n"
                 "  Ctrl + T              - Állománystatisztika megnyitása\n"
                 "  Ctrl + D              - Dezideráta-kezelő megnyitása\n"
                 "  Ctrl + Shift + K      - KönyvTárnok kereső megnyitása\n"
@@ -181,7 +186,9 @@ class HelpNotebookDialog(wx.Dialog):
                 "  Ctrl + A              - Összes tétel kijelölése\n"
                 "  Delete                - Kijelölt tétel(ek) törlése\n"
                 "  Ctrl + F              - Kijelölt tétel(ek) felvétele a fő könyvállományba\n"
-                "  Ctrl + Shift + C                - Katalóguslap mentése PDF fájlba\n"
+                "  Ctrl + K                - Katalóguslap mentése PDF fájlba\n"
+                "  Ctrl + C            - Kijelölt könyv vágólapra másolása\n"
+                "  Ctrl + K                - Katalóguslap mentése PDF fájlba\n"
                 "  Ctrl + Shift + B      - Dezideráta-jegyzék betöltése JSON fájlból\n"
                 "  Ctrl + Shift + M      - Dezideráta-jegyzék mentése JSON fájlba\n"
                 "  Ctrl + Z        - Utolsó művelet visszavonása.\n"
