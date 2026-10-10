@@ -82,9 +82,6 @@ python main.py
 ├─ Futtatas.bat                # Indító script
 ├─ exe-port.bat         # PyInstaller build script
 ├─ QuickInstallRequirements.bat         # A függőségek gyors telepítésére.
-├─ converter/excel_to_json.exe         # Excel fájlok JSON-ra történő gyors átalakítására szolgáló segédprogram.
-├─ converter/excel_to_json.py         # A segédprogram forráskódja.
-├─ converter/build.py         # Az excel-konvertáló pyinstaller fordítására szolgáló script.
 ```
 
 ## Tesztelés
