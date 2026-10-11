@@ -132,7 +132,7 @@ class HelpNotebookDialog(wx.Dialog):
                 "Frissítés",
                 "FRISSÍTÉSEK KERESÉSE\n\n"
                 "1. Új verzió ellenőrzése:\n"
-                "  Új verzió ellenőrzéséhez használja a Súgó menü Frissítések keresése menüpontját, vagy nyomja meg a Ctrl+Shift+F billentyűkombinációt.\n"
+                "  Új verzió ellenőrzéséhez használja a Súgó menü Frissítések keresése menüpontját, vagy nyomja meg a Ctrl+U billentyűkombinációt.\n"
                 "  A program alapértelmezés szerint minden indításkor ellenőrzi a frissítéseket, ezt a beállítások ablakban módosíthatja.\n"
                 "  Ha van elérhető új verzió, a felugró ablakban megjelenik annak leírása, valamint a letöltésre, a GitHub kiadási oldal megnyitására, és a frissítés elhalasztására szolgáló gombok.\n"
                 "  Ha nem érhető el frissítés, manuális ellenőrzés esetén a program felugró ablakban tájékoztat erről.\n\n"
@@ -173,7 +173,7 @@ class HelpNotebookDialog(wx.Dialog):
                 "  F1                    - Súgó és billentyűparancsok megnyitása\n"
                 "  Ctrl + Shift + U      - Újdonságok megjelenítése\n"
                 "  Ctrl + Shift + N      - Névjegy megjelenítése\n"
-                "  Ctrl + Shift + F      - Frissítések keresése\n"
+                "  Ctrl + U      - Frissítések keresése\n"
                 "  ESC                   - Párbeszédablakok bezárása\n"
                 "  Ctrl + Z        - Utolsó művelet visszavonása.\n"
                 "  Ctrl + Y        - Visszavont művelet ismételt végrehajtása.\n"

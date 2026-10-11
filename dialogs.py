@@ -72,17 +72,14 @@ class UjdonsagokDialog(wx.Dialog):
         cim_label.SetFont(font_cim)
         main_sizer.Add(cim_label, 0, wx.ALIGN_CENTER | wx.TOP, 15)
         
-        verzio_label = wx.StaticText(self, label=f"v{APP_VERSION} {APP_STAGE}".strip())
+        verzio_label = wx.StaticText(self, label=F"v{APP_VERSION}".strip())
         main_sizer.Add(verzio_label, 0, wx.ALIGN_CENTER | wx.TOP | wx.BOTTOM, 5)        
 
         main_sizer.Add(wx.StaticLine(self), 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 15)
         
         ujdonsagok_lista = [
-            "Forrás megjelenítése a KönyvTárnok-keresőben.",
-            "Új témák (zsályazöld, szépia papír, sötétkék és kontrasztos fekete).",
-            "Javítva a visszavonás utáni fókuszálási hiba.",
-            "Javítva a Deziderátából való átemelés közben tapasztalt mikrofagyás.",
-            "A Dezideráta-kezelő listafókusza átemelés után a következő tételre kerül."
+            "Javítva a frissítés ellenőrzésének billentyűparancsa, mely mostantól CTRL+U.",
+            "Tizenegy új téma a beállításokban (köztük a rendszer téma, mely egyéni beállítások nélkül az alapértelmezett."
         ]
 
         szoveg_box = wx.BoxSizer(wx.VERTICAL)

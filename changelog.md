@@ -4,6 +4,13 @@ A projekten végrehajtott lényegi változtatások dokumentációja.
 
 
 
+## [3.14.0] - 2026-10-12
+
+- Javítva a frissítés ellenőrzés billentyűparancsa (ctrl+U).
+- Tizenegy új téma a beállításokban (köztük a rendszer téma, mely egyéni beállítások nélkül az alapértelmezett.
+
+
+
 ## [3.13.0] - 2026-10-11
 
 - Forrás megjelenítése a KönyvTárnok-keresőben.
