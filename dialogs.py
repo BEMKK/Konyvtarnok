@@ -78,13 +78,11 @@ class UjdonsagokDialog(wx.Dialog):
         main_sizer.Add(wx.StaticLine(self), 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 15)
         
         ujdonsagok_lista = [
-            "Kijelölés menüpont és gomb a KönyvTárnok-keresőben.",
-            "Összes oszlop kijelölésére szolgáló jelölőnégyzet a KönyvTárnok-keresőben a kereséshez.",
-            "Kijelölés törlése funkció mindhárom modulban.",
-            "Keresőmező ürítése gomb a főablak Kereső Dialogban.",
-            "A katalóguslap exportálásának billentyűparancsa mostantól Ctrl+K a főablakban és a Deziderátában egyaránt.",
-            "A főablak Keresőablaka a Ctrl+Shift+F billentyűkombinációval érhető el.",
-            "Javítások és kiegészítések a súgóban."
+            "Forrás megjelenítése a KönyvTárnok-keresőben.",
+            "Új témák (zsályazöld, szépia papír, sötétkék és kontrasztos fekete).",
+            "Javítva a visszavonás utáni fókuszálási hiba.",
+            "Javítva a Deziderátából való átemelés közben tapasztalt mikrofagyás.",
+            "A Dezideráta-kezelő listafókusza átemelés után a következő tételre kerül."
         ]
 
         szoveg_box = wx.BoxSizer(wx.VERTICAL)

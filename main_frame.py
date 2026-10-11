@@ -3,6 +3,7 @@ import os
 import sys
 import re
 import logging
+from contextlib import contextmanager
 from constants import APP_TITLE
 from dialogs import NevjegyDialog, UjdonsagokDialog, FajlutkozesDialog, exportal_egy_konyv
 from kereso import KeresoDialog
@@ -121,6 +122,7 @@ class Konyvtarnok(wx.Frame):
         # TÉMA ALKALMAZÁSA
         current_theme = config.get("tema", "vilagos")
         apply_theme(self, current_theme)
+        self._aktualis_tema = current_theme
 
         # GYORSBILLENTYŰK (Visszaállítva!)
         id_mindent_kijelol = wx.NewIdRef()
@@ -515,42 +517,114 @@ class Konyvtarnok(wx.Frame):
             f"Újra alkalmazva: {leiras}." if ismet else f"Visszavonva: {leiras}."
         )
 
+    # Visszavonás/mégis után a lista a korábbi helyén marad (fókusz, kijelölés,
+    # görgetés). True esetén ehelyett a visszavont/újraalkalmazott könyvek
+    # kerülnek kijelölésre és fókuszba (a korábbi viselkedés).
+    UNDO_UTAN_ERINTETT_KIJELOLESE = False
+
+    def _lista_helyzet_mentese(self):
+        """A lista helyzetének (fókusz, kijelölés, görgetés) elmentése
+        könyv-id alapján, hogy egy újraépítés után visszaállítható legyen."""
+        lista = self.lista
+        terkep = lista.sor_id_terkep
+        fokusz_idx = lista.GetFocusedItem()
+        top_idx = lista.GetTopItem()
+        return {
+            "listan_van_fokusz": lista.HasFocus(),
+            "fokusz_idx": fokusz_idx,
+            "fokusz_id": terkep.get(fokusz_idx),
+            "kijelolt_idk": {terkep.get(i) for i in lista.GetKijeloltIndexek()} - {None},
+            "top_idx": top_idx,
+            "top_id": terkep.get(top_idx),
+        }
+
+    def _lista_helyzet_visszaallitasa(self, allapot, erintett_idk=None):
+        lista = self.lista
+        db = lista.GetItemCount()
+        if db == 0:
+            return
+        id_index = {azon: i for i, azon in lista.sor_id_terkep.items()}
+
+        kijeloltek, fokusz = [], None
+        if erintett_idk:
+            kijeloltek = [id_index[a] for a in erintett_idk if a in id_index]
+            fokusz = kijeloltek[0] if kijeloltek else None
+        if fokusz is None:
+            kijeloltek = [id_index[a] for a in allapot["kijelolt_idk"] if a in id_index]
+            fokusz = id_index.get(allapot["fokusz_id"])
+        if fokusz is None and kijeloltek:
+            fokusz = min(kijeloltek)
+        if fokusz is None and allapot["fokusz_idx"] != -1:
+            # A korábban fókuszban lévő könyv megszűnt (pl. felvétel
+            # visszavonása): a hozzá legközelebbi sor kapja a fókuszt.
+            fokusz = min(allapot["fokusz_idx"], db - 1)
+            if not kijeloltek and allapot["kijelolt_idk"]:
+                kijeloltek = [fokusz]
+
+        for i in kijeloltek:
+            lista.Select(i)
+        if fokusz is not None:
+            lista.Focus(fokusz)
+
+        # Görgetési helyzet: előbb a lista aljára, majd a korábbi első látható
+        # sorra görgetünk, így az újra felülre kerül.
+        top = id_index.get(allapot["top_id"])
+        if top is None:
+            top = min(max(allapot["top_idx"], 0), db - 1)
+        lista.EnsureVisible(db - 1)
+        lista.EnsureVisible(top)
+        if fokusz is not None:
+            lista.EnsureVisible(fokusz)
+
+        if erintett_idk or allapot["listan_van_fokusz"]:
+            lista.SetFocus()
+
+    @contextmanager
+    def _lista_helyzet_megtartasa(self, erintett_idk=None):
+        """Context manager: a blokkban a lista újraépíthető (FeltoltLista),
+        a fókusz, a kijelölés és a görgetés utána visszaáll, az újraépítés
+        alatt pedig a lista le van fagyasztva (nincs villogás/lassulás)."""
+        lista = self.lista
+        allapot = self._lista_helyzet_mentese()
+        lista.Freeze()
+        try:
+            yield
+        finally:
+            try:
+                self._lista_helyzet_visszaallitasa(allapot, erintett_idk)
+            finally:
+                lista.Thaw()
+
     def _nezet_frissitese_visszavonas_utan(self, kijelolendo_idk, kijelol=True):
         """Újraépíti a listát a visszaállított adatokból, megőrizve az aktív
-        szűrést; kijelol=True esetén kijelöli az érintett (visszakerült/
-        megváltozott) könyveket és ide viszi a fókuszt."""
+        szűrést és a lista helyzetét (fókusz, kijelölés, görgetés). Ha az
+        UNDO_UTAN_ERINTETT_KIJELOLESE be van kapcsolva, az érintett
+        könyveket jelöli ki és ide viszi a fókuszt."""
         self.teljes_adatlista = []
-        if self.aktiv_szurt_lista is not None:
-            predikatum = self.aktiv_szuro_predikatum
-            if predikatum is not None:
-                def _illeszkedik(konyv):
-                    try:
-                        return bool(predikatum(konyv))
-                    except Exception:
-                        return False
-                self.aktiv_szurt_lista = [k for k in self.db.konyvek if _illeszkedik(k)]
-            else:
-                korabbi_idk = {k.get("id") for k in self.aktiv_szurt_lista}
-                self.aktiv_szurt_lista = [
-                    k for k in self.db.konyvek if k.get("id") in korabbi_idk
-                ]
-            self.lista.FeltoltLista(self.aktiv_szurt_lista)
-            self._frissit_szuro_cimke_darabszamot(len(self.aktiv_szurt_lista))
-        else:
-            self.lista.FeltoltLista()
-        self.FrissitStatusBar()
+        erintett = None
+        if kijelol and self.UNDO_UTAN_ERINTETT_KIJELOLESE and kijelolendo_idk:
+            erintett = list(kijelolendo_idk)
 
-        if not kijelol:
-            return
-        self.lista.SetFocus()
-        if kijelolendo_idk:
-            halmaz = set(kijelolendo_idk)
-            indexek = [i for i, azon in self.lista.sor_id_terkep.items() if azon in halmaz]
-            if indexek:
-                for i in indexek:
-                    self.lista.Select(i)
-                self.lista.Focus(indexek[0])
-                self.lista.EnsureVisible(indexek[0])
+        with self._lista_helyzet_megtartasa(erintett):
+            if self.aktiv_szurt_lista is not None:
+                predikatum = self.aktiv_szuro_predikatum
+                if predikatum is not None:
+                    def _illeszkedik(konyv):
+                        try:
+                            return bool(predikatum(konyv))
+                        except Exception:
+                            return False
+                    self.aktiv_szurt_lista = [k for k in self.db.konyvek if _illeszkedik(k)]
+                else:
+                    korabbi_idk = {k.get("id") for k in self.aktiv_szurt_lista}
+                    self.aktiv_szurt_lista = [
+                        k for k in self.db.konyvek if k.get("id") in korabbi_idk
+                    ]
+                self.lista.FeltoltLista(self.aktiv_szurt_lista)
+                self._frissit_szuro_cimke_darabszamot(len(self.aktiv_szurt_lista))
+            else:
+                self.lista.FeltoltLista()
+        self.FrissitStatusBar()
 
     def OnListaDuplaKlikk(self, event):
         self.MegnyitReszletek(szerkesztesre=False)
@@ -599,27 +673,30 @@ class Konyvtarnok(wx.Frame):
         """
         self.teljes_adatlista = []
 
-        if self.aktiv_szurt_lista is None:
-            self.lista.FeltoltLista()
-            self.FrissitStatusBar()
-            return list(uj_konyvek)
+        # A lista helyzetét (fókusz, kijelölés, görgetés) megtartjuk: pl. a
+        # Dezideráta-ablakból indított átemelés ne vigye el a főlista fókuszát.
+        with self._lista_helyzet_megtartasa():
+            if self.aktiv_szurt_lista is None:
+                self.lista.FeltoltLista()
+                lathato_uj_konyvek = list(uj_konyvek)
+            else:
+                lathato_uj_konyvek = []
+                for konyv in uj_konyvek:
+                    illeszkedik = True
+                    if self.aktiv_szuro_predikatum is not None:
+                        try:
+                            illeszkedik = bool(self.aktiv_szuro_predikatum(konyv))
+                        except Exception:
+                            illeszkedik = False
+                    if illeszkedik:
+                        self.aktiv_szurt_lista.append(konyv)
+                        lathato_uj_konyvek.append(konyv)
 
-        lathato_uj_konyvek = []
-        for konyv in uj_konyvek:
-            illeszkedik = True
-            if self.aktiv_szuro_predikatum is not None:
-                try:
-                    illeszkedik = bool(self.aktiv_szuro_predikatum(konyv))
-                except Exception:
-                    illeszkedik = False
-            if illeszkedik:
-                self.aktiv_szurt_lista.append(konyv)
-                lathato_uj_konyvek.append(konyv)
+                if lathato_uj_konyvek:
+                    self._frissit_szuro_cimke_darabszamot(len(self.aktiv_szurt_lista))
 
-        if lathato_uj_konyvek:
-            self._frissit_szuro_cimke_darabszamot(len(self.aktiv_szurt_lista))
+                self.lista.FeltoltLista(self.aktiv_szurt_lista)
 
-        self.lista.FeltoltLista(self.aktiv_szurt_lista)
         self.FrissitStatusBar()
         return lathato_uj_konyvek
 
@@ -936,9 +1013,22 @@ class Konyvtarnok(wx.Frame):
             uj_oszlopok = dlg.GetKivalasztottOszlopok()
             uj_tema = dlg.GetKivalasztottTema()
             uj_rendezes = dlg.GetKivalasztottRendezes()
-            
-            self.lista.SetAktivOszlopok(uj_oszlopok)
-            
+
+            # Csak azt alkalmazzuk, ami ténylegesen változott: a téma
+            # átváltása nem igényel listaújraépítést, és a rendezést sem
+            # kell újra végrehajtani (az eddigi aktuális sorrendet is
+            # elvesztette volna minden mentéskor).
+            oszlop_valtozott = set(uj_oszlopok) != set(config.get("lathato_oszlopok", []))
+            rendezes_valtozott = uj_rendezes != config.get("alapertelmezett_rendezes", "cim")
+            tema_valtozott = uj_tema != self._aktualis_tema
+
+            if oszlop_valtozott or rendezes_valtozott:
+                with self._lista_helyzet_megtartasa():
+                    if oszlop_valtozott:
+                        self.lista.SetAktivOszlopok(uj_oszlopok)
+                    if rendezes_valtozott and hasattr(self.lista, 'Rendezes'):
+                        self.lista.Rendezes(uj_rendezes)
+
             config["lathato_oszlopok"] = uj_oszlopok
             config["tema"] = uj_tema
             config["alapertelmezett_rendezes"] = uj_rendezes
@@ -948,17 +1038,16 @@ class Konyvtarnok(wx.Frame):
             config["auto_update_check"] = dlg.GetAutoUpdateCheck()
             config["update_frequency"] = dlg.GetUpdateFrequency()
             save_settings(config)
-            
-            if hasattr(self.lista, 'Rendezes'):
-                self.lista.Rendezes(uj_rendezes)
 
-            apply_theme(self, uj_tema)
-            if self.deziderata_frame:
-                apply_theme(self.deziderata_frame, uj_tema)
-                self.deziderata_frame.current_theme = uj_tema
-            if self.konyvtarnok_kereso_frame:
-                apply_theme(self.konyvtarnok_kereso_frame, uj_tema)
-                self.konyvtarnok_kereso_frame.current_theme = uj_tema
+            if tema_valtozott:
+                self._aktualis_tema = uj_tema
+                apply_theme(self, uj_tema)
+                if self.deziderata_frame:
+                    apply_theme(self.deziderata_frame, uj_tema)
+                    self.deziderata_frame.current_theme = uj_tema
+                if self.konyvtarnok_kereso_frame:
+                    apply_theme(self.konyvtarnok_kereso_frame, uj_tema)
+                    self.konyvtarnok_kereso_frame.current_theme = uj_tema
 
             wx.MessageBox("A beállítások sikeresen mentésre kerültek!", "Beállítások", wx.OK | wx.ICON_INFORMATION)
         dlg.Destroy()

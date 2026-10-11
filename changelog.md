@@ -4,6 +4,15 @@ A projekten végrehajtott lényegi változtatások dokumentációja.
 
 
 
+## [3.13.0] - 2026-10-11
+
+- Forrás megjelenítése a KönyvTárnok-keresőben.
+- Új témák (zsályazöld, szépia papír, sötétkék és kontrasztos fekete).
+- Javítva a visszavonás utáni fókuszálási hiba.
+- Javítva a Deziderátából való átemelés közben tapasztalt mikrofagyás.
+- A Dezideráta-kezelő listafókusza átemelés után a következő tételre kerül.
+
+
 ## [3.12.0] - 2026-10-10
 
 - Keresőmező ürítése gomb a főablak Kereső dialog-ban.

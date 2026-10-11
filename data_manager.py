@@ -6,7 +6,7 @@ import sys
 import logging
 import uuid
 import functools
-from contextlib import nullcontext
+from contextlib import nullcontext, contextmanager
 import wx
 
 # Az alkalmazás alapmappájának (exe melletti, ill. szkript-mappa)
@@ -469,6 +469,10 @@ class KonyvAdatbazis:
         self.undo_regiszter = UndoRegiszter()
         self.undo_regiszter.tarolo_regisztral("allomany", lambda: AdatbazisTarolo(self))
         self.undo = UndoKezelo(self.undo_regiszter, ["allomany"], elsodleges=True)
+        # Kötegelt mentés (lásd kotegelt_mentes): amíg a mélység > 0, az
+        # AdatokMentese csak jelzi, hogy van mentetlen változás.
+        self._mentes_melyseg = 0
+        self._mentes_fuggoben = False
         self.AdatokBetoltese()
 
     def is_duplikalat(self, uj_adatok):
@@ -524,7 +528,39 @@ class KonyvAdatbazis:
         self.konyvek = []
 
     def AdatokMentese(self):
+        if self._mentes_melyseg:
+            # Kötegelt mód: a tényleges lemezre írás a köteg végén történik.
+            self._mentes_fuggoben = True
+            return True
         return save_hmac_json(self.fajlnev, self.konyvek)
+
+    @contextmanager
+    def kotegelt_mentes(self):
+        """Tömeges módosításnál (pl. átemelés) a tételenkénti, teljes fájlt
+        újraíró mentés helyett a blokk végén EGYETLEN mentés történik.
+
+        Ha ez a záró mentés meghiúsul, MentesiHiba kivételt dob (kivéve, ha a
+        blokkból már egy másik kivétel indult el: akkor csak naplóz). Fontos:
+        ilyenkor a memóriabeli módosítások nem gördülnek vissza tételenként,
+        a hívónak kell kezelnie a MentesiHiba-t.
+        """
+        self._mentes_melyseg += 1
+        kivetel_van = False
+        try:
+            yield
+        except BaseException:
+            kivetel_van = True
+            raise
+        finally:
+            self._mentes_melyseg -= 1
+            if self._mentes_melyseg == 0 and self._mentes_fuggoben:
+                self._mentes_fuggoben = False
+                if not save_hmac_json(self.fajlnev, self.konyvek):
+                    hiba = f"Nem sikerült elmenteni az állományjegyzéket ({self.fajlnev})."
+                    if kivetel_van:
+                        logging.error(hiba)
+                    else:
+                        raise MentesiHiba(hiba)
 
     # --- ID ALAPÚ MENTÉS ---
     @_undo_lepes("könyv módosítása")

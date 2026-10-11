@@ -45,7 +45,7 @@ class KonyvtarnokKeresoApp(wx.Frame):
         self.panel.SetName("Főpanel")
 
         # 1. JSON fájl betöltése a háttérben
-        self.json_fajlnev = "enekeskonyvek_adatai.json"  # Excel helyett JSON
+        self.json_fajlnev = "enekeskonyvek_adatai.json"
         self.oszlopok = []
         # A táblázat soraihoz tartozó EREDETI (forrás) sor-dictek. A
         # táblázat sorainak ListCtrl-adata (SetItemData) erre a listára
@@ -67,7 +67,7 @@ class KonyvtarnokKeresoApp(wx.Frame):
         # Status bar létrehozása az ablak alján
         self.CreateStatusBar()
         osszesen = len(self.adatok) if self.adatok else 0
-        self.SetStatusText(f"Keresés {osszesen} kötet adataiban")
+        self.SetStatusText(f"Keresés {osszesen} kötet adataiban, forrás: {self.json_fajlnev}")
 
         # Téma alkalmazása - a Show()-t csak EZUTÁN hívjuk (lásd az init_ui
         # végén lévő kommentet).

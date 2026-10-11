@@ -27,6 +27,39 @@ THEMES = {
         "header_bg": wx.Colour(50, 53, 55),
         "header_fg": wx.Colour(230, 230, 230),
     },
+    "magas_kontraszt": {
+        "name": "Magas kontraszt",
+        "panel_bg": wx.Colour(0, 0, 0),          # Tiszta fekete
+        "text_fg": wx.Colour(255, 255, 255),    # Tiszta fehér
+        "ctrl_bg": wx.Colour(20, 20, 20),
+        "ctrl_fg": wx.Colour(255, 255, 0),      # Kiemelt sárga szöveg a mezőkben
+        "btn_bg": wx.Colour(40, 40, 40),
+        "btn_fg": wx.Colour(255, 255, 255),
+        "header_bg": wx.Colour(30, 30, 30),
+        "header_fg": wx.Colour(255, 255, 255),
+    },
+    "szepia": {
+        "name": "Szépia (Papír)",
+        "panel_bg": wx.Colour(245, 238, 220),    # Meleg, krémszínű papírháttér
+        "text_fg": wx.Colour(60, 45, 30),        # Mély kávébarna szöveg
+        "ctrl_bg": wx.Colour(252, 248, 235),     # Világosabb krém a beviteli mezőknek
+        "ctrl_fg": wx.Colour(50, 35, 20),
+        "btn_bg": wx.Colour(230, 220, 200),
+        "btn_fg": wx.Colour(50, 35, 20),
+        "header_bg": wx.Colour(235, 225, 205),
+        "header_fg": wx.Colour(50, 35, 20),
+    },
+    "zsalya": {
+        "name": "Zsálya zöld",
+        "panel_bg": wx.Colour(232, 240, 235),
+        "text_fg": wx.Colour(30, 50, 40),
+        "ctrl_bg": wx.Colour(242, 248, 244),
+        "ctrl_fg": wx.Colour(20, 40, 30),
+        "btn_bg": wx.Colour(210, 225, 215),
+        "btn_fg": wx.Colour(20, 40, 30),
+        "header_bg": wx.Colour(220, 235, 225),
+        "header_fg": wx.Colour(25, 45, 35),
+    },
     "pastel_kek": {
         "name": "Pasztell kék",
         "panel_bg": wx.Colour(230, 240, 250),
@@ -48,6 +81,17 @@ THEMES = {
         "btn_fg": wx.Colour(50, 15, 30),
         "header_bg": wx.Colour(250, 225, 232),
         "header_fg": wx.Colour(60, 20, 35),
+    },
+    "sotet_kek": {
+        "name": "Sötét kék",
+        "panel_bg": wx.Colour(20, 28, 40),
+        "text_fg": wx.Colour(230, 238, 248),
+        "ctrl_bg": wx.Colour(32, 44, 62),
+        "ctrl_fg": wx.Colour(230, 238, 248),
+        "btn_bg": wx.Colour(45, 60, 82),
+        "btn_fg": wx.Colour(245, 248, 255),
+        "header_bg": wx.Colour(26, 36, 52),
+        "header_fg": wx.Colour(220, 230, 242),
     }
 }
 
@@ -56,9 +100,25 @@ def get_theme_names():
     return [(key, data["name"]) for key, data in THEMES.items()]
 
 def apply_theme(window, theme_name="vilagos"):
-    """Rekurzívan alkalmazza a kiválasztott témát az ablakra és elemeire."""
+    """Rekurzívan alkalmazza a kiválasztott témát az ablakra és elemeire.
+
+    A színezés közben az ablak le van fagyasztva (Freeze/Thaw), az újrarajzolás
+    és az elrendezés-számítás (Refresh/Layout) pedig csak egyszer, a legfelső
+    szinten fut le. Korábban minden rekurziós szinten külön lefutott, ami
+    beágyazott panelek esetén sokszoros, észrevehető késlekedést okozott.
+    """
     theme = THEMES.get(theme_name, THEMES["vilagos"])
-    
+    window.Freeze()
+    try:
+        _apply_theme_rekurziv(window, theme)
+    finally:
+        window.Thaw()
+    window.Refresh()
+    window.Layout()
+
+
+def _apply_theme_rekurziv(window, theme):
+    """Az apply_theme belső, rekurzív része (Refresh/Layout nélkül)."""
     # Ha a főablak/dialógus maga is színezhető
     if hasattr(window, "SetBackgroundColour"):
         window.SetBackgroundColour(theme["panel_bg"])
@@ -108,10 +168,7 @@ def apply_theme(window, theme_name="vilagos"):
         
         # Rekurzió a gyermek elemek gyermekeire (pl. sizer-be ágyazott panelek, ablakok)
         if hasattr(child, "GetChildren") and child.GetChildren():
-            apply_theme(child, theme_name)
-            
-    window.Refresh()
-    window.Layout()
+            _apply_theme_rekurziv(child, theme)
 
 
 def apply_theme_from_settings(window):

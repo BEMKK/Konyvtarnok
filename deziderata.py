@@ -631,12 +631,17 @@ class Deziderata(wx.Frame):
             idx: item.get("id") for idx, item in enumerate(self.items)
             if isinstance(item, dict)
         }
-        self.list.DeleteAllItems()
-        for item in self.items:
-            ertekek = [lista_ertek(item, k) for k in LISTA_OSZLOP_KULCSOK]
-            index = self.list.InsertItem(self.list.GetItemCount(), ertekek[0])
-            for oszlop, ertek in enumerate(ertekek[1:], start=1):
-                self.list.SetItem(index, oszlop, ertek)
+        # Freeze/Thaw: a sorok beszúrása közben nincs közbenső újrarajzolás.
+        self.list.Freeze()
+        try:
+            self.list.DeleteAllItems()
+            for item in self.items:
+                ertekek = [lista_ertek(item, k) for k in LISTA_OSZLOP_KULCSOK]
+                index = self.list.InsertItem(self.list.GetItemCount(), ertekek[0])
+                for oszlop, ertek in enumerate(ertekek[1:], start=1):
+                    self.list.SetItem(index, oszlop, ertek)
+        finally:
+            self.list.Thaw()
 
         # A görgetősáv megjelenése/eltűnése a hasznos szélességet módosíthatja
         self.IgazitOszlopSzelesseg()
@@ -934,6 +939,10 @@ class Deziderata(wx.Frame):
         if not kerj_tomeges_atemeles_megerositest(self, db, "tételt", "az állományba"):
             return
 
+        # Az átemelés után a fókusz erre a sorra kerül (lásd
+        # _fokusz_atemeles_utan), vagyis az átemelt tételek utáni következőre.
+        elso_kijelolt_index = min(kijelolt_indexek)
+
         parent_frame = self.GetParent()
 
         # Az allomany_rekord_dezideratabol fehérlistás: id nélküli rekordot ad,
@@ -971,9 +980,13 @@ class Deziderata(wx.Frame):
         # visszavonva mindkét oldal visszaáll (lásd undo_manager.py).
         with self.undo.muvelet("átemelés az állományba", ["allomany", "deziderata"]):
             try:
-                sikeres, visszautasitott, sikeres_relativ_indexek, _ = konyvek_tomeges_felvetele(
-                    parent_frame.db, konyv_adatok, utani_frissites_fv=_frissites
-                )
+                # Kötegelt mentés: az állományjegyzék a teljes átemelés után
+                # EGYSZER íródik ki (korábban minden könyv után újra, teljes
+                # egészében), ez volt az ablak megfagyásának fő oka.
+                with parent_frame.db.kotegelt_mentes():
+                    sikeres, visszautasitott, sikeres_relativ_indexek, _ = konyvek_tomeges_felvetele(
+                        parent_frame.db, konyv_adatok, utani_frissites_fv=_frissites
+                    )
             except MentesiHiba as e:
                 # A megszakadásig már felvett tételek az állományban maradnak, ezért
                 # a dezideráta-jegyzékből is el kell távolítani őket (különben
@@ -996,6 +1009,12 @@ class Deziderata(wx.Frame):
                     wx.OK | wx.ICON_ERROR,
                     self,
                 )
+                # A lista ilyenkor is újraépült (a már felvett tételek kikerültek),
+                # ezért a fókuszt vissza kell adni.
+                if mar_felvett_idk:
+                    self._fokusz_atemeles_utan(elso_kijelolt_index)
+                else:
+                    self.list.SetFocus()
                 return
 
             if sikeres > 0:
@@ -1007,6 +1026,14 @@ class Deziderata(wx.Frame):
         mutass_tomeges_atemeles_eredmenyt(
             self, sikeres, visszautasitott, "az állományhoz", "az állományban"
         )
+        # Az eredményüzenet bezárása UTÁN állítjuk be a fókuszt, különben az
+        # ablak visszaadná a korábbi (már törölt) fókuszpontot. Ha semmi nem
+        # került át (pl. csupa duplikátum), a lista nem épült újra, a kijelölés
+        # a helyén marad, ezért csak a fókuszt adjuk vissza a listának.
+        if sikeres > 0:
+            self._fokusz_atemeles_utan(elso_kijelolt_index)
+        else:
+            self.list.SetFocus()
 
     def feldolgoz_kereso_karakter(self, karakter):
         """Kezeli a karakter hozzáadását a keresési pufferhez és a megfelelő
@@ -1041,6 +1068,18 @@ class Deziderata(wx.Frame):
             self._MegjelenitPopUpMenut()
         else:
             event.Skip()
+
+    def _fokusz_atemeles_utan(self, index):
+        """Az átemelt tételek eltűnése után a következő tételre ugrik
+        (ugyanúgy, mint törlés után az on_delete): az átemelt tételek
+        kikerültek a listából, így az első kijelölt sor korábbi indexén
+        már a következő tétel áll. A lista végén az utolsó sorra lép, üres
+        listánál csak a fókuszt adja vissza a listának."""
+        osszesen = self.list.GetItemCount()
+        if osszesen > 0:
+            self.select_and_focus(min(index, osszesen - 1))
+        else:
+            self.list.SetFocus()
 
     def select_and_focus(self, index):
         if 0 <= index < self.list.GetItemCount():
