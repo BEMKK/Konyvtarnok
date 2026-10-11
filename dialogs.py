@@ -79,7 +79,8 @@ class UjdonsagokDialog(wx.Dialog):
         
         ujdonsagok_lista = [
             "Javítva a frissítés ellenőrzésének billentyűparancsa, mely mostantól CTRL+U.",
-            "Tizenegy új téma a beállításokban (köztük a rendszer téma, mely egyéni beállítások nélkül az alapértelmezett."
+            "Tizenegy új téma a beállításokban (köztük a rendszer téma, mely egyéni beállítások nélkül az alapértelmezett.",
+            "A témaválasztó görgetésekor a kijelölt téma előnézete megjelenik a beállítások ablakban."
         ]
 
         szoveg_box = wx.BoxSizer(wx.VERTICAL)

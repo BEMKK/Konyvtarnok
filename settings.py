@@ -40,26 +40,29 @@ class BeallitasokDialog(wx.Dialog):
         self.aktiv_tema = config.get("tema", "rendszer")
 
         fo_sizer = wx.BoxSizer(wx.VERTICAL)
-        
+
         # Notebook (Fülek) létrehozása
         self.notebook = wx.Notebook(self)
 
         # --- 1. FÜL: Megjelenítés / Téma ---
         panel_tema = wx.Panel(self.notebook)
         tema_sizer = wx.BoxSizer(wx.VERTICAL)
-        
+
         lbl_tema = wx.StaticText(panel_tema, label="Téma")
         self.tema_valaszto = wx.Choice(panel_tema, choices=[nev for _, nev in get_theme_names()])
         self.tema_kulcsok = [kulcs for kulcs, _ in get_theme_names()]
-        
+
         if self.aktiv_tema in self.tema_kulcsok:
             self.tema_valaszto.SetSelection(self.tema_kulcsok.index(self.aktiv_tema))
         else:
             self.tema_valaszto.SetSelection(0)
-            
+
+        # A Bind csak azután jöhet, hogy a választó létrejött
+        self.tema_valaszto.Bind(wx.EVT_CHOICE, self.on_tema_valtas_elo_nezet)
+
         lbl_rendezes = wx.StaticText(panel_tema, label="Alapértelmezett rendezés")
         self.rendezes_valaszto = wx.Choice(panel_tema, choices=[nev for _, nev in self.RENDEZESI_OPOK])
-        
+
         akt_rend = config.get("alapertelmezett_rendezes", "cim")
         rend_kulcsok = [k for k, _ in self.RENDEZESI_OPOK]
         self.rendezes_valaszto.SetSelection(rend_kulcsok.index(akt_rend) if akt_rend in rend_kulcsok else 0)
@@ -75,11 +78,11 @@ class BeallitasokDialog(wx.Dialog):
         oszlop_sizer = wx.BoxSizer(wx.VERTICAL)
         lbl_oszlopok = wx.StaticText(panel_oszlopok, label="Válassza ki a listában megjelenő oszlopokat:")
         oszlop_sizer.Add(lbl_oszlopok, 0, wx.ALL, 10)
-        
+
         # Gördíthető felület arra az esetre, ha tovább bővülne a mezők listája
         scroll = wx.ScrolledWindow(panel_oszlopok, style=wx.VSCROLL)
         scroll.SetScrollRate(0, 15)
-        
+
         # cols=1 -> szigorúan egymás alatti, lineáris Tab sorrend
         grid_sizer = wx.FlexGridSizer(cols=1, vgap=6, hgap=0)
         self.jelolo_negyzetek = {}
@@ -97,7 +100,7 @@ class BeallitasokDialog(wx.Dialog):
         btn_oszlop_sizer = wx.BoxSizer(wx.HORIZONTAL)
         btn_select_all = wx.Button(panel_oszlopok, label="Mindet kijelöl")
         btn_reset_def = wx.Button(panel_oszlopok, label="Alapértelmezettek visszaállítása")
-        
+
         btn_select_all.Bind(wx.EVT_BUTTON, self.on_mindet_kijelol)
         btn_reset_def.Bind(wx.EVT_BUTTON, self.on_alapertelmezett_oszlopok)
 
@@ -155,7 +158,7 @@ class BeallitasokDialog(wx.Dialog):
 
         lbl_freq = wx.StaticText(panel_frissites, label="Ellenőrzés gyakorisága:")
         self.choice_freq = wx.Choice(panel_frissites, choices=[nev for _, nev in self.FREKVENCIA_OPCIOK])
-        
+
         akt_freq = config.get("update_frequency", "startup")
         freq_kulcsok = [k for k, _ in self.FREKVENCIA_OPCIOK]
         self.choice_freq.SetSelection(freq_kulcsok.index(akt_freq) if akt_freq in freq_kulcsok else 0)
@@ -186,17 +189,22 @@ class BeallitasokDialog(wx.Dialog):
         gomb_sizer = wx.StdDialogButtonSizer()
         ok_gomb = wx.Button(self, wx.ID_OK, label="Mentés")
         megse_gomb = wx.Button(self, wx.ID_CANCEL, label="Mégse")
-        
+
         gomb_sizer.AddButton(ok_gomb)
         gomb_sizer.AddButton(megse_gomb)
-        
-        apply_theme(self, self.aktiv_tema)
         gomb_sizer.Realize()
 
         fo_sizer.Add(gomb_sizer, 0, wx.ALIGN_RIGHT | wx.RIGHT | wx.BOTTOM, 10)
 
         self.SetSizer(fo_sizer)
+
+        # A téma alkalmazása akkor történik, amikor már minden vezérlő létezik
+        apply_theme(self, self.aktiv_tema)
         self.Centre()
+
+    def on_tema_valtas_elo_nezet(self, event):
+        uj_tema = self.GetKivalasztottTema()
+        apply_theme(self, uj_tema)
 
     def on_mindet_kijelol(self, event):
         for cb in self.jelolo_negyzetek.values():

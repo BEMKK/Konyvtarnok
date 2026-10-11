@@ -8,6 +8,7 @@ A projekten végrehajtott lényegi változtatások dokumentációja.
 
 - Javítva a frissítés ellenőrzés billentyűparancsa (ctrl+U).
 - Tizenegy új téma a beállításokban (köztük a rendszer téma, mely egyéni beállítások nélkül az alapértelmezett.
+- A témaválasztó görgetésekor a kijelölt téma előnézete megjelenik a beállítások ablakban.
 
 
 
