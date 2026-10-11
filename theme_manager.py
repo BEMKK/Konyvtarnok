@@ -5,6 +5,11 @@ from config_manager import load_settings
 
 # A témák szótára és definíciói
 THEMES = {
+    "rendszer": {
+        # Helyőrző: a színeket a _rendszer_tema() állítja elő a Windows
+        # aktuális (akár magas kontrasztos) beállításaiból.
+        "name": "Rendszer (Windows színek)",
+    },
     "vilagos": {
         "name": "Világos",
         "panel_bg": wx.Colour(240, 240, 240),
@@ -92,8 +97,148 @@ THEMES = {
         "btn_fg": wx.Colour(245, 248, 255),
         "header_bg": wx.Colour(26, 36, 52),
         "header_fg": wx.Colour(220, 230, 242),
-    }
+    },
+"homok": {
+        "name": "Homok",
+        "panel_bg": wx.Colour(240, 232, 218),
+        "text_fg": wx.Colour(55, 42, 30),
+        "ctrl_bg": wx.Colour(250, 245, 235),
+        "ctrl_fg": wx.Colour(45, 32, 20),
+        "btn_bg": wx.Colour(225, 212, 192),
+        "btn_fg": wx.Colour(45, 32, 20),
+        "header_bg": wx.Colour(230, 220, 203),
+        "header_fg": wx.Colour(50, 38, 25),
+    },
+    "barack": {
+        "name": "Barack",
+        "panel_bg": wx.Colour(253, 236, 224),
+        "text_fg": wx.Colour(70, 35, 20),
+        "ctrl_bg": wx.Colour(255, 246, 240),
+        "ctrl_fg": wx.Colour(55, 25, 10),
+        "btn_bg": wx.Colour(247, 215, 195),
+        "btn_fg": wx.Colour(60, 28, 12),
+        "header_bg": wx.Colour(250, 224, 208),
+        "header_fg": wx.Colour(65, 30, 15),
+    },
+    "mez": {
+        "name": "Méz (halványsárga)",
+        "panel_bg": wx.Colour(255, 248, 205),
+        "text_fg": wx.Colour(40, 30, 10),
+        "ctrl_bg": wx.Colour(255, 252, 230),
+        "ctrl_fg": wx.Colour(35, 25, 5),
+        "btn_bg": wx.Colour(245, 232, 170),
+        "btn_fg": wx.Colour(40, 30, 10),
+        "header_bg": wx.Colour(250, 240, 185),
+        "header_fg": wx.Colour(40, 30, 10),
+    },
+    "terrakotta": {
+        "name": "Terrakotta (pasztell)",
+        "panel_bg": wx.Colour(246, 228, 218),
+        "text_fg": wx.Colour(75, 32, 20),
+        "ctrl_bg": wx.Colour(252, 240, 233),
+        "ctrl_fg": wx.Colour(60, 25, 12),
+        "btn_bg": wx.Colour(236, 200, 185),
+        "btn_fg": wx.Colour(60, 25, 12),
+        "header_bg": wx.Colour(240, 214, 202),
+        "header_fg": wx.Colour(70, 30, 18),
+    },
+    "borostyan": {
+        "name": "Borostyán feketén",
+        "panel_bg": wx.Colour(0, 0, 0),
+        "text_fg": wx.Colour(255, 176, 0),
+        "ctrl_bg": wx.Colour(22, 14, 0),
+        "ctrl_fg": wx.Colour(255, 190, 40),
+        "btn_bg": wx.Colour(48, 32, 0),
+        "btn_fg": wx.Colour(255, 176, 0),
+        "header_bg": wx.Colour(36, 24, 0),
+        "header_fg": wx.Colour(255, 176, 0),
+    },
+    "sarga_kek": {
+        "name": "Sárga kéken",
+        "panel_bg": wx.Colour(0, 0, 128),
+        "text_fg": wx.Colour(255, 255, 0),
+        "ctrl_bg": wx.Colour(0, 0, 160),
+        "ctrl_fg": wx.Colour(255, 255, 0),
+        "btn_bg": wx.Colour(30, 30, 175),
+        "btn_fg": wx.Colour(255, 255, 0),
+        "header_bg": wx.Colour(0, 0, 100),
+        "header_fg": wx.Colour(255, 255, 0),
+    },
+    "sarga_fekete": {
+        "name": "Sárga feketén",
+        "panel_bg": wx.Colour(0, 0, 0),
+        "text_fg": wx.Colour(255, 255, 0),
+        "ctrl_bg": wx.Colour(30, 30, 30),
+        "ctrl_fg": wx.Colour(255, 255, 0),
+        "btn_bg": wx.Colour(50, 50, 50),
+        "btn_fg": wx.Colour(255, 255, 0),
+        "header_bg": wx.Colour(38, 38, 38),
+        "header_fg": wx.Colour(255, 255, 0),
+    },
+    "tompitett_szurke": {
+        "name": "Tompított szürke",
+        "panel_bg": wx.Colour(70, 70, 70),
+        "text_fg": wx.Colour(225, 225, 225),
+        "ctrl_bg": wx.Colour(88, 88, 88),
+        "ctrl_fg": wx.Colour(240, 240, 240),
+        "btn_bg": wx.Colour(100, 100, 100),
+        "btn_fg": wx.Colour(245, 245, 245),
+        "header_bg": wx.Colour(80, 80, 80),
+        "header_fg": wx.Colour(235, 235, 235),
+    },
+
+    # ---------- Esztétikai témák ----------
+    "grafit": {
+        "name": "Grafit",
+        "panel_bg": wx.Colour(46, 52, 64),
+        "text_fg": wx.Colour(236, 239, 244),
+        "ctrl_bg": wx.Colour(59, 66, 82),
+        "ctrl_fg": wx.Colour(236, 239, 244),
+        "btn_bg": wx.Colour(67, 76, 94),
+        "btn_fg": wx.Colour(236, 239, 244),
+        "header_bg": wx.Colour(52, 60, 74),
+        "header_fg": wx.Colour(216, 222, 233),
+    },
+    "levendula": {
+        "name": "Levendula",
+        "panel_bg": wx.Colour(240, 236, 250),
+        "text_fg": wx.Colour(40, 30, 70),
+        "ctrl_bg": wx.Colour(248, 246, 255),
+        "ctrl_fg": wx.Colour(30, 20, 60),
+        "btn_bg": wx.Colour(224, 216, 244),
+        "btn_fg": wx.Colour(30, 20, 60),
+        "header_bg": wx.Colour(232, 226, 248),
+        "header_fg": wx.Colour(35, 25, 65),
+    },
 }
+
+
+def _rendszer_tema():
+    """A Windows aktuális színeiből állítja elő a témát (magas kontrasztos
+    módot is követ). Futásidőben hívódik, mert a wx.SystemSettings csak a
+    wx.App létrejötte után megbízhatóan használható."""
+    def sc(index):
+        return wx.SystemSettings.GetColour(index)
+
+    return {
+        "name": "Rendszer (Windows színek)",
+        "panel_bg": sc(wx.SYS_COLOUR_BTNFACE),
+        "text_fg": sc(wx.SYS_COLOUR_WINDOWTEXT),
+        "ctrl_bg": sc(wx.SYS_COLOUR_WINDOW),
+        "ctrl_fg": sc(wx.SYS_COLOUR_WINDOWTEXT),
+        "btn_bg": sc(wx.SYS_COLOUR_BTNFACE),
+        "btn_fg": sc(wx.SYS_COLOUR_BTNTEXT),
+        "header_bg": sc(wx.SYS_COLOUR_BTNFACE),
+        "header_fg": sc(wx.SYS_COLOUR_BTNTEXT),
+    }
+
+
+def _get_theme(theme_name):
+    """Visszaadja a téma szótárát; a 'rendszer' témát futásidőben állítja elő."""
+    if theme_name == "rendszer":
+        return _rendszer_tema()
+    return THEMES.get(theme_name, THEMES["vilagos"])
+
 
 def get_theme_names():
     """Visszaadja a témák belső kulcsait és megjelenítendő neveit a beállításokhoz."""
@@ -107,7 +252,7 @@ def apply_theme(window, theme_name="vilagos"):
     szinten fut le. Korábban minden rekurziós szinten külön lefutott, ami
     beágyazott panelek esetén sokszoros, észrevehető késlekedést okozott.
     """
-    theme = THEMES.get(theme_name, THEMES["vilagos"])
+    theme = _get_theme(theme_name)
     window.Freeze()
     try:
         _apply_theme_rekurziv(window, theme)

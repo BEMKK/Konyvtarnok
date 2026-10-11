@@ -14,7 +14,7 @@ _BASE_DIR = alkalmazas_alapmappa()
 SETTINGS_FILE = _os.path.join(_BASE_DIR, "settings.json")
 DEFAULT_CONFIG = {
     "lathato_oszlopok": list(DEFAULT_LATHATO_OSZLOPOK),
-    "tema": "vilagos",
+    "tema": "rendszer",
     "last_json_dir": "",
     "last_pdf_dir": "",
     "last_stat_pdf_dir": "",

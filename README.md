@@ -62,7 +62,7 @@ python main.py
 ├─ data_manager.py             # Adatbázis‑kezelő (KonyvAdatbazis)
 ├─ export_manager.py           # PDF export (egyedi, kötegelt, statisztika)
 ├─ config_manager.py           # Konfigurációkezelő (settings.json)
-├─ theme_manager.py            # Téma‑kezelő (4 beépített színtéma)
+├─ theme_manager.py            # Téma‑kezelő (19 beépített színtéma)
 ├─ dialogs.py                  # Névjegy, újdonságok és fájlütközés párbeszédablak.
 ├─ konyvdialogs.py                  # Könyv szerkesztése és adatlap megjelenítő párbeszédablakok.
 ├─ settings.py                  # Beállítások ablak.

@@ -37,7 +37,7 @@ class BeallitasokDialog(wx.Dialog):
         """
         super().__init__(parent, title="Beállítások", size=(420, 500), style=wx.DEFAULT_DIALOG_STYLE | wx.STAY_ON_TOP)
         self.lathato_oszlopok = config.get("lathato_oszlopok", DEFAULT_LATHATO_OSZLOPOK)
-        self.aktiv_tema = config.get("tema", "vilagos")
+        self.aktiv_tema = config.get("tema", "rendszer")
 
         fo_sizer = wx.BoxSizer(wx.VERTICAL)
         
