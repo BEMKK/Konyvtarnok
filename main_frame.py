@@ -655,7 +655,7 @@ class Konyvtarnok(wx.Frame):
             self.lista.Select(idx)
         self._MegjelenitPopUpMenut()
 
-    def _uj_konyvek_utani_frissites(self, uj_konyvek):
+    def _uj_konyvek_utani_frissites(self, uj_konyvek, fokusz_az_ujra=False):
         """Egy vagy több újonnan felvett könyv (kézi felvitel, PDF import vagy
         JSON import) után frissíti a lista nézetét úgy, hogy egy esetlegesen
         aktív szűrés megmaradjon: a predikátumra illeszkedő új tételek
@@ -667,6 +667,11 @@ class Konyvtarnok(wx.Frame):
         Egy esetleges jövőbeli, teljes adatbázis-cserét végző művelethez nem
         ez, hanem a szűrés teljes újraszámolása lenne a helyes megoldás, mert
         ott a régi szűrt lista elemei már nem is léteznének az új adatban.
+
+        Ha a fokusz_az_ujra igaz (átemelés a Dezideráta-kezelőből vagy a
+        KönyvTárnok-keresőből), a főlista kijelölése és fókusza a ténylegesen
+        láthatóvá vált új tételekre kerül. A lista ablak-fókuszát nem
+        vesszük át, így a művelet a másik ablakban folytatódhat.
 
         Visszaadja azokat az új könyveket, amelyek ténylegesen láthatóvá
         váltak (a szűrt vagy a teljes listában megjelentek).
@@ -697,8 +702,30 @@ class Konyvtarnok(wx.Frame):
 
                 self.lista.FeltoltLista(self.aktiv_szurt_lista)
 
+        if fokusz_az_ujra and lathato_uj_konyvek:
+            self._fokusz_az_uj_konyvekre(lathato_uj_konyvek)
+
         self.FrissitStatusBar()
         return lathato_uj_konyvek
+
+    def _fokusz_az_uj_konyvekre(self, uj_konyvek):
+        """A főlistában az új könyvek kijelölése, az első (a lista szerinti
+        sorrendben) fókuszba és a látható tartományba hozása. Az ablak-
+        fókuszt nem módosítja (nem hívja a SetFocus-t)."""
+        lista = self.lista
+        uj_idk = {k.get("id") for k in uj_konyvek} - {None}
+        uj_objektumok = {id(k) for k in uj_konyvek}
+        indexek = [
+            i for i, k in enumerate(lista.jelenlegi_adatok)
+            if k.get("id") in uj_idk or id(k) in uj_objektumok
+        ]
+        if not indexek:
+            return
+        lista.KijelolesMegszuntetese()
+        for i in indexek:
+            lista.Select(i)
+        lista.Focus(indexek[0])
+        lista.EnsureVisible(indexek[0])
 
     def OnUjKonyv(self, event):
         ures_adatok = {k: "" for k in ["cim", "alcim", "szerzo", "egyeb_szemelyek", "kiado", "hely", "ev", "oldalszam", "meretek", "kotes", "rovid_cim", "forras", "status", "rovid_leiras"]}

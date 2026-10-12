@@ -792,7 +792,9 @@ class KonyvtarnokKeresoApp(wx.Frame):
         # a teljes, szűretlen lista jelenne meg).
         def _frissites(uj_konyv_objektumok):
             if hasattr(self.parent, "_uj_konyvek_utani_frissites"):
-                self.parent._uj_konyvek_utani_frissites(uj_konyv_objektumok)
+                self.parent._uj_konyvek_utani_frissites(
+                    uj_konyv_objektumok, fokusz_az_ujra=True
+                )
             elif hasattr(self.parent, "lista"):
                 self.parent.lista.FeltoltLista()
                 if hasattr(self.parent, "FrissitStatusBar"):

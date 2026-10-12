@@ -4,6 +4,7 @@ import logging
 import os
 import uuid
 import webbrowser
+from contextlib import contextmanager
 import wx
 from config_manager import load_settings, save_settings
 from theme_manager import apply_theme_from_settings
@@ -165,9 +166,15 @@ class DeziderataTarolo(ListaTarolo):
         return self.frame.save_data()
 
     def frissit(self, valtozas, kijelol):
-        self.frame.refresh_list()
-        if kijelol:
-            self.frame._kijelol_idk(valtozas.erintett_idk())
+        # Ugyanúgy, mint a főablakban (lásd MainFrame._nezet_frissitese_
+        # visszavonas_utan): a lista a korábbi helyén marad (fókusz,
+        # kijelölés, görgetés); ha a fókuszban lévő tétel megszűnt, a
+        # hozzá legközelebbi (következő) sor kapja a fókuszt.
+        erintett = None
+        if kijelol and self.frame.UNDO_UTAN_ERINTETT_KIJELOLESE:
+            erintett = list(valtozas.erintett_idk())
+        with self.frame._lista_helyzet_megtartasa(erintett):
+            self.frame.refresh_list()
 
 
 class DeziderataFajlTarolo(ListaTarolo):
@@ -591,8 +598,15 @@ class Deziderata(wx.Frame):
             f"Újra alkalmazva: {leiras}." if ismet else f"Visszavonva: {leiras}."
         )
 
-    def _kijelol_idk(self, idk):
-        """A megadott id-jű tételek kijelölése (az elsőre fókuszálva)."""
+    # Visszavonás/mégis után a lista a korábbi helyén marad (fókusz,
+    # kijelölés, görgetés), mint a főablakban. True esetén ehelyett a
+    # visszavont/újraalkalmazott tételek kerülnek kijelölésre és fókuszba.
+    UNDO_UTAN_ERINTETT_KIJELOLESE = False
+
+    def _kijelol_idk(self, idk, ablak_fokusz=True):
+        """A megadott id-jű tételek kijelölése (az elsőre fókuszálva).
+        ablak_fokusz=False esetén a lista nem kapja meg az ablak-fókuszt
+        (pl. ha az átemelést másik ablakból indították)."""
         indexek = [self._sorindex_idhoz(i) for i in idk]
         indexek = [i for i in indexek if i != -1]
         for i in indexek:
@@ -600,7 +614,76 @@ class Deziderata(wx.Frame):
         if indexek:
             self.list.Focus(indexek[0])
             self.list.EnsureVisible(indexek[0])
-        self.list.SetFocus()
+        if ablak_fokusz:
+            self.list.SetFocus()
+
+    def _lista_helyzet_mentese(self):
+        """A lista helyzetének (fókusz, kijelölés, görgetés) elmentése
+        tétel-id alapján (a főablak MainFrame._lista_helyzet_mentese
+        megfelelője)."""
+        lista = self.list
+        terkep = self.sor_id_terkep
+        fokusz_idx = lista.GetFocusedItem()
+        top_idx = lista.GetTopItem()
+        return {
+            "listan_van_fokusz": lista.HasFocus(),
+            "fokusz_idx": fokusz_idx,
+            "fokusz_id": terkep.get(fokusz_idx),
+            "kijelolt_idk": {terkep.get(i) for i in osszes_kijelolt_index(lista)} - {None},
+            "top_idx": top_idx,
+            "top_id": terkep.get(top_idx),
+        }
+
+    def _lista_helyzet_visszaallitasa(self, allapot, erintett_idk=None):
+        lista = self.list
+        db = lista.GetItemCount()
+        if db == 0:
+            return
+        id_index = {azon: i for i, azon in self.sor_id_terkep.items()}
+
+        kijeloltek, fokusz = [], None
+        if erintett_idk:
+            kijeloltek = [id_index[a] for a in erintett_idk if a in id_index]
+            fokusz = kijeloltek[0] if kijeloltek else None
+        if fokusz is None:
+            kijeloltek = [id_index[a] for a in allapot["kijelolt_idk"] if a in id_index]
+            fokusz = id_index.get(allapot["fokusz_id"])
+        if fokusz is None and kijeloltek:
+            fokusz = min(kijeloltek)
+        if fokusz is None and allapot["fokusz_idx"] != -1:
+            # A korábban fókuszban lévő tétel megszűnt (pl. felvétel
+            # visszavonása): a hozzá legközelebbi sor kapja a fókuszt.
+            fokusz = min(allapot["fokusz_idx"], db - 1)
+            if not kijeloltek and allapot["kijelolt_idk"]:
+                kijeloltek = [fokusz]
+
+        for i in kijeloltek:
+            lista.Select(i)
+        if fokusz is not None:
+            lista.Focus(fokusz)
+
+        # Görgetési helyzet: előbb a lista aljára, majd a korábbi első látható
+        # sorra görgetünk, így az újra felülre kerül.
+        top = id_index.get(allapot["top_id"])
+        if top is None:
+            top = min(max(allapot["top_idx"], 0), db - 1)
+        lista.EnsureVisible(db - 1)
+        lista.EnsureVisible(top)
+        if fokusz is not None:
+            lista.EnsureVisible(fokusz)
+
+        if erintett_idk or allapot["listan_van_fokusz"]:
+            lista.SetFocus()
+
+    @contextmanager
+    def _lista_helyzet_megtartasa(self, erintett_idk=None):
+        """Context manager: a blokkban a lista újraépíthető (refresh_list),
+        a fókusz, a kijelölés és a görgetés utána visszaáll."""
+        allapot = self._lista_helyzet_mentese()
+        try:
+            yield
+        finally:
+            self._lista_helyzet_visszaallitasa(allapot, erintett_idk)
 
     def on_lista_atmeretezes(self, event):
         event.Skip()
@@ -740,6 +823,11 @@ class Deziderata(wx.Frame):
                     self.refresh_list()
                     return None
                 self.refresh_list()
+        if felvett:
+            # A felvett tételek kijelölése, az első fókuszba hozása. Az
+            # ablak-fókuszt nem vesszük el a (másik ablakban dolgozó) kereső
+            # elől.
+            self._kijelol_idk([t["id"] for t in felvett], ablak_fokusz=False)
         return sikeres, visszautasitott
 
     def on_add(self, event):
@@ -757,9 +845,9 @@ class Deziderata(wx.Frame):
 
             if target_idx != -1:
                 self.select_and_focus(target_idx)
-            else:
-                self.list.SetFocus()
         dlg.Destroy()
+        # Mégse / Escape esetén a fókusz különben a gombon maradna.
+        self.list.SetFocus()
 
     def on_edit(self, event):
         if not self._szerkesztes_engedelyezett():
@@ -783,6 +871,8 @@ class Deziderata(wx.Frame):
                                   eredeti_sorindex=selected_idx)
 
         dlg.Destroy()
+        # Mégse / Escape esetén a fókusz különben a gombon maradna.
+        self.list.SetFocus()
 
     def on_delete(self, event):
         """Kijelölt tétel(ek) törlése (tömeges törlés támogatásával)."""
@@ -963,7 +1053,9 @@ class Deziderata(wx.Frame):
         # lista jelenne meg).
         def _frissites(uj_konyv_objektumok):
             if hasattr(parent_frame, "_uj_konyvek_utani_frissites"):
-                parent_frame._uj_konyvek_utani_frissites(uj_konyv_objektumok)
+                parent_frame._uj_konyvek_utani_frissites(
+                    uj_konyv_objektumok, fokusz_az_ujra=True
+                )
             elif hasattr(parent_frame, "lista"):
                 parent_frame.lista.FeltoltLista()
                 if hasattr(parent_frame, "FrissitStatusBar"):
