@@ -1,3 +1,4 @@
+import re
 import hashlib
 import hmac
 import json
@@ -731,9 +732,6 @@ def mutass_tomeges_atemeles_eredmenyt(parent, sikeres, visszautasitott, hozzaadv
 # tételgyűjteményen (pl. egy jövőbeli kereső ablakon vagy egy teszten)
 # ugyanígy használható.
 def szoveg_szuro_egyezik(tetel, keresett, pontos_egyezes):
-    """Egy tétel (könyv-dict, lista/tuple vagy tetszőleges objektum)
-    illeszkedik-e a megadott (már kisbetűsített, levágott) keresett szövegre,
-    a mezőértékek soronkénti vizsgálatával."""
     if isinstance(tetel, dict):
         ertekek = tetel.values()
     elif isinstance(tetel, (list, tuple)):
@@ -741,18 +739,23 @@ def szoveg_szuro_egyezik(tetel, keresett, pontos_egyezes):
     else:
         ertekek = vars(tetel).values() if hasattr(tetel, '__dict__') else []
 
+    minta = None
+    if pontos_egyezes:
+        # Egész szó / szókapcsolat egyezés, Unicode-barát szóhatárral
+        minta = re.compile(
+            r"(?<!\w)" + re.escape(keresett) + r"(?!\w)", re.IGNORECASE
+        )
+
     for ertek in ertekek:
         if not ertek:
             continue
         ertek_str = str(ertek).lower().strip()
-        if pontos_egyezes:
-            if keresett == ertek_str:
+        if minta is not None:
+            if minta.search(ertek_str):
                 return True
-        else:
-            if keresett in ertek_str:
-                return True
+        elif keresett in ertek_str:
+            return True
     return False
-
 
 def szuresi_talalatok(tetelek, keresett_szoveg, pontos_egyezes=False):
     """Egy tételgyűjtemény (pl. könyvek listája) leszűrése egy szöveges

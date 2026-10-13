@@ -78,8 +78,9 @@ class UjdonsagokDialog(wx.Dialog):
         main_sizer.Add(wx.StaticLine(self), 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 15)
         
         ujdonsagok_lista = [
-            "Megújult a Kereső dialog, mely mostantól a főablakban és a deziderátában is keres.",
-            "Az új kereső a találatokat saját listában jeleníti meg a főlisták szűrése nélkül (lásd a súgóban."
+            "Javítva a Keresés a gyűjteményekben dialog hibája pontos egyezés bejelölése esetén.",
+            "A kereső dialog fókusza 0 találat esetén is a listára kerül.",
+            "Javítások és frissítések a súgóban és a billentyűparancsok listájában."
         ]
 
         szoveg_box = wx.BoxSizer(wx.VERTICAL)

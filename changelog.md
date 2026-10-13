@@ -4,6 +4,14 @@ A projekten végrehajtott lényegi változtatások dokumentációja.
 
 
 
+## [3.15.1] - 2026-10-14
+
+- Javítva a Keresés a gyűjteményekben dialog hibája pontos egyezés bejelölése esetén.
+- A kereső dialog fókusza 0 találat esetén is a listára kerül.
+- Javítások és frissítések a súgóban és a billentyűparancsok listájában.
+
+
+
 ## [3.15.0] - 2026-10-13
 
 - Átalakított kereső párbeszédablak (KeresoDialog) saját találati listával és hatókör-választóval (Mindenhol, Dezideráta, Állományjegyzék).

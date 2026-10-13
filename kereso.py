@@ -305,8 +305,7 @@ class KeresoDialog(wx.Dialog):
             self.list_ctrl.SetFocus()
         else:
             self.statusz_text.SetLabel("Nincs találat.")
-            self.text_ctrl.SetFocus()
-
+        self.list_ctrl.SetFocus()
         self.Layout()
 
     def on_reszletek(self, event=None):
