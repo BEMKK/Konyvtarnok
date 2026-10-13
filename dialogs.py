@@ -78,9 +78,9 @@ class UjdonsagokDialog(wx.Dialog):
         main_sizer.Add(wx.StaticLine(self), 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 15)
         
         ujdonsagok_lista = [
-            "Javítva a Keresés a gyűjteményekben dialog hibája pontos egyezés bejelölése esetén.",
-            "A kereső dialog fókusza 0 találat esetén is a listára kerül.",
-            "Javítások és frissítések a súgóban és a billentyűparancsok listájában."
+            "Javítva a könyvrészletek és súgó esetén képernyőolvasóval, ablakváltás után tapasztalt fókuszálási hiba.",
+            "A Dezideráta-kezelőben a kapható tételek adatlapján szereplő linkek mostantól nem kattintással, hanem az erre szolgáló gombbal nyithatók meg.",
+            "A gomb csak akkor jelenik meg, ha van megadva URL."
         ]
 
         szoveg_box = wx.BoxSizer(wx.VERTICAL)

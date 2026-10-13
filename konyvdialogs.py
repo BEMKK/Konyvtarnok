@@ -57,7 +57,7 @@ class KonyvReszletekDialog(wx.Dialog):
         # Akadálymentes (NVDA barát) olvasópanel wx.TextCtrl-ből
         self.olvaso_panel = wx.TextCtrl(
             self,
-            style=wx.TE_MULTILINE | wx.TE_READONLY | wx.TE_RICH2 | wx.BORDER_SUNKEN
+            style=wx.TE_MULTILINE | wx.TE_READONLY | wx.BORDER_SUNKEN
         )
         self.olvaso_panel.SetMargins(24, 10)
         self.olvaso_panel.SetValue(self.general_szoveg())
@@ -309,16 +309,24 @@ class DeziderataReszletekDialog(wx.Dialog):
         # Akadálymentes (NVDA barát) olvasópanel wx.TextCtrl-ből
         self.olvaso_panel = wx.TextCtrl(
             self,
-            style=wx.TE_MULTILINE | wx.TE_READONLY | wx.TE_RICH2 | wx.TE_AUTO_URL | wx.BORDER_SUNKEN
+            style=wx.TE_MULTILINE | wx.TE_READONLY | wx.BORDER_SUNKEN
         )
         self.olvaso_panel.SetMargins(24, 10)
         self.olvaso_panel.SetValue(self.general_szoveg())
-        self.olvaso_panel.Bind(wx.EVT_TEXT_URL, self.on_link_click)
         self.main_sizer.Add(self.olvaso_panel, 1, wx.EXPAND | wx.ALL, 15)
 
         # Gombok elrendezése
         btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
         
+        self.link_url = str(self.item_data.get("link", "") or "").strip()
+
+        btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
+
+        if self.link_url:
+            btn_link = wx.Button(self, label="&Link megnyitása böngészőben")
+            btn_link.Bind(wx.EVT_BUTTON, self.on_link_megnyitas)
+            btn_sizer.Add(btn_link, 0, wx.RIGHT, 10)
+
         btn_szerkesztes = wx.Button(self, label="Szerkesztés")
         btn_szerkesztes.Bind(wx.EVT_BUTTON, self.on_szerkesztes)
         btn_sizer.Add(btn_szerkesztes, 0, wx.RIGHT, 10)
@@ -332,20 +340,13 @@ class DeziderataReszletekDialog(wx.Dialog):
         # Fókusz áthelyezése a szövegmezőre, hogy az NVDA azonnal olvashassa
         wx.CallAfter(self.olvaso_panel.SetFocus)
 
-    def on_link_click(self, event):
-        """Kattintáskor megnyitja a linket az alapértelmezett böngészőben."""
-        evt = event.GetMouseEvent()
-        if evt.LeftUp():
-            start = event.GetURLStart()
-            end = event.GetURLEnd()
-            url = self.olvaso_panel.GetValue()[start:end].strip()
-        
-            if url:
-                if not url.startswith(("http://", "https://")):
-                    url = "https://" + url
-                webbrowser.open(url)
-            
-        event.Skip()
+    def on_link_megnyitas(self, event):
+        """A tétel linkjének megnyitása az alapértelmezett böngészőben."""
+        url = self.link_url
+        if not url.startswith(("http://", "https://")):
+            url = "https://" + url
+        webbrowser.open(url)
+        self.olvaso_panel.SetFocus()
 
     def on_szerkesztes(self, event):
         """Átvált szerkesztő módra a szerkesztő dialógus megnyitásával.

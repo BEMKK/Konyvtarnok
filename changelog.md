@@ -4,7 +4,15 @@ A projekten végrehajtott lényegi változtatások dokumentációja.
 
 
 
-## [3.15.1] - 2026-10-14
+## [3.16.0] - 2026-10-14
+
+- Javítva a könyvrészletek és súgó esetén képernyőolvasóval, ablakváltás után tapasztalt fókuszálási hiba.
+- A Dezideráta-kezelőben a kapható tételek adatlapján szereplő linkek mostantól nem kattintással, hanem az erre szolgáló gombbal nyithatók meg.
+- A gomb csak akkor jelenik meg, ha van megadva URL.
+
+
+
+## [3.15.1] - 2026-10-13
 
 - Javítva a Keresés a gyűjteményekben dialog hibája pontos egyezés bejelölése esetén.
 - A kereső dialog fókusza 0 találat esetén is a listára kerül.

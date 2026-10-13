@@ -84,7 +84,7 @@ class HelpNotebookDialog(wx.Dialog):
                 "2. Új tétel hozzáadása:\n"
                 "  Új beszerzendő könyv felvételéhez nyomja meg az 'Új tétel' gombot vagy a Ctrl + N billentyűket. A megnyíló ablakban töltse ki a könyv adatait. Az alapadatok (cím, összeállító, egyéb személyek, kiadó, kiadás helye és éve) mellett megadhatja a tétel prioritását, státuszát (kapható/nem kapható). Kapható státusz esetén megjelenik három további mező, ahol a megvásárolható tétel lelőhelyét, jelenlegi vagy becsült árát és webes hivatkozását (link) is rögzítheti. Ha a könyv státuszát Nem kapható-ra állítja, az utóbbi három mező eltűnik, és tartalmuk törlődik a könyv adatlapjáról. Amikor végzett az adatok kitöltésével, kattintson a Mentés gombra, vagy nyomja meg a Ctrl+S billentyűt.\n\n"
                 "3. Tételek megtekintése és szerkesztése:\n"
-                "  A kijelölt tétel részleteit az Enter billentyűvel vagy dupla kattintással tekintheti meg. Ha a tétel kapható, és van megadva link, az adatlapon rákattintva a program megnyitja a weboldalt az Ön alapértelmezett böngészőjében. Tétel szerkesztéséhez használja a 'Kijelölt tétel szerkesztése' gombot vagy a Ctrl + E billentyűparancsot. Az adatok módosítása után kattintson a Mentés gombra, vagy nyomja meg a Ctrl+S billentyűt.\n\n"
+                "  A kijelölt tétel részleteit az Enter billentyűvel vagy dupla kattintással tekintheti meg. Ha a tétel kapható, és van megadva link, megjelenik a link megnyitására szolgáló gomb. A gombra kattintva a program megnyitja a megadott linket az alapértelmezett böngészőben.\nTétel szerkesztéséhez használja a 'Kijelölt tétel szerkesztése' gombot vagy a Ctrl + E billentyűparancsot. Az adatok módosítása után kattintson a Mentés gombra, vagy nyomja meg a Ctrl+S billentyűt.\n\n"
                 "4. Tételek törlése:\n"
                 "  A már nem kívánt tételeket a Delete billentyűvel vagy a törlés gombbal távolíthatja el.\n\n"
                 "5. Tétel felvétele a fő könyvállományba:\n"
@@ -211,7 +211,7 @@ class HelpNotebookDialog(wx.Dialog):
         for tab_title, content in pages_data:
             page = wx.Panel(notebook)
             sizer = wx.BoxSizer(wx.VERTICAL)
-            txt = wx.TextCtrl(page, style=wx.TE_MULTILINE | wx.TE_READONLY | wx.TE_RICH2)
+            txt = wx.TextCtrl(page, style=wx.TE_MULTILINE | wx.TE_READONLY)
             txt.SetValue(content)
             sizer.Add(txt, 1, wx.EXPAND | wx.ALL, 5)
             page.SetSizer(sizer)
