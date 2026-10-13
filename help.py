@@ -116,7 +116,7 @@ class HelpNotebookDialog(wx.Dialog):
                 "1. A Beállítások ablak megnyitása:\n"
                 "  Az alkalmazás testreszabásához válassza az Eszközök -> Beállítások menüpontot vagy nyomja meg a Ctrl + B billentyűkombinációt.\n\n"
                 "2. Vizuális téma váltása:\n"
-                "  Beállíthatja az alkalmazás megjelenési témáját (pl. Világos vagy Sötét téma), amely azonnal érvényesül a főablakon, a párbeszédablakokon és a segédmodulokon is. Ehhez válassza ki a kívánt témát, majd kattintson a mentés gombra.\n\n"
+                "  Beállíthatja az alkalmazás megjelenési témáját (pl. Világos vagy Sötét téma), amely mentés után azonnal érvényesül a főablakon, a párbeszédablakokon és a segédmodulokon is. Ehhez válassza ki a kívánt témát, majd kattintson a mentés gombra. A témaválasztó görgetésekor a kijelölt téma előnézete megjelenik a beállítások ablakon, így mentés nélkül is láthatja annak kinézetét.\n\n"
                 "3. Alapértelmezett rendezés:\n"
                 "  Kiválaszthatja, hogy a program indításakor a könyvlista milyen mező szerint legyen automatikusan sorba rendezve. A Rendezés-menüben kiválasztott szempont csupán ideiglenesen, a program bezárásáig érvényes.\n\n"
                 "4. Látható oszlopok beállítása:\n"
