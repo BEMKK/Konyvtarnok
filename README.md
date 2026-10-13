@@ -1,6 +1,6 @@
 # KönyvTárnok
 
-> **Verzió:** 3.14.0
+> **Verzió:** 3.15.0
 
 ## Leírás
 
@@ -66,7 +66,7 @@ python main.py
 ├─ dialogs.py                  # Névjegy, újdonságok és fájlütközés párbeszédablak.
 ├─ konyvdialogs.py                  # Könyv szerkesztése és adatlap megjelenítő párbeszédablakok.
 ├─ settings.py                  # Beállítások ablak.
-├─ kereso.py                  # Keresés és szűrés dialog.
+├─ kereso.py                  # Keresés a gyűjteményekben dialog.
 ├─ statisztika.py                  # Állománystatisztika párbeszédablak.
 ├─ help.py              # Súgó és billentyűparancsok
 ├─ konyv_lista.py              # Virtuális könyvlista UI (rendezés, gyorskeresés)

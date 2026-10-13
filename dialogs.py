@@ -78,12 +78,8 @@ class UjdonsagokDialog(wx.Dialog):
         main_sizer.Add(wx.StaticLine(self), 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 15)
         
         ujdonsagok_lista = [
-            "Javítva a frissítés ellenőrzésének billentyűparancsa, mely mostantól CTRL+U.",
-            "Tizenegy új téma a beállításokban (köztük a rendszer téma, mely egyéni beállítások nélkül az alapértelmezett.",
-            "A témaválasztó görgetésekor a kijelölt téma előnézete megjelenik a beállítások ablakban.",
-            "A Dezideráta kezelő listájának fókusza az új tétel és szerkesztő dialog-ok mégse gombbal való bezárása után a listára kerül.",
-            "A főablak listájának fókusza átemelés után a KönyvTárnok-keresőből vagy Dezideráta-kezelőből átemelt tételre ugrik.",
-            "A Dezideráta ablakának fókusza KönyvTárnok-keresőből való átemelés és annak visszavonása után sem ugrik vissza a lista elejére."
+            "Megújult a Kereső dialog, mely mostantól a főablakban és a deziderátában is keres.",
+            "Az új kereső a találatokat saját listában jeleníti meg a főlisták szűrése nélkül (lásd a súgóban."
         ]
 
         szoveg_box = wx.BoxSizer(wx.VERTICAL)

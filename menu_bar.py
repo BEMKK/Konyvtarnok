@@ -46,7 +46,7 @@ class MenuBar(wx.MenuBar):
         self.Append(view_menu, '&Nézet')
 
         set_menu = wx.Menu()
-        self.find = set_menu.Append(wx.ID_ANY, '&Keresés és szűrés\tCTRL+Shift+F', 'Keresés')
+        self.find = set_menu.Append(wx.ID_ANY, '&Keresés a gyűjteményekben\tCTRL+Shift+F', 'Közös keresés az állományban és a deziderátában')
         self.statisztika = set_menu.Append(wx.ID_ANY, '&Állománystatisztika\tCTRL+T', 'Statisztika készítése feltételek alapján')
         set_menu.AppendSeparator()
         self.deziderata = set_menu.Append(wx.ID_ANY, '&Dezideráta-kezelő\tCTRL+D', 'Dezideráta jegyzék kezelése')
@@ -92,6 +92,8 @@ class DeziderataMenuBar(wx.MenuBar):
         self.select_all = select_menu.Append(wx.ID_ANY, "Összes elem\tCtrl+A", "Összes elem kijelölése a listában")
         self.select_none = select_menu.Append(wx.ID_ANY, "Egyik sem\tCtrl+Shift+A")
         edit_menu.AppendSubMenu(select_menu, '&Kijelölés')
+        edit_menu.AppendSeparator()
+        self.find = edit_menu.Append(wx.ID_ANY, "Keresés a gyűjteményekben\tCtrl+Shift+F", "Közös keresés az állományban és a deziderátában")
 
         self.Append(edit_menu, "Szerkesztés")
 

@@ -317,6 +317,7 @@ class Deziderata(wx.Frame):
         self.Bind(wx.EVT_MENU, self.OnEgyikSemKijelol, menusor.select_none)
         self.Bind(wx.EVT_MENU, self.OnVisszavonas, menusor.undo)
         self.Bind(wx.EVT_MENU, self.OnMegis, menusor.redo)
+        self.Bind(wx.EVT_MENU, self.on_kereses, menusor.find)
         self.Bind(wx.EVT_MENU_OPEN, self.OnMenuNyitas)
 
         self.btn_add.Bind(wx.EVT_BUTTON, self.on_add)
@@ -829,6 +830,13 @@ class Deziderata(wx.Frame):
             # elől.
             self._kijelol_idk([t["id"] for t in felvett], ablak_fokusz=False)
         return sikeres, visszautasitott
+
+    def on_kereses(self, event=None):
+        """Megnyitja a közös keresőablakot."""
+        from kereso import KeresoDialog
+        dlg = KeresoDialog(self)
+        dlg.ShowModal()
+        dlg.Destroy()
 
     def on_add(self, event):
         if not self._szerkesztes_engedelyezett():

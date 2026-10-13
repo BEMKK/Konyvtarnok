@@ -4,6 +4,16 @@ A projekten végrehajtott lényegi változtatások dokumentációja.
 
 
 
+## [3.15.0] - 2026-10-13
+
+- Átalakított kereső párbeszédablak (KeresoDialog) saját találati listával és hatókör-választóval (Mindenhol, Dezideráta, Állományjegyzék).
+- A keresőablak egyszerre és közösen képes keresni mind az állományban, mind a deziderátában anélkül, hogy a főablak listáját felülírná vagy leszűrné.
+- A találatokból (ListCtrl) a kiválasztott tétel részletes olvasó adatlapja közvetlenül megnyitható (Enter vagy dupla kattintás).
+- A kereső párbeszédablak mostantól a Dezideráta-kezelőből is elérhető (Ctrl+Shift+F).
+- Sorok vágólapra másolása (Ctrl+C) a kereső találati listájában.
+
+
+
 ## [3.14.0] - 2026-10-12
 
 - Javítva a frissítés ellenőrzés billentyűparancsa (ctrl+U).

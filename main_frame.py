@@ -950,12 +950,7 @@ class Konyvtarnok(wx.Frame):
 
     def on_kereses_dialógus_megnyitasa(self, event):
         dlg = KeresoDialog(self)
-        if dlg.ShowModal() == wx.ID_OK:
-            keresett_szoveg = dlg.get_search_text()
-            pontos_egyezes = dlg.is_exact_match()
-            if keresett_szoveg:
-                self.kereso_ctrl.SetValue(keresett_szoveg)
-                self.kereses_az_allomanyban(keresett_szoveg, pontos_egyezes)
+        dlg.ShowModal()
         dlg.Destroy()
 
     def _frissit_szuro_cimke_darabszamot(self, uj_darabszam):
