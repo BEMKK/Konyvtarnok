@@ -7,6 +7,8 @@ A projekten végrehajtott lényegi változtatások dokumentációja.
 ## [3.17.0] - 2026-10-15
 
 - A Ctrl+S mostantól a beállítások ablakban is használható a módosítások mentésére.
+- Javítva a Keresés a gyűjteményekben dialogban egy hiba, mely miatt az érvénytelen json fájlok is betöltődtek.
+- Kisebb hibajavítások.
 
 
 

@@ -24,6 +24,7 @@ import sys
 import datetime
 import logging
 import platform
+import subprocess
 from collections import defaultdict
 
 # ==============================================================================

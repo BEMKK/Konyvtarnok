@@ -154,6 +154,9 @@ class KeresoDialog(wx.Dialog):
 
         try:
             adatok, ervenyes = load_hmac_json(DEFAULT_ADATBAZIS_FAJL)
+            if not ervenyes:
+                logging.error("Az állományfájl HMAC-ellenőrzése sikertelen, az adatok nem kerülnek betöltésre.")
+                return []
             if isinstance(adatok, list):
                 return [k for k in adatok if isinstance(k, dict)]
         except Exception as e:
@@ -180,6 +183,9 @@ class KeresoDialog(wx.Dialog):
 
         try:
             adatok, ervenyes = load_hmac_json(DEZIDERATA_DATA_FILE)
+            if not ervenyes:
+                logging.error("A deziderátafájl HMAC-ellenőrzése sikertelen, az adatok nem kerülnek betöltésre.")
+                return []
             if isinstance(adatok, list):
                 return [d for d in adatok if isinstance(d, dict)]
         except Exception as e:

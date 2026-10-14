@@ -125,7 +125,6 @@ class Konyvtarnok(wx.Frame):
         self._aktualis_tema = current_theme
 
         # GYORSBILLENTYŰK (Visszaállítva!)
-        id_mindent_kijelol = wx.NewIdRef()
         id_kereso_fokusz = wx.NewIdRef()
 
         # A Delete billentyűt NEM kötjük itt külön is a törléshez: a Fájl
@@ -189,8 +188,6 @@ class Konyvtarnok(wx.Frame):
         self.lista.Bind(wx.EVT_LIST_ITEM_RIGHT_CLICK, self.OnListaJobbKlikk)
         self.lista.Bind(wx.EVT_LIST_ITEM_ACTIVATED, self.OnListaDuplaKlikk)
         self.lista.Bind(wx.EVT_KEY_DOWN, self.OnListaEnter)
-
-        self.Bind(wx.EVT_MENU, self.OnMindentKijelol, id=id_mindent_kijelol)
 
         # FÓKUSZ (kijelölés nélkül): indításkor az első tétel nincs kijelölve.
         self.lista.SetFocus()
