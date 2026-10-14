@@ -78,7 +78,7 @@ class UjdonsagokDialog(wx.Dialog):
         main_sizer.Add(wx.StaticLine(self), 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 15)
         
         ujdonsagok_lista = [
-            "Javítva a duplikált ctrl és alt billentyűparancsok a keresőkben."
+            "A Ctrl+S mostantól a beállítások ablakban is használható a módosítások mentésére."
         ]
 
         szoveg_box = wx.BoxSizer(wx.VERTICAL)

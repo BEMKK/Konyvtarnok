@@ -4,6 +4,12 @@ A projekten végrehajtott lényegi változtatások dokumentációja.
 
 
 
+## [3.17.0] - 2026-10-15
+
+- A Ctrl+S mostantól a beállítások ablakban is használható a módosítások mentésére.
+
+
+
 ## [3.16.1] - 2026-10-14
 
 - Javítva a duplikált ctrl és alt billentyűparancsok a keresőkben.

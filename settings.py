@@ -178,8 +178,8 @@ class BeallitasokDialog(wx.Dialog):
         panel_frissites.SetSizer(frissites_sizer)
 
         # Fülek hozzáadása a Notebook-hoz
-        self.notebook.AddPage(panel_tema, "Téma és rendezés")
-        self.notebook.AddPage(panel_oszlopok, "Megjelenítendő oszlopok")
+        self.notebook.AddPage(panel_tema, "Megjelenés")
+        self.notebook.AddPage(panel_oszlopok, "Oszlopok a listában")
         self.notebook.AddPage(panel_mappak, "Mappák és elérési utak")
         self.notebook.AddPage(panel_frissites, "Frissítések")
 
@@ -197,6 +197,12 @@ class BeallitasokDialog(wx.Dialog):
         fo_sizer.Add(gomb_sizer, 0, wx.ALIGN_RIGHT | wx.RIGHT | wx.BOTTOM, 10)
 
         self.SetSizer(fo_sizer)
+
+        # Ctrl+S = Mentés (ugyanaz, mint az OK gomb)
+        gyorsbillentyuk = wx.AcceleratorTable([
+            (wx.ACCEL_CTRL, ord('S'), wx.ID_OK)
+        ])
+        self.SetAcceleratorTable(gyorsbillentyuk)
 
         # A téma alkalmazása akkor történik, amikor már minden vezérlő létezik
         apply_theme(self, self.aktiv_tema)
