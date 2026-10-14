@@ -78,12 +78,7 @@ class UjdonsagokDialog(wx.Dialog):
         main_sizer.Add(wx.StaticLine(self), 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 15)
         
         ujdonsagok_lista = [
-            "Javítva a könyvrészletek és súgó esetén képernyőolvasóval, ablakváltás után tapasztalt fókuszálási hiba.",
-            "A Dezideráta-kezelőben a kapható tételek adatlapján szereplő linkek mostantól nem kattintással, hanem az erre szolgáló gombbal nyithatók meg.",
-            "A gomb csak akkor jelenik meg, ha van megadva URL.",
-            "A keresés a gyűjteményekben dialogban módosítottuk az elemek tabulátor sorrendjét.",
-            "A keresés törlése gomb a KönyvTárnok-keresőhöz hasonlóan alapértelmezetten tiltott.",
-            "Új billentyűparancsok a keresés dialogban és a KönyvTárnok-keresőben."
+            "Javítva a duplikált ctrl és alt billentyűparancsok a keresőkben."
         ]
 
         szoveg_box = wx.BoxSizer(wx.VERTICAL)

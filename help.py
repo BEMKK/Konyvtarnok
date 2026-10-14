@@ -210,10 +210,6 @@ class HelpNotebookDialog(wx.Dialog):
                 "  Alt + T               - Keresés törlése\n"
                 "  Alt + R               - Keresés indítása\n"
                 "  Alt + O               - Összes oszlop jelölőnégyzet\n"
-                "  Alt + J               - Összes találat kijelölése\n"
-                "  Alt + M               - Kijelölt találat(ok) másolása a vágólapra\n"
-                "  Alt + L               - Kijelölt találat(ok) felvétele a fő könyvállományba\n"
-                "  Alt + D               - Kijelölt találat(ok) felvétele a Dezideráta-jegyzékbe\n"
                 "  Ctrl + W        - Ablak bezárása\n\n"
                 "   4. A Keresés a gyűjteményekben ablak billentyűparancsai:\n"
                 "  Enter a keresőmezőben - Keresés indítása\n"
@@ -224,8 +220,6 @@ class HelpNotebookDialog(wx.Dialog):
                 "  Alt + K               - Ugrás a keresett kifejezés mezőjére\n"
                 "  Alt + T               - Keresés törlése\n"
                 "  Alt + R               - Keresés indítása\n"
-                "  Alt + Z               - Kijelölt tétel részleteinek megnyitása\n"
-                "  Alt + B               - Ablak bezárása\n"
                 "  ESC                   - Ablak bezárása\n"
             )
         ]

@@ -83,11 +83,11 @@ class KeresoDialog(wx.Dialog):
         self.frissit_akadalymentesites(0)
 
         # 7. Részletek
-        self.btn_reszletek = wx.Button(self, label="Rés&zletek...")
+        self.btn_reszletek = wx.Button(self, label="Részletek...")
         self.btn_reszletek.Bind(wx.EVT_BUTTON, self.on_reszletek)
 
         # 8. Bezárás
-        self.btn_bezaras = wx.Button(self, wx.ID_CANCEL, label="&Bezárás")
+        self.btn_bezaras = wx.Button(self, wx.ID_CANCEL, label="Bezárás")
 
         # Állapotsor (nem tabulátor-megálló)
         self.statusz_text = wx.StaticText(self, label="")

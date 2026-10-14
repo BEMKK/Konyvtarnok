@@ -4,6 +4,12 @@ A projekten végrehajtott lényegi változtatások dokumentációja.
 
 
 
+## [3.16.1] - 2026-10-14
+
+- Javítva a duplikált ctrl és alt billentyűparancsok a keresőkben.
+
+
+
 ## [3.16.0] - 2026-10-14
 
 - Javítva a könyvrészletek és súgó esetén képernyőolvasóval, ablakváltás után tapasztalt fókuszálási hiba.

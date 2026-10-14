@@ -371,16 +371,16 @@ class KonyvtarnokKeresoApp(wx.Frame):
         # --- Gombsor ---
         btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
         self.btn_osszes_kijelolese = wx.Button(
-            self.panel, label="Összes ki&jelölése"
+            self.panel, label="Összes kijelölése"
         )
         self.btn_masolas_vagolapra = wx.Button(
-            self.panel, label="&Másolás vágólapra"
+            self.panel, label="Másolás vágólapra"
         )
         self.btn_atemeles_allomanyba = wx.Button(
-            self.panel, label="Átemelés az ál&lományba"
+            self.panel, label="Átemelés az állományba"
         )
         self.btn_atemeles_deziderataba = wx.Button(
-            self.panel, label="Átemelés a &Deziderátába"
+            self.panel, label="Átemelés a Deziderátába"
         )
 
         btn_sizer.Add(self.btn_osszes_kijelolese, 0, wx.RIGHT, 10)

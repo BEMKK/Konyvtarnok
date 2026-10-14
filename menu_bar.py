@@ -31,7 +31,7 @@ class MenuBar(wx.MenuBar):
         self.select_none = select_menu.Append(wx.ID_ANY, "Egyik sem\tCtrl+Shift+A")
         edit_menu.AppendSubMenu(select_menu, '&Kijelölés')
 
-        self.Append(edit_menu, "Szerkesztés")
+        self.Append(edit_menu, "S&zerkesztés")
 
         view_menu = wx.Menu()
         ord_menu = wx.Menu()
@@ -95,7 +95,7 @@ class DeziderataMenuBar(wx.MenuBar):
         edit_menu.AppendSeparator()
         self.find = edit_menu.Append(wx.ID_ANY, "Keresés a gyűjteményekben\tCtrl+Shift+F", "Közös keresés az állományban és a deziderátában")
 
-        self.Append(edit_menu, "Szerkesztés")
+        self.Append(edit_menu, "S&zerkesztés")
 
 class KeresoMenuBar(wx.MenuBar):
     def __init__(self):
@@ -115,4 +115,4 @@ class KeresoMenuBar(wx.MenuBar):
         self.select_none = select_menu.Append(wx.ID_ANY, "Egyik sem\tCtrl+Shift+A")
         edit_menu.AppendSubMenu(select_menu, '&Kijelölés')
 
-        self.Append(edit_menu, "Szerkesztés")
+        self.Append(edit_menu, "S&zerkesztés")
