@@ -280,17 +280,17 @@ class KonyvtarnokKeresoApp(wx.Frame):
 
         # --- Kereső sáv ---
         kereso_szoveg = wx.StaticText(
-            self.panel, label="Keresendő kifejezés:"
+            self.panel, label="Keresendő &kifejezés:"
         )
         self.kereso_mezo = wx.TextCtrl(self.panel, style=wx.TE_PROCESS_ENTER)
         self.kereso_mezo.Bind(wx.EVT_TEXT_ENTER, self.on_kereses)
         self.kereso_mezo.Bind(wx.EVT_TEXT, self.on_szoveg_valtozas)
 
-        self.btn_kereses_torlese = wx.Button(self.panel, label="Keresés törlése")
+        self.btn_kereses_torlese = wx.Button(self.panel, label="Keresés &törlése")
         self.btn_kereses_torlese.Enable(False)
         self.btn_kereses_torlese.Bind(wx.EVT_BUTTON, self.on_kereses_torlese)
 
-        kereso_gomb = wx.Button(self.panel, label="Keresés")
+        kereso_gomb = wx.Button(self.panel, label="Ke&resés")
         kereso_gomb.Bind(wx.EVT_BUTTON, self.on_kereses)
 
         kereso_sizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -319,7 +319,7 @@ class KonyvtarnokKeresoApp(wx.Frame):
             # "Összes oszlop" jelölőnégyzet az oszlop-jelölőnégyzetek előtt:
             # bejelölése minden oszlopot kijelöl, a pipa kivétele pedig
             # mindegyikből kiveszi a pipát.
-            self.cb_osszes_oszlop = wx.CheckBox(self.panel, label="Összes oszlop")
+            self.cb_osszes_oszlop = wx.CheckBox(self.panel, label="Összes &oszlop")
             self.cb_osszes_oszlop.SetValue(True)
             self.cb_osszes_oszlop.Bind(wx.EVT_CHECKBOX, self.on_osszes_oszlop)
             checkbox_sizer.Add(self.cb_osszes_oszlop, flag=wx.RIGHT, border=10)
@@ -371,16 +371,16 @@ class KonyvtarnokKeresoApp(wx.Frame):
         # --- Gombsor ---
         btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
         self.btn_osszes_kijelolese = wx.Button(
-            self.panel, label="Összes kijelölése"
+            self.panel, label="Összes ki&jelölése"
         )
         self.btn_masolas_vagolapra = wx.Button(
-            self.panel, label="Másolás vágólapra"
+            self.panel, label="&Másolás vágólapra"
         )
         self.btn_atemeles_allomanyba = wx.Button(
-            self.panel, label="Átemelés az állományba"
+            self.panel, label="Átemelés az ál&lományba"
         )
         self.btn_atemeles_deziderataba = wx.Button(
-            self.panel, label="Átemelés a Deziderátába"
+            self.panel, label="Átemelés a &Deziderátába"
         )
 
         btn_sizer.Add(self.btn_osszes_kijelolese, 0, wx.RIGHT, 10)

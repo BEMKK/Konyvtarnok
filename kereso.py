@@ -14,6 +14,11 @@ class KeresoDialog(wx.Dialog):
     Egyetlen felületen teszi lehetővé a keresést az állományjegyzékben,
     a dezideráta-jegyzékben vagy mindkettőben egyszerre. A találatokból
     közvetlenül megnyitható az adott tétel részletes adatlapja (olvasó nézet).
+
+    Tabulátorsorrend (a vezérlők létrehozási sorrendje határozza meg):
+    Keresés helye, Csak pontos egyezés, Keresett kifejezés, Keresés törlése,
+    Keresés, Találati lista, Részletek, Bezárás.
+    A kezdőfókusz a Keresett kifejezés mezőn van.
     """
 
     def __init__(self, parent):
@@ -26,49 +31,43 @@ class KeresoDialog(wx.Dialog):
         self.parent = parent
         self._talalatok = []
 
-        main_sizer = wx.BoxSizer(wx.VERTICAL)
+        # =====================================================================
+        # VEZÉRLŐK LÉTREHOZÁSA
+        # A létrehozás sorrendje egyben a tabulátorsorrend is. A címke mindig
+        # közvetlenül a hozzá tartozó vezérlő előtt jön létre, így a gyorsbillentyű
+        # és a képernyőolvasó is helyesen párosítja őket.
+        # =====================================================================
 
-        # 1. Keresett kifejezés sora
-        input_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        label_keresett = wx.StaticText(self, label="Keresett kifejezés:")
-        self.text_ctrl = wx.TextCtrl(self, style=wx.TE_PROCESS_ENTER)
-        self.text_ctrl.Bind(wx.EVT_TEXT_ENTER, self.on_kereses)
-
-        self.btn_kereses = wx.Button(self, label="Keresés")
-        self.btn_kereses.SetDefault()
-        self.btn_kereses.Bind(wx.EVT_BUTTON, self.on_kereses)
-
-        self.btn_clear = wx.Button(self, label="Mező ürítése")
-        self.btn_clear.Bind(wx.EVT_BUTTON, self.on_clear)
-
-        input_sizer.Add(label_keresett, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 5)
-        input_sizer.Add(self.text_ctrl, 1, wx.EXPAND | wx.RIGHT, 5)
-        input_sizer.Add(self.btn_kereses, 0, wx.RIGHT, 5)
-        input_sizer.Add(self.btn_clear, 0)
-        main_sizer.Add(input_sizer, 0, wx.EXPAND | wx.ALL, 10)
-
-        # 2. Hatókör (Choice) és pontos egyezés sora
-        options_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        label_scope = wx.StaticText(self, label="Keresés helye:")
+        # 1. Keresés helye
+        self.label_scope = wx.StaticText(self, label="Keresés &helye:")
         self.scope_choice = wx.Choice(
             self, choices=["Mindenhol", "Dezideráta", "Állomány"]
         )
         self.scope_choice.SetSelection(0)
+        self.scope_choice.SetName("Keresés helye")
 
-        self.exact_match_cb = wx.CheckBox(self, label="Csak pontos egyezés")
+        # 2. Csak pontos egyezés
+        self.exact_match_cb = wx.CheckBox(self, label="Csak &pontos egyezés")
 
-        options_sizer.Add(label_scope, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 5)
-        options_sizer.Add(self.scope_choice, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 20)
-        options_sizer.Add(self.exact_match_cb, 0, wx.ALIGN_CENTER_VERTICAL)
-        main_sizer.Add(
-            options_sizer, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 10
-        )
+        # 3. Keresett kifejezés
+        self.label_keresett = wx.StaticText(self, label="Keresett &kifejezés:")
+        self.text_ctrl = wx.TextCtrl(self, style=wx.TE_PROCESS_ENTER)
+        self.text_ctrl.SetName("Keresett kifejezés")
+        self.text_ctrl.Bind(wx.EVT_TEXT_ENTER, self.on_kereses)
+        self.text_ctrl.Bind(wx.EVT_TEXT, self.on_text_changed)
 
-        # 3. Találati lista felirat (akadálymentesítéshez is)
+        # 4. Keresés törlése (alapértelmezetten letiltva)
+        self.btn_clear = wx.Button(self, label="Keresés &törlése")
+        self.btn_clear.Bind(wx.EVT_BUTTON, self.on_clear)
+        self.btn_clear.Enable(False)
+
+        # 5. Keresés
+        self.btn_kereses = wx.Button(self, label="Ke&resés")
+        self.btn_kereses.SetDefault()
+        self.btn_kereses.Bind(wx.EVT_BUTTON, self.on_kereses)
+
+        # 6. Találati lista (felirat + táblázat)
         self.eredmeny_szoveg = wx.StaticText(self, label="Találatok:")
-        main_sizer.Add(self.eredmeny_szoveg, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 5)
-
-        # 4. Találati táblázat (wx.ListCtrl)
         self.list_ctrl = wx.ListCtrl(
             self,
             style=wx.LC_REPORT | wx.LC_SINGLE_SEL | wx.BORDER_SUNKEN,
@@ -79,24 +78,48 @@ class KeresoDialog(wx.Dialog):
         self.list_ctrl.InsertColumn(3, "Kiadó", width=150)
         self.list_ctrl.InsertColumn(4, "Kiadás helye", width=110)
         self.list_ctrl.InsertColumn(5, "Kiadás éve", width=85)
-
         self.list_ctrl.Bind(wx.EVT_LIST_ITEM_ACTIVATED, self.on_reszletek)
         self.list_ctrl.Bind(wx.EVT_KEY_DOWN, self.on_list_key_down)
-
         self.frissit_akadalymentesites(0)
-        main_sizer.Add(self.list_ctrl, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 10)
 
-        # 5. Alsó állapotsor és gombsor
-        bottom_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        self.statusz_text = wx.StaticText(self, label="")
-        bottom_sizer.Add(self.statusz_text, 0, wx.ALIGN_CENTER_VERTICAL)
-        bottom_sizer.AddStretchSpacer(1)
-
-        self.btn_reszletek = wx.Button(self, label="Részletek...")
+        # 7. Részletek
+        self.btn_reszletek = wx.Button(self, label="Rés&zletek...")
         self.btn_reszletek.Bind(wx.EVT_BUTTON, self.on_reszletek)
 
-        self.btn_bezaras = wx.Button(self, wx.ID_CANCEL, label="Bezárás")
+        # 8. Bezárás
+        self.btn_bezaras = wx.Button(self, wx.ID_CANCEL, label="&Bezárás")
 
+        # Állapotsor (nem tabulátor-megálló)
+        self.statusz_text = wx.StaticText(self, label="")
+
+        # =====================================================================
+        # ELRENDEZÉS
+        # =====================================================================
+        main_sizer = wx.BoxSizer(wx.VERTICAL)
+
+        # Beállítások sora (felül)
+        options_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        options_sizer.Add(self.label_scope, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 5)
+        options_sizer.Add(self.scope_choice, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 20)
+        options_sizer.Add(self.exact_match_cb, 0, wx.ALIGN_CENTER_VERTICAL)
+        main_sizer.Add(options_sizer, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 10)
+
+        # Keresett kifejezés sora
+        input_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        input_sizer.Add(self.label_keresett, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 5)
+        input_sizer.Add(self.text_ctrl, 1, wx.EXPAND | wx.RIGHT, 5)
+        input_sizer.Add(self.btn_clear, 0, wx.RIGHT, 5)
+        input_sizer.Add(self.btn_kereses, 0)
+        main_sizer.Add(input_sizer, 0, wx.EXPAND | wx.ALL, 10)
+
+        # Találati lista
+        main_sizer.Add(self.eredmeny_szoveg, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 5)
+        main_sizer.Add(self.list_ctrl, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 10)
+
+        # Alsó állapotsor és gombsor
+        bottom_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        bottom_sizer.Add(self.statusz_text, 0, wx.ALIGN_CENTER_VERTICAL)
+        bottom_sizer.AddStretchSpacer(1)
         bottom_sizer.Add(self.btn_reszletek, 0, wx.RIGHT, 5)
         bottom_sizer.Add(self.btn_bezaras, 0)
         main_sizer.Add(bottom_sizer, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 10)
@@ -109,6 +132,7 @@ class KeresoDialog(wx.Dialog):
         self.Layout()
         self.CentreOnParent()
 
+        self.frissit_torles_gomb()
         self.text_ctrl.SetFocus()
 
     # =========================================================================
@@ -204,6 +228,17 @@ class KeresoDialog(wx.Dialog):
         self.eredmeny_szoveg.SetLabel(f"Találatok ({darabszam} db):")
         self.list_ctrl.SetName(szoveg)
 
+    def frissit_torles_gomb(self):
+        """A Keresés törlése gomb csak akkor érhető el, ha van szöveg a mezőben
+        vagy találat a listában."""
+        van_szoveg = bool(self.text_ctrl.GetValue())
+        van_talalat = self.list_ctrl.GetItemCount() > 0
+        self.btn_clear.Enable(van_szoveg or van_talalat)
+
+    def on_text_changed(self, event):
+        self.frissit_torles_gomb()
+        event.Skip()
+
     def on_list_key_down(self, event):
         keycode = event.GetKeyCode()
         # Enter megnyitja a részleteket
@@ -233,6 +268,8 @@ class KeresoDialog(wx.Dialog):
         self._talalatok = []
         self.frissit_akadalymentesites(0)
         self.statusz_text.SetLabel("")
+        self.frissit_torles_gomb()
+        # A fókuszt a letiltódó gomb helyett a keresőmezőre tesszük
         self.text_ctrl.SetFocus()
 
     def on_kereses(self, event=None):
@@ -249,7 +286,7 @@ class KeresoDialog(wx.Dialog):
             return
 
         pontos_egyezes = self.exact_match_cb.IsChecked()
-        scope = self.scope_choice.GetSelection()  # 0: Mindenhol, 1: Dezideráta, 2: Állományjegyzék
+        scope = self.scope_choice.GetSelection()  # 0: Mindenhol, 1: Dezideráta, 2: Állomány
 
         self.list_ctrl.DeleteAllItems()
         self._talalatok = []
@@ -257,7 +294,7 @@ class KeresoDialog(wx.Dialog):
         allomany_talalatok = []
         deziderata_talalatok = []
 
-        # 1. Keresés az állományban (0: Mindenhol vagy 2: Állományjegyzék)
+        # 1. Keresés az állományban (0: Mindenhol vagy 2: Állomány)
         if scope in (0, 2):
             allomany_konyvek = self._get_allomany_adatok()
             allomany_talalatok = szuresi_talalatok(
@@ -304,8 +341,11 @@ class KeresoDialog(wx.Dialog):
             )
             self.list_ctrl.SetFocus()
         else:
+            # Találat nélkül a fókusz a keresőmezőn marad, hogy rögtön lehessen módosítani a kifejezést
             self.statusz_text.SetLabel("Nincs találat.")
-        self.list_ctrl.SetFocus()
+            self.text_ctrl.SetFocus()
+
+        self.frissit_torles_gomb()
         self.Layout()
 
     def on_reszletek(self, event=None):

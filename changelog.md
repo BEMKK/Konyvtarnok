@@ -9,6 +9,9 @@ A projekten végrehajtott lényegi változtatások dokumentációja.
 - Javítva a könyvrészletek és súgó esetén képernyőolvasóval, ablakváltás után tapasztalt fókuszálási hiba.
 - A Dezideráta-kezelőben a kapható tételek adatlapján szereplő linkek mostantól nem kattintással, hanem az erre szolgáló gombbal nyithatók meg.
 - A gomb csak akkor jelenik meg, ha van megadva URL.
+- A keresés a gyűjteményekben dialogban módosítottuk az elemek tabulátor sorrendjét.
+- A keresés törlése gomb a KönyvTárnok-keresőhöz hasonlóan alapértelmezetten tiltott.
+- Új billentyűparancsok a keresés dialogban és a KönyvTárnok-keresőben.
 
 
 
