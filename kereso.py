@@ -7,6 +7,16 @@ from deziderata import DATA_FILE as DEZIDERATA_DATA_FILE
 from konyvdialogs import KonyvReszletekDialog, DeziderataReszletekDialog
 from utils import masolas_vagolapra_szoveg
 
+# Kereshető oszlopok: (belső kulcs, megjelenített név). A kulcsok a kanonikus
+# mezőnevek (cim, szerzo, kiado, hely, ev); a "Forrás" oszlop nem kereshető.
+KERESHETO_OSZLOPOK = [
+    ("cim", "Cím"),
+    ("szerzo", "Összeállító"),
+    ("kiado", "Kiadó"),
+    ("hely", "Kiadás helye"),
+    ("ev", "Kiadás éve"),
+]
+
 
 class KeresoDialog(wx.Dialog):
     """Összesített kereső párbeszédablak saját találati listával.
@@ -16,8 +26,10 @@ class KeresoDialog(wx.Dialog):
     közvetlenül megnyitható az adott tétel részletes adatlapja (olvasó nézet).
 
     Tabulátorsorrend (a vezérlők létrehozási sorrendje határozza meg):
-    Keresés helye, Csak pontos egyezés, Keresett kifejezés, Keresés törlése,
-    Keresés, Találati lista, Részletek, Bezárás.
+    Keresés helye, Csak teljes szó, Keresett kifejezés, Keresés törlése,
+    Keresés, Összes oszlop, az egyes oszlopok jelölőnégyzetei (Cím,
+    Összeállító, Kiadó, Kiadás helye, Kiadás éve), Találati lista, Részletek,
+    Bezárás.
     A kezdőfókusz a Keresett kifejezés mezőn van.
     """
 
@@ -46,8 +58,8 @@ class KeresoDialog(wx.Dialog):
         self.scope_choice.SetSelection(0)
         self.scope_choice.SetName("Keresés helye")
 
-        # 2. Csak pontos egyezés
-        self.exact_match_cb = wx.CheckBox(self, label="Csak &pontos egyezés")
+        # 2. Csak teljes szó (a keresett szavak egész szóként egyezzenek)
+        self.exact_match_cb = wx.CheckBox(self, label="Csak teljes &szó")
 
         # 3. Keresett kifejezés
         self.label_keresett = wx.StaticText(self, label="Keresett &kifejezés:")
@@ -66,7 +78,21 @@ class KeresoDialog(wx.Dialog):
         self.btn_kereses.SetDefault()
         self.btn_kereses.Bind(wx.EVT_BUTTON, self.on_kereses)
 
-        # 6. Találati lista (felirat + táblázat)
+        # 6. Keresési oszlopok: "Összes oszlop" + oszloponkénti jelölőnégyzetek
+        # (ugyanúgy, mint a KönyvTárnok-keresőben)
+        self.label_oszlopok = wx.StaticText(self, label="Keresés ezekben az oszlopokban:")
+        self.cb_osszes_oszlop = wx.CheckBox(self, label="Összes &oszlop")
+        self.cb_osszes_oszlop.SetValue(True)
+        self.cb_osszes_oszlop.Bind(wx.EVT_CHECKBOX, self.on_osszes_oszlop)
+
+        self.oszlop_checkboxok = {}
+        for kulcs, nev in KERESHETO_OSZLOPOK:
+            cb = wx.CheckBox(self, label=nev)
+            cb.SetValue(True)
+            cb.Bind(wx.EVT_CHECKBOX, self.on_oszlop_checkbox)
+            self.oszlop_checkboxok[kulcs] = cb
+
+        # 7. Találati lista (felirat + táblázat)
         self.eredmeny_szoveg = wx.StaticText(self, label="Találatok:")
         self.list_ctrl = wx.ListCtrl(
             self,
@@ -82,11 +108,11 @@ class KeresoDialog(wx.Dialog):
         self.list_ctrl.Bind(wx.EVT_KEY_DOWN, self.on_list_key_down)
         self.frissit_akadalymentesites(0)
 
-        # 7. Részletek
+        # 8. Részletek
         self.btn_reszletek = wx.Button(self, label="Részletek...")
         self.btn_reszletek.Bind(wx.EVT_BUTTON, self.on_reszletek)
 
-        # 8. Bezárás
+        # 9. Bezárás
         self.btn_bezaras = wx.Button(self, wx.ID_CANCEL, label="Bezárás")
 
         # Állapotsor (nem tabulátor-megálló)
@@ -111,6 +137,14 @@ class KeresoDialog(wx.Dialog):
         input_sizer.Add(self.btn_clear, 0, wx.RIGHT, 5)
         input_sizer.Add(self.btn_kereses, 0)
         main_sizer.Add(input_sizer, 0, wx.EXPAND | wx.ALL, 10)
+
+        # Oszlopválasztó sor (WrapSizer: keskeny ablaknál új sorba tör)
+        main_sizer.Add(self.label_oszlopok, 0, wx.LEFT | wx.RIGHT, 10)
+        oszlop_sizer = wx.WrapSizer(wx.HORIZONTAL)
+        oszlop_sizer.Add(self.cb_osszes_oszlop, 0, wx.RIGHT | wx.TOP | wx.BOTTOM, 10)
+        for cb in self.oszlop_checkboxok.values():
+            oszlop_sizer.Add(cb, 0, wx.RIGHT | wx.TOP | wx.BOTTOM, 10)
+        main_sizer.Add(oszlop_sizer, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 10)
 
         # Találati lista
         main_sizer.Add(self.eredmeny_szoveg, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 5)
@@ -264,6 +298,29 @@ class KeresoDialog(wx.Dialog):
             masolas_vagolapra_szoveg(szoveg)
 
     # =========================================================================
+    # OSZLOPVÁLASZTÓ
+    # =========================================================================
+
+    def on_osszes_oszlop(self, event):
+        """Az „Összes oszlop” jelölőnégyzet: minden oszlop-jelölőnégyzetet
+        a saját állapotára állít (bejelölve mind be, pipa nélkül mind ki)."""
+        ertek = self.cb_osszes_oszlop.GetValue()
+        for cb in self.oszlop_checkboxok.values():
+            cb.SetValue(ertek)
+
+    def on_oszlop_checkbox(self, event):
+        """Egy oszlop változásakor az „Összes oszlop” követi az állapotot:
+        csak akkor van bejelölve, ha minden oszlop be van jelölve."""
+        self.cb_osszes_oszlop.SetValue(
+            all(cb.GetValue() for cb in self.oszlop_checkboxok.values())
+        )
+        event.Skip()
+
+    def _kijelolt_oszlopok(self):
+        """A bejelölt oszlopok kulcsai (a KERESHETO_OSZLOPOK sorrendjében)."""
+        return [k for k, cb in self.oszlop_checkboxok.items() if cb.GetValue()]
+
+    # =========================================================================
     # KERESÉS ÉS VEZÉRLÉS
     # =========================================================================
 
@@ -291,6 +348,25 @@ class KeresoDialog(wx.Dialog):
             self.text_ctrl.SetFocus()
             return
 
+        kijelolt_oszlopok = self._kijelolt_oszlopok()
+        if not kijelolt_oszlopok:
+            wx.MessageBox(
+                "Jelöljön ki legalább egy oszlopot a kereséshez!",
+                "Nincs kijelölve oszlop",
+                wx.OK | wx.ICON_INFORMATION,
+                parent=self,
+            )
+            self.cb_osszes_oszlop.SetFocus()
+            return
+
+        # A keresés kizárólag a bejelölt oszlopokban fut (az "Összes oszlop"
+        # is csak a táblázatban látható oszlopokat jelenti, a tétel további,
+        # nem megjelenített mezőit - alcím, egyéb személyek, id stb. - nem).
+        mezok = kijelolt_oszlopok
+
+        # "Csak teljes szó": a keresett szavak egész szóként egyezzenek
+        # (nem részszövegként). A szavak között "és" kapcsolat van: minden
+        # szónak szerepelnie kell a kijelölt oszlopok valamelyikében.
         pontos_egyezes = self.exact_match_cb.IsChecked()
         scope = self.scope_choice.GetSelection()  # 0: Mindenhol, 1: Dezideráta, 2: Állomány
 
@@ -304,14 +380,16 @@ class KeresoDialog(wx.Dialog):
         if scope in (0, 2):
             allomany_konyvek = self._get_allomany_adatok()
             allomany_talalatok = szuresi_talalatok(
-                allomany_konyvek, keresett_szoveg, pontos_egyezes
+                allomany_konyvek, keresett_szoveg, pontos_egyezes,
+                mezok=mezok, szavankent=True,
             )
 
         # 2. Keresés a deziderátában (0: Mindenhol vagy 1: Dezideráta)
         if scope in (0, 1):
             dezi_tetelek = self._get_deziderata_adatok()
             deziderata_talalatok = szuresi_talalatok(
-                dezi_tetelek, keresett_szoveg, pontos_egyezes
+                dezi_tetelek, keresett_szoveg, pontos_egyezes,
+                mezok=mezok, szavankent=True,
             )
 
         # 3. Eredmények összefűzése
@@ -345,11 +423,14 @@ class KeresoDialog(wx.Dialog):
             self.statusz_text.SetLabel(
                 f"{osszesen} találat (Állomány: {len(allomany_talalatok)}, Dezideráta: {len(deziderata_talalatok)})"
             )
-            self.list_ctrl.SetFocus()
         else:
-            # Találat nélkül a fókusz a keresőmezőn marad, hogy rögtön lehessen módosítani a kifejezést
             self.statusz_text.SetLabel("Nincs találat.")
-            self.text_ctrl.SetFocus()
+
+        # A fókusz minden keresés után a találati listára kerül - 0 találatnál
+        # is, a KönyvTárnok-keresőhöz hasonlóan. A lista neve ilyenkor
+        # "Találatok listája, 0 elem", így a képernyőolvasó felolvassa az
+        # eredményt.
+        self.list_ctrl.SetFocus()
 
         self.frissit_torles_gomb()
         self.Layout()
@@ -386,5 +467,5 @@ class KeresoDialog(wx.Dialog):
         return self.text_ctrl.GetValue()
 
     def is_exact_match(self):
-        """Visszaadja, hogy be van-e jelölve a pontos egyezés."""
+        """Visszaadja, hogy be van-e jelölve a „Csak teljes szó”."""
         return self.exact_match_cb.IsChecked()

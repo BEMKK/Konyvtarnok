@@ -4,6 +4,14 @@ A projekten végrehajtott lényegi változtatások dokumentációja.
 
 
 
+## [3.18.0] - 2026-10-17
+
+- Oszlopok kiválasztására szolgáló jelölőnégyzetek a Keresés dialogban.
+- Csak teljes szóra való keresés lehetősége a KönyvTárnok-keresőben.
+- A Keresés a gyűjteményekben dialog mostantól csak a megadott öt oszlopban keres, és támogatja az "és" szókapcsolatot.
+
+
+
 ## [3.17.0] - 2026-10-15
 
 - A Ctrl+S mostantól a beállítások ablakban is használható a módosítások mentésére.

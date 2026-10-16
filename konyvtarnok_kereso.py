@@ -1,3 +1,4 @@
+import re
 import wx
 import logging
 from contextlib import nullcontext
@@ -286,6 +287,10 @@ class KonyvtarnokKeresoApp(wx.Frame):
         self.kereso_mezo.Bind(wx.EVT_TEXT_ENTER, self.on_kereses)
         self.kereso_mezo.Bind(wx.EVT_TEXT, self.on_szoveg_valtozas)
 
+        # "Csak teljes szó": a keresett szavak egész szóként egyezzenek (ne
+        # részszövegként). A tabulátorsorrendben a kereső mező után jön.
+        self.cb_teljes_szo = wx.CheckBox(self.panel, label="Csak teljes &szó")
+
         self.btn_kereses_torlese = wx.Button(self.panel, label="Keresés &törlése")
         self.btn_kereses_torlese.Enable(False)
         self.btn_kereses_torlese.Bind(wx.EVT_BUTTON, self.on_kereses_torlese)
@@ -300,6 +305,11 @@ class KonyvtarnokKeresoApp(wx.Frame):
             border=5,
         )
         kereso_sizer.Add(self.kereso_mezo, proportion=1, flag=wx.EXPAND)
+        kereso_sizer.Add(
+            self.cb_teljes_szo,
+            flag=wx.ALIGN_CENTER_VERTICAL | wx.LEFT,
+            border=10,
+        )
         kereso_sizer.Add(self.btn_kereses_torlese, flag=wx.LEFT, border=5)
         kereso_sizer.Add(kereso_gomb, flag=wx.LEFT, border=5)
 
@@ -572,11 +582,29 @@ class KonyvtarnokKeresoApp(wx.Frame):
         # szerepel a kijelölt oszlopok valamelyikében (nem feltétlenül
         # ugyanabban az oszlopban). Pl. a "Kodály Rózsavölgyi" akkor is talál,
         # ha a két név külön oszlopban van.
+        #
+        # "Csak teljes szó" bejelölve: a szavak csak egész szóként számítanak
+        # egyezésnek (Unicode-barát szóhatárral), pl. a "dal" nem találja meg
+        # a "Dalok" szót. Kikapcsolva a keresés részszöveges, mint eddig.
         szavak = keresett_szo.split()
+        if self.cb_teljes_szo.GetValue():
+            szo_mintak = [
+                re.compile(r"(?<!\w)" + re.escape(szo) + r"(?!\w)", re.IGNORECASE)
+                for szo in szavak
+            ]
+
+            def szo_talalt(minta, ertek):
+                return minta.search(ertek) is not None
+        else:
+            szo_mintak = szavak
+
+            def szo_talalt(szo, ertek):
+                return szo in ertek
+
         szurt_adatok = []
         for sor in self.adatok:
             ertekek = [str(sor.get(oszlop, "")).lower() for oszlop in kijelolt_oszlopok]
-            if all(any(szo in ertek for ertek in ertekek) for szo in szavak):
+            if all(any(szo_talalt(minta, ertek) for ertek in ertekek) for minta in szo_mintak):
                 szurt_adatok.append(sor)
 
         if szurt_adatok:

@@ -731,35 +731,70 @@ def mutass_tomeges_atemeles_eredmenyt(parent, sikeres, visszautasitott, hozzaadv
 # kifejezetten a könyvekhez kötné - bármilyen dict/lista/objektum-alapú
 # tételgyűjteményen (pl. egy jövőbeli kereső ablakon vagy egy teszten)
 # ugyanígy használható.
-def szoveg_szuro_egyezik(tetel, keresett, pontos_egyezes):
-    if isinstance(tetel, dict):
+def szoveg_szuro_egyezik(tetel, keresett, pontos_egyezes, mezok=None, szavankent=False):
+    """Egy tétel egyezik-e a keresett szöveggel.
+
+    mezok=None (alapeset): a tétel MINDEN mezőértékében keres.
+    mezok=[...]: csak a megadott logikai mezőkben (pl. "cim", "szerzo",
+    "kiado", "hely", "ev") keres. A mezőneveket a DEZIDERATA_MEZO_ALIASOK
+    oldja fel, így a dezideráta régi, angol kulcsú tételeit (title, author,
+    publisher, place, year) is megtalálja. Listaként/tuple-ként megadott
+    tételnél a mezőnevek nem értelmezhetők, ott a mezok figyelmen kívül marad.
+
+    szavankent=False (alapeset): a TELJES keresett kifejezésnek egyben, egyetlen
+    mezőértékben kell szerepelnie.
+    szavankent=True: a kifejezést szavakra bontjuk, és a tétel akkor egyezik,
+    ha MINDEN szó szerepel valamelyik (vizsgált) mezőértékben - nem
+    feltétlenül ugyanabban. Pl. a "kodály zsoltár" akkor is talál, ha a
+    Kodály a szerző, a zsoltár pedig a cím mezőben van.
+
+    pontos_egyezes=True: a keresett szöveg (szavankent módban minden egyes
+    szó) csak egész szóként számít egyezésnek, Unicode-barát szóhatárral.
+    """
+    if mezok is not None and not isinstance(tetel, (list, tuple)):
+        if isinstance(tetel, dict):
+            forras = tetel
+        elif hasattr(tetel, '__dict__'):
+            forras = vars(tetel)
+        else:
+            forras = {}
+        ertekek = [
+            _elso_kitoltott_ertek(forras, DEZIDERATA_MEZO_ALIASOK.get(mezo, (mezo,)))
+            for mezo in mezok
+        ]
+    elif isinstance(tetel, dict):
         ertekek = tetel.values()
     elif isinstance(tetel, (list, tuple)):
         ertekek = tetel
     else:
         ertekek = vars(tetel).values() if hasattr(tetel, '__dict__') else []
 
-    minta = None
-    if pontos_egyezes:
-        # Egész szó / szókapcsolat egyezés, Unicode-barát szóhatárral
-        minta = re.compile(
-            r"(?<!\w)" + re.escape(keresett) + r"(?!\w)", re.IGNORECASE
-        )
+    ertek_szovegek = [str(ertek).lower().strip() for ertek in ertekek if ertek]
 
-    for ertek in ertekek:
-        if not ertek:
-            continue
-        ertek_str = str(ertek).lower().strip()
-        if minta is not None:
-            if minta.search(ertek_str):
-                return True
-        elif keresett in ertek_str:
-            return True
-    return False
+    szavak = keresett.split() if szavankent else []
+    if not szavak:
+        szavak = [keresett]
 
-def szuresi_talalatok(tetelek, keresett_szoveg, pontos_egyezes=False):
+    for szo in szavak:
+        if pontos_egyezes:
+            # Egész szó / szókapcsolat egyezés, Unicode-barát szóhatárral
+            minta = re.compile(
+                r"(?<!\w)" + re.escape(szo) + r"(?!\w)", re.IGNORECASE
+            )
+            talalt = any(minta.search(ertek_str) for ertek_str in ertek_szovegek)
+        else:
+            talalt = any(szo in ertek_str for ertek_str in ertek_szovegek)
+        if not talalt:
+            return False
+    return True
+
+def szuresi_talalatok(tetelek, keresett_szoveg, pontos_egyezes=False, mezok=None, szavankent=False):
     """Egy tételgyűjtemény (pl. könyvek listája) leszűrése egy szöveges
-    keresésre, a szoveg_szuro_egyezik predikátum alapján."""
+    keresésre, a szoveg_szuro_egyezik predikátum alapján. A mezok
+    megadásával a keresés a felsorolt mezőkre szűkíthető, a szavankent=True
+    pedig "és" kapcsolatot jelent a kifejezés szavai között (lásd ott)."""
     keresett = keresett_szoveg.lower().strip()
-    return [tetel for tetel in tetelek if szoveg_szuro_egyezik(tetel, keresett, pontos_egyezes)]
-
+    return [
+        tetel for tetel in tetelek
+        if szoveg_szuro_egyezik(tetel, keresett, pontos_egyezes, mezok, szavankent)
+    ]

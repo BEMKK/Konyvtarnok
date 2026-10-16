@@ -78,9 +78,9 @@ class UjdonsagokDialog(wx.Dialog):
         main_sizer.Add(wx.StaticLine(self), 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 15)
         
         ujdonsagok_lista = [
-            "A Ctrl+S mostantól a beállítások ablakban is használható a módosítások mentésére.",
-            "Javítva a Keresés a gyűjteményekben dialogban egy hiba, mely miatt az érvénytelen JSON fájlok is betöltődtek.",
-            "Kisebb hibajavítások."
+            "Oszlopok kiválasztására szolgáló jelölőnégyzetek a Keresés dialogban.",
+            "Csak teljes szóra való keresés lehetősége a KönyvTárnok-keresőben.",
+            "A Keresés a gyűjteményekben dialog mostantól csak a megadott öt oszlopban keres, és támogatja az és szókapcsolatot."
         ]
 
         szoveg_box = wx.BoxSizer(wx.VERTICAL)
