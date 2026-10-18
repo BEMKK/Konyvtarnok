@@ -78,9 +78,7 @@ class UjdonsagokDialog(wx.Dialog):
         main_sizer.Add(wx.StaticLine(self), 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 15)
         
         ujdonsagok_lista = [
-            "Oszlopok kiválasztására szolgáló jelölőnégyzetek a Keresés dialogban.",
-            "Csak teljes szóra való keresés lehetősége a KönyvTárnok-keresőben.",
-            "A Keresés a gyűjteményekben dialog mostantól csak a megadott öt oszlopban keres, és támogatja az és szókapcsolatot."
+            "Eltávolítva a rövid cím mező."
         ]
 
         szoveg_box = wx.BoxSizer(wx.VERTICAL)

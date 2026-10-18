@@ -1,5 +1,5 @@
 APP_NAME = "KönyvTárnok"
-APP_VERSION = "3.18.0"
+APP_VERSION = "3.19.0"
 APP_STAGE = ""
 APP_TITLE = APP_NAME
 
@@ -34,7 +34,6 @@ PELDANY_MEZO_DEFINICIOK = [
     ("oldalszam", "Oldalszám:"),
     ("meretek", "Méret (Ma x sz, cm):"),
     ("kotes", "Kötés típusa:"),
-    ("rovid_cim", "Rövid cím:"),
     ("bekerult", "Bekerülés dátuma:"),
     ("forras", "Példány forrása:"),
     ("status", "Példány státusza:"),
@@ -61,7 +60,6 @@ _OSZLOP_ADATOK = {
     "oldalszam":       ("Oldalszám",        80, 0.5),
     "meretek":         ("Méret",            90, 0.5),
     "kotes":           ("Kötés",            90, 0.5),
-    "rovid_cim":       ("Rövid cím",       120, 1.5),
     "bekerult":        ("Bekerült",        100, 0.8),
     "forras":          ("Forrás",           80, 0.5),
     "status":          ("Státusz",         100, 0.8),

@@ -4,6 +4,12 @@ A projekten végrehajtott lényegi változtatások dokumentációja.
 
 
 
+## [3.19.0] - 2026-10-18
+
+- Eltávolítva a rövid cím mező.
+
+
+
 ## [3.18.0] - 2026-10-17
 
 - Oszlopok kiválasztására szolgáló jelölőnégyzetek a Keresés dialogban.

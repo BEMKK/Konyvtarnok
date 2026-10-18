@@ -725,7 +725,7 @@ class Konyvtarnok(wx.Frame):
         lista.EnsureVisible(indexek[0])
 
     def OnUjKonyv(self, event):
-        ures_adatok = {k: "" for k in ["cim", "alcim", "szerzo", "egyeb_szemelyek", "kiado", "hely", "ev", "oldalszam", "meretek", "kotes", "rovid_cim", "forras", "status", "rovid_leiras"]}
+        ures_adatok = {k: "" for k in ["cim", "alcim", "szerzo", "egyeb_szemelyek", "kiado", "hely", "ev", "oldalszam", "meretek", "kotes", "forras", "status", "rovid_leiras"]}
         dlg = KonyvSzerkesztoDialog(self, ures_adatok, self.db, uj_konyv=True)
     
         res = dlg.ShowModal()

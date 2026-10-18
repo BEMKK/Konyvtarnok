@@ -248,7 +248,6 @@ KERESO_MEZO_ALIASOK = {
     "oldalszam": ("oldalszam", "Oldalszám"),
     "meretek": ("meretek", "Méretek", "Méret"),
     "kotes": ("kotes", "Kötés"),
-    "rovid_cim": ("rovid_cim", "Rövid cím"),
     "rovid_leiras": ("rovid_leiras", "Rövid leírás"),
     # SZÁNDÉKOSAN csak a pontos, kanonikus kulccsal: a kereső táblázatának
     # "Státusz" (Állományban/Deziderátában) és a többforrásos nézet
