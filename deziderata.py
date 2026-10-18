@@ -56,7 +56,7 @@ DATA_FILE = os.path.join(BASE_DIR, "deziderata.json")
 # A lista (és a katalóguslap) oszlopai: kulcsok sorrendben. A feliratok a
 # DEZIDERATA_MEZO_DEFINICIOK-ból jönnek (lásd katalogus_oszlop_definiciok).
 LISTA_OSZLOP_KULCSOK = [
-    "cim", "szerzo", "egyeb_szemelyek", "kiado",
+    "cim", "alcim", "szerzo", "egyeb_szemelyek", "kiado",
     "hely", "ev", "priority", "status",
 ]
 # kulcs: (alap szélesség pixelben, kitöltési súly átméretezéskor).
@@ -67,6 +67,7 @@ LISTA_OSZLOP_KULCSOK = [
 # meg, hogy az ablak átméretezésekor a többletszélességből mekkora részt kap.
 LISTA_OSZLOP_ADATOK = {
     "cim":             (200, 3.0),
+    "alcim":             (170, 3.0),
     "szerzo":          (130, 2.0),
     "egyeb_szemelyek": (120, 2.0),
     "kiado":           (140, 2.0),
@@ -76,7 +77,7 @@ LISTA_OSZLOP_ADATOK = {
     "status":          (130, 1.5),
 }
 # A régi (angol kulcsos) rekordok kezelése
-_REGI_KULCSOK = {"cim": "title", "szerzo": "author", "kiado": "publisher",
+_REGI_KULCSOK = {"cim": "title", "alcim": "subtitle", "szerzo": "author", "kiado": "publisher",
                  "hely": "place", "ev": "year"}
 
 
@@ -1195,4 +1196,4 @@ class App(wx.App):
 
 if __name__ == "__main__":
     app = App(False)
-    app.MainLoop()
+    app.MainLoop()

@@ -257,6 +257,7 @@ class KonyvSzerkesztoDialog(wx.Dialog):
 
 DEZIDERATA_MEZO_DEFINICIOK = [
     ("cim", "Cím:"),
+    ("alcim", "Alcím:"),
     ("szerzo", "Összeállító:"),
     ("egyeb_szemelyek", "Egyéb személyek:"),
     ("kiado", "Kiadó:"),
@@ -316,7 +317,6 @@ class DeziderataReszletekDialog(wx.Dialog):
         self.main_sizer.Add(self.olvaso_panel, 1, wx.EXPAND | wx.ALL, 15)
 
         # Gombok elrendezése
-        btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
         
         self.link_url = str(self.item_data.get("link", "") or "").strip()
 
@@ -371,7 +371,7 @@ class DeziderataReszletekDialog(wx.Dialog):
 class BaseItemDialog(wx.Dialog):
     """Közös alaposztály a hozzáadó és szerkesztő ablakokhoz."""
     def __init__(self, parent, title, data=None):
-        super().__init__(parent, title=title, size=(850, 520))
+        super().__init__(parent, title=title, size=(850, 560))
 
         if data is None:
             data = {}
@@ -394,6 +394,7 @@ class BaseItemDialog(wx.Dialog):
 
         # --- Mezők létrehozása ---
         self.txt_cim = create_field("Cím:", data.get("cim", data.get("title", "")))
+        self.txt_alcim = create_field("Alcím:", data.get("alcim", data.get("subtitle", "")))
         self.txt_szerzo = create_field("Összeállító:", data.get("szerzo", data.get("author", "")))
         self.txt_egyeb_szemelyek = create_field("Egyéb személyek:", data.get("egyeb_szemelyek", ""))
         self.txt_kiado = create_field("Kiadó:", data.get("kiado", data.get("publisher", "")))
@@ -507,6 +508,7 @@ class BaseItemDialog(wx.Dialog):
     def get_data(self):
         return {
             "cim": self.txt_cim.GetValue(),
+            "alcim": self.txt_alcim.GetValue(),
             "szerzo": self.txt_szerzo.GetValue(),
             "egyeb_szemelyek": self.txt_egyeb_szemelyek.GetValue(),
             "kiado": self.txt_kiado.GetValue(),

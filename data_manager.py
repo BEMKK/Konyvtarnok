@@ -294,9 +294,9 @@ ALLOMANY_MEZOK = (
     "rovid_leiras",
 )
 
-# A dezideráta bibliográfiai mezői (az alcím nem tartozik ide) és a
+# A dezideráta bibliográfiai mezői és a
 # dezideráta-specifikus mezők alapértékei.
-DEZIDERATA_BIBLIO_MEZOK = ("cim", "szerzo", "egyeb_szemelyek", "kiado", "hely", "ev")
+DEZIDERATA_BIBLIO_MEZOK = ("cim", "alcim", "szerzo", "egyeb_szemelyek", "kiado", "hely", "ev")
 DEZIDERATA_ALAPERTEKEK = {
     "priority": "Másodlagos",
     "status": "Jelenleg nem kapható",
@@ -337,6 +337,9 @@ def allomany_rekord_dezideratabol(tetel):
         rekord[mezo] = _tiszta_szoveg(
             _elso_kitoltott_ertek(tetel, DEZIDERATA_MEZO_ALIASOK[mezo])
         )
+    # Az alcím nem vesz részt az egyezés-vizsgálatban (nincs a
+    # DEZIDERATA_MEZO_ALIASOK-ban), ezért külön vesszük át.
+    rekord["alcim"] = _tiszta_szoveg(_elso_kitoltott_ertek(tetel, ("alcim", "subtitle")))
     rekord["egyeb_szemelyek"] = _tiszta_szoveg(tetel.get("egyeb_szemelyek", ""))
     rekord["forras"] = _tiszta_szoveg(tetel.get("location", ""))
     return rekord
