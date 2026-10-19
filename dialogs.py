@@ -78,8 +78,7 @@ class UjdonsagokDialog(wx.Dialog):
         main_sizer.Add(wx.StaticLine(self), 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 15)
         
         ujdonsagok_lista = [
-            "Alcím mező a Dezideráta-kezelőben.",
-            "Mezőnevek egységesítve."
+            "A Dezideráta-kezelő alcím-mezője az állományhoz hasonlóan többsoros, az adatlap nézetben pedig ugyanúgy a vonal felett jelenik meg."
         ]
 
         szoveg_box = wx.BoxSizer(wx.VERTICAL)

@@ -4,6 +4,12 @@ A projekten végrehajtott lényegi változtatások dokumentációja.
 
 
 
+## [3.20.1] - 2026-10-19
+
+- A Dezideráta-kezelő alcím-mezője az állományhoz hasonlóan többsoros, az adatlap nézetben pedig ugyanúgy a vonal felett jelenik meg.
+
+
+
 ## [3.20.0] - 2026-10-19
 
 - Alcím mező a Dezideráta kezelőben.

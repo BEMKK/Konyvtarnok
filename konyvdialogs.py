@@ -279,10 +279,14 @@ class DeziderataReszletekDialog(wx.Dialog):
         """Összeállítja a tétel adatait egy tiszta, jól olvasható szöveggé."""
         vonal = "-" * 40
         cim = self.item_data.get('cim', 'Nincs cím')
-        szoveg = f"{cim}\n{vonal}\n\n"
+        szoveg = f"{cim}\n"
+        alcim = str(self.item_data.get('alcim', "") or "").strip()
+        if alcim:
+            szoveg += f"{alcim}\n"
+        szoveg += f"{vonal}\n\n"
 
         for kulcs, felirat in DEZIDERATA_MEZO_DEFINICIOK:
-            if kulcs == 'cim':
+            if kulcs in ('cim', 'alcim'):
                 continue
             ertek = str(self.item_data.get(kulcs, "") or "").strip()
             if ertek:
@@ -369,11 +373,18 @@ class BaseItemDialog(wx.Dialog):
         form = wx.FlexGridSizer(0, 2, 10, 10)
         form.AddGrowableCol(1, 1)
 
-        def create_field(label_text, value=""):
+        def create_field(label_text, value="", multiline=False):
             clean_label = label_text.rstrip(":")
             lbl = wx.StaticText(panel, label=label_text)
-            txt = wx.TextCtrl(panel, value=str(value), name=clean_label)
-            
+            if multiline:
+                # Ugyanúgy, mint az állomány (KonyvSzerkesztoDialog) alcím mezője
+                txt = wx.TextCtrl(
+                    panel, value=str(value), name=clean_label,
+                    style=wx.TE_MULTILINE, size=(-1, 60)
+                )
+            else:
+                txt = wx.TextCtrl(panel, value=str(value), name=clean_label)
+
             form.Add(lbl, 0, wx.ALIGN_CENTER_VERTICAL)
             form.Add(txt, 1, wx.EXPAND)
             return txt
@@ -382,7 +393,7 @@ class BaseItemDialog(wx.Dialog):
         # A feliratok a constants.DEZIDERATA_MEZO_DEFINICIOK-ból jönnek.
         felirat = dict(DEZIDERATA_MEZO_DEFINICIOK)
         self.txt_cim = create_field(felirat["cim"], data.get("cim", ""))
-        self.txt_alcim = create_field(felirat["alcim"], data.get("alcim", ""))
+        self.txt_alcim = create_field(felirat["alcim"], data.get("alcim", ""), multiline=True)
         self.txt_szerzo = create_field(felirat["szerzo"], data.get("szerzo", ""))
         self.txt_egyeb_szemelyek = create_field(felirat["egyeb_szemelyek"], data.get("egyeb_szemelyek", ""))
         self.txt_kiado = create_field(felirat["kiado"], data.get("kiado", ""))
