@@ -7,6 +7,7 @@ A projekten végrehajtott lényegi változtatások dokumentációja.
 ## [3.20.0] - 2026-10-19
 
 - Alcím mező a Dezideráta kezelőben.
+- Mezőnevek egységesítése és közös definiálása.
 
 
 

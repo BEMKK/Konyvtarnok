@@ -78,7 +78,8 @@ class UjdonsagokDialog(wx.Dialog):
         main_sizer.Add(wx.StaticLine(self), 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 15)
         
         ujdonsagok_lista = [
-            "Eltávolítva a rövid cím mező."
+            "Alcím mező a Dezideráta-kezelőben.",
+            "Mezőnevek egységesítve."
         ]
 
         szoveg_box = wx.BoxSizer(wx.VERTICAL)

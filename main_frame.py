@@ -4,7 +4,7 @@ import sys
 import re
 import logging
 from contextlib import contextmanager
-from constants import APP_TITLE
+from constants import APP_TITLE, MEZO_DEFINICIOK
 from dialogs import NevjegyDialog, UjdonsagokDialog, FajlutkozesDialog, exportal_egy_konyv
 from kereso import KeresoDialog
 from settings import BeallitasokDialog
@@ -725,7 +725,9 @@ class Konyvtarnok(wx.Frame):
         lista.EnsureVisible(indexek[0])
 
     def OnUjKonyv(self, event):
-        ures_adatok = {k: "" for k in ["cim", "alcim", "szerzo", "egyeb_szemelyek", "kiado", "hely", "ev", "oldalszam", "meretek", "kotes", "forras", "status", "rovid_leiras"]}
+        # Az új könyv űrlapjának üres adatai: a mezőregiszter (constants.MEZO_DEFINICIOK)
+        # kulcsai, a korábbi viselkedésnek megfelelően a "bekerult" nélkül.
+        ures_adatok = {k: "" for k, _ in MEZO_DEFINICIOK if k != "bekerult"}
         dlg = KonyvSzerkesztoDialog(self, ures_adatok, self.db, uj_konyv=True)
     
         res = dlg.ShowModal()

@@ -18,6 +18,7 @@ import wx
 # eltér, mert az egy csomagolt, olvasásra szánt erőforrásfájlt keres, nem
 # az írható adatfájlok mappáját - ezért az szándékosan külön maradt.)
 from utils import alkalmazas_alapmappa
+from constants import BIBLIOGRAFIAI_KULCSOK, KERESO_MEZO_ALIASOK
 from undo_manager import UndoRegiszter, UndoKezelo, ListaTarolo
 
 _BASE_DIR = alkalmazas_alapmappa()
@@ -219,50 +220,21 @@ def konyvek_tomeges_felvetele(db, konyv_adatok_listaja, utani_frissites_fv=None)
 # ez az egyetlen, közös implementáció, amit mindenhonnan importálva
 # használunk, hogy a "mi számít ugyanannak a könyvnek" szabály mindenhol
 # ugyanaz legyen.
-DEFAULT_MEZO_ALIASOK = {
-    "cim": ("cim",),
-    "szerzo": ("szerzo",),
-    "kiado": ("kiado",),
-    "hely": ("hely",),
-    "ev": ("ev",),
-}
+# Azok a mezők, amelyek az egyezés-vizsgálatban részt vesznek: a cím mindig
+# kötelező és pontosan egyeznie kell, a többinél csak az számít eltérésnek, ha
+# mindkét oldalon ki van töltve és különbözik. (Az állomány és a dezideráta
+# bibliográfiai mezői azonos kulcsúak, ezért nincs külön szabály.)
+EGYEZES_MEZOK = ("cim", "szerzo", "kiado", "hely", "ev")
 
-DEZIDERATA_MEZO_ALIASOK = {
-    "cim": ("cim", "title"),
-    "szerzo": ("szerzo", "author"),
-    "kiado": ("kiado", "publisher"),
-    "hely": ("hely", "place"),
-    "ev": ("ev", "year"),
-}
-
-KERESO_MEZO_ALIASOK = {
-    "cim": ("cim", "Cím"),
-    "alcim": ("alcim", "Alcím"),
-    "szerzo": ("szerzo", "Összeállító"),
-    "egyeb_szemelyek": ("egyeb_szemelyek", "Egyéb személyek"),
-    "kiado": ("kiado", "Kiadó"),
-    "hely": ("hely", "Kiadás helye"),
-    "ev": ("ev", "Kiadás éve"),
-    # Az állomány további mezői. Ezek is átjutnak az átemeléskor, ha a
-    # forrásban szerepelnek (magyar fejléccel vagy a kanonikus kulccsal).
-    "oldalszam": ("oldalszam", "Oldalszám"),
-    "meretek": ("meretek", "Méretek", "Méret"),
-    "kotes": ("kotes", "Kötés"),
-    "rovid_leiras": ("rovid_leiras", "Rövid leírás"),
-    # SZÁNDÉKOSAN csak a pontos, kanonikus kulccsal: a kereső táblázatának
-    # "Státusz" (Állományban/Deziderátában) és a többforrásos nézet
-    # "Forrás" oszlopa nem egyezik a könyv saját status/forras mezőjével,
-    # ezért ezekhez NEM szabad magyar fejléc-aliast felvenni.
-    "forras": ("forras",),
-    "status": ("status",),
-}
+# A KERESO_MEZO_ALIASOK (a kereső külső JSON-jának fejlécnevei -> kanonikus
+# kulcs) a constants.py mezőregiszteréből származik (importálva fent).
 
 
 def is_same_book(item1, item2):
     """
-    Két könyv/tétel egyezőségét vizsgálja a dezideráta mező-aliasok alapján (lásd tetelek_egyeznek).
+    Két könyv/tétel egyezőségét vizsgálja (lásd tetelek_egyeznek).
     """
-    return tetelek_egyeznek(item1, item2, DEZIDERATA_MEZO_ALIASOK)
+    return tetelek_egyeznek(item1, item2)
 
 
 def sor_alap_adatta_alakitasa(forras_dict):
@@ -288,15 +260,14 @@ def sor_alap_adatta_alakitasa(forras_dict):
 # kerül át, és a forrás eredeti dictjét sem módosítjuk (a
 # KonyvAdatbazis.uj_konyv_hozzaadasa ugyanis a kapott dictbe beleírja az
 # "id"-t, és a dictet szó szerint menti).
-ALLOMANY_MEZOK = (
-    "cim", "alcim", "szerzo", "egyeb_szemelyek", "kiado", "hely", "ev",
+ALLOMANY_MEZOK = BIBLIOGRAFIAI_KULCSOK + (
     "oldalszam", "meretek", "kotes", "rovid_cim", "forras", "status",
     "rovid_leiras",
 )
 
 # A dezideráta bibliográfiai mezői és a
 # dezideráta-specifikus mezők alapértékei.
-DEZIDERATA_BIBLIO_MEZOK = ("cim", "alcim", "szerzo", "egyeb_szemelyek", "kiado", "hely", "ev")
+DEZIDERATA_BIBLIO_MEZOK = BIBLIOGRAFIAI_KULCSOK
 DEZIDERATA_ALAPERTEKEK = {
     "priority": "Másodlagos",
     "status": "Jelenleg nem kapható",
@@ -328,19 +299,51 @@ def deziderata_tetel_forras_dictbol(forras_dict):
     return tetel
 
 
+# ------------------------------------------------------------------------------
+# RÉGI (ANGOL KULCSÚ) DEZIDERATA-TÉTELEK EGYSZERI ÁTALAKÍTÁSA
+# ------------------------------------------------------------------------------
+# A dezideráta korábbi változata angol kulcsokkal tárolta a bibliográfiai
+# mezőket. A program többi része már kizárólag a kanonikus (magyar) kulcsokat
+# ismeri, ezért a régi tételeket MINDEN beolvasási ponton (fájlbetöltés,
+# JSON-import) azonnal átalakítjuk. EZ AZ EGYETLEN HELY, ahol ezek a régi
+# nevek még szerepelnek. Ha már biztosan nincs régi fájl/export, a
+# függvény és a hívásai egyben törölhetők.
+_REGI_ANGOL_KULCSOK = {
+    "title": "cim",
+    "subtitle": "alcim",
+    "author": "szerzo",
+    "publisher": "kiado",
+    "place": "hely",
+    "year": "ev",
+}
+
+
+def deziderata_regi_kulcsok_atalakitasa(tetelek):
+    """A tételek (dict-ek listája) régi, angol kulcsait kanonikussá alakítja,
+    helyben. Ha a kanonikus mező már ki van töltve, annak értéke marad; a régi
+    kulcs minden esetben törlődik. True-t ad, ha módosított valamit."""
+    valtozott = False
+    for tetel in tetelek:
+        if not isinstance(tetel, dict):
+            continue
+        for regi, uj in _REGI_ANGOL_KULCSOK.items():
+            if regi not in tetel:
+                continue
+            ertek = tetel.pop(regi)
+            if not tetel.get(uj) and ertek:
+                tetel[uj] = ertek
+            elif uj not in tetel:
+                tetel[uj] = ertek if ertek is not None else ""
+            valtozott = True
+    return valtozott
+
+
 def allomany_rekord_dezideratabol(tetel):
-    """Egy dezideráta-tételből (a régi, angol kulcsú tételeket is kezelve)
-    felépíti az állományba felvehető rekordot. A dezideráta "location"
+    """Egy dezideráta-tételből felépíti az állományba felvehető rekordot. A dezideráta "location"
     mezője az állomány "forras" mezőjébe kerül."""
     rekord = {mezo: "" for mezo in ALLOMANY_MEZOK}
-    for mezo in ("cim", "szerzo", "kiado", "hely", "ev"):
-        rekord[mezo] = _tiszta_szoveg(
-            _elso_kitoltott_ertek(tetel, DEZIDERATA_MEZO_ALIASOK[mezo])
-        )
-    # Az alcím nem vesz részt az egyezés-vizsgálatban (nincs a
-    # DEZIDERATA_MEZO_ALIASOK-ban), ezért külön vesszük át.
-    rekord["alcim"] = _tiszta_szoveg(_elso_kitoltott_ertek(tetel, ("alcim", "subtitle")))
-    rekord["egyeb_szemelyek"] = _tiszta_szoveg(tetel.get("egyeb_szemelyek", ""))
+    for mezo in BIBLIOGRAFIAI_KULCSOK:
+        rekord[mezo] = _tiszta_szoveg(tetel.get(mezo, ""))
     rekord["forras"] = _tiszta_szoveg(tetel.get("location", ""))
     return rekord
 
@@ -384,17 +387,7 @@ def _norm_ertek(ertek):
     return str(ertek or "").strip().lower()
 
 
-def _elso_kitoltott_ertek(tetel, kulcsok):
-    """Az első nem üres értéket adja vissza a megadott kulcsok/aliasok közül
-    (pl. hogy a 'cim' és a 'title' mezőnevet egyaránt kezelni tudjuk)."""
-    for kulcs in kulcsok:
-        ertek = tetel.get(kulcs)
-        if ertek:
-            return ertek
-    return ""
-
-
-def tetelek_egyeznek(tetel1, tetel2, mezo_aliasok=None):
+def tetelek_egyeznek(tetel1, tetel2, mezok=EGYEZES_MEZOK):
     """
     Két könyv/tétel (dict) egyezőségét vizsgálja.
 
@@ -404,23 +397,19 @@ def tetelek_egyeznek(tetel1, tetel2, mezo_aliasok=None):
     egy üres mező tehát nem zárja ki az egyezést, ha a többi kitöltött mező
     megegyezik.
 
-    A mezo_aliasok egy {logikai_mezonev: (lehetseges, kulcsnevek, ...)}
-    szótár, hogy eltérő adatforrások (pl. angol 'title'/'author' mezőnevű
-    dezideráta-import) mezőneveit is kezelni tudjuk anélkül, hogy a hívóknak
-    külön kellene normalizálniuk az adatokat.
+    A mezok az összehasonlított kulcsok sorozata; az első elemnek a "cim"-nek
+    kell lennie.
     """
-    aliasok = mezo_aliasok or DEFAULT_MEZO_ALIASOK
-
-    cim1 = _norm_ertek(_elso_kitoltott_ertek(tetel1, aliasok["cim"]))
-    cim2 = _norm_ertek(_elso_kitoltott_ertek(tetel2, aliasok["cim"]))
+    cim1 = _norm_ertek(tetel1.get("cim"))
+    cim2 = _norm_ertek(tetel2.get("cim"))
     if not cim1 or not cim2 or cim1 != cim2:
         return False
 
-    for mezo, kulcsok in aliasok.items():
+    for mezo in mezok:
         if mezo == "cim":
             continue
-        ertek1 = _norm_ertek(_elso_kitoltott_ertek(tetel1, kulcsok))
-        ertek2 = _norm_ertek(_elso_kitoltott_ertek(tetel2, kulcsok))
+        ertek1 = _norm_ertek(tetel1.get(mezo))
+        ertek2 = _norm_ertek(tetel2.get(mezo))
         if ertek1 and ertek2 and ertek1 != ertek2:
             return False
 
@@ -738,9 +727,7 @@ def szoveg_szuro_egyezik(tetel, keresett, pontos_egyezes, mezok=None, szavankent
 
     mezok=None (alapeset): a tétel MINDEN mezőértékében keres.
     mezok=[...]: csak a megadott logikai mezőkben (pl. "cim", "szerzo",
-    "kiado", "hely", "ev") keres. A mezőneveket a DEZIDERATA_MEZO_ALIASOK
-    oldja fel, így a dezideráta régi, angol kulcsú tételeit (title, author,
-    publisher, place, year) is megtalálja. Listaként/tuple-ként megadott
+    "kiado", "hely", "ev") keres. Listaként/tuple-ként megadott
     tételnél a mezőnevek nem értelmezhetők, ott a mezok figyelmen kívül marad.
 
     szavankent=False (alapeset): a TELJES keresett kifejezésnek egyben, egyetlen
@@ -760,10 +747,7 @@ def szoveg_szuro_egyezik(tetel, keresett, pontos_egyezes, mezok=None, szavankent
             forras = vars(tetel)
         else:
             forras = {}
-        ertekek = [
-            _elso_kitoltott_ertek(forras, DEZIDERATA_MEZO_ALIASOK.get(mezo, (mezo,)))
-            for mezo in mezok
-        ]
+        ertekek = [forras.get(mezo) or "" for mezo in mezok]
     elif isinstance(tetel, dict):
         ertekek = tetel.values()
     elif isinstance(tetel, (list, tuple)):

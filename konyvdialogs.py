@@ -5,7 +5,9 @@ from theme_manager import apply_theme_from_settings
 # export_manager.py PDF-sablonja ugyanabból az egyetlen forrásból építkezzen,
 # mint az itteni adatlap/szerkesztő dialógusok - lásd a constants.py
 # megjegyzését.
-from constants import MEZO_DEFINICIOK
+# (A DEZIDERATA_MEZO_DEFINICIOK ugyaninnen jön; a korábban itt definiált
+# név ezért innen is változatlanul importálható.)
+from constants import MEZO_DEFINICIOK, DEZIDERATA_MEZO_DEFINICIOK
 # A kijelölés/fókusz szerkesztés utáni visszaállításához (lásd
 # DeziderataReszletekDialog.on_szerkesztes) ugyanazt az egyezés-vizsgálatot
 # használjuk, mint amit a Deziderata.on_edit már használ.
@@ -32,7 +34,7 @@ class KonyvReszletekDialog(wx.Dialog):
         self.CentreOnParent()
 
     def general_szoveg(self):
-        """Összeállítja a könyv adatait egy tiszta, jól olvasható szöveggé."""
+        """Szerző / Összeállítja a könyv adatait egy tiszta, jól olvasható szöveggé."""
         vonal = "-" * 40
         szoveg = f"{self.konyv_adatok.get('cim', 'Nincs cím')}\n"
         if self.konyv_adatok.get('alcim'):
@@ -252,24 +254,8 @@ class KonyvSzerkesztoDialog(wx.Dialog):
 
 
 # ==============================================================================
-# DEZIDERÁTA DIALÓGUSOK ÉS MEZŐDEFINÍCIÓK
+# DEZIDERÁTA DIALÓGUSOK (a mezőfeliratok a constants.py-ban vannak)
 # ==============================================================================
-
-DEZIDERATA_MEZO_DEFINICIOK = [
-    ("cim", "Cím:"),
-    ("alcim", "Alcím:"),
-    ("szerzo", "Összeállító:"),
-    ("egyeb_szemelyek", "Egyéb személyek:"),
-    ("kiado", "Kiadó:"),
-    ("hely", "Kiadás helye:"),
-    ("ev", "Kiadás éve:"),
-    ("priority", "Prioritás:"),
-    ("status", "Státusz:"),
-    ("location", "Lelőhely:"),
-    ("price", "Jelenlegi ár (ft):"),
-    ("link", "Link:"),
-]
-
 
 class DeziderataReszletekDialog(wx.Dialog):
     """Dezideráta tétel adatainak kizárólagos megjelenítése (Olvasó mód - NVDA kompatibilis)."""
@@ -277,7 +263,7 @@ class DeziderataReszletekDialog(wx.Dialog):
     def __init__(self, parent, item_data, index=None):
         super().__init__(
             parent,
-            title=f"Tétel részletei: {item_data.get('cim', item_data.get('title', ''))}",
+            title=f"Tétel részletei: {item_data.get('cim', '')}",
             size=(500, 580),
             style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER,
         )
@@ -292,7 +278,7 @@ class DeziderataReszletekDialog(wx.Dialog):
     def general_szoveg(self):
         """Összeállítja a tétel adatait egy tiszta, jól olvasható szöveggé."""
         vonal = "-" * 40
-        cim = self.item_data.get('cim', self.item_data.get('title', 'Nincs cím'))
+        cim = self.item_data.get('cim', 'Nincs cím')
         szoveg = f"{cim}\n{vonal}\n\n"
 
         for kulcs, felirat in DEZIDERATA_MEZO_DEFINICIOK:
@@ -393,16 +379,18 @@ class BaseItemDialog(wx.Dialog):
             return txt
 
         # --- Mezők létrehozása ---
-        self.txt_cim = create_field("Cím:", data.get("cim", data.get("title", "")))
-        self.txt_alcim = create_field("Alcím:", data.get("alcim", data.get("subtitle", "")))
-        self.txt_szerzo = create_field("Összeállító:", data.get("szerzo", data.get("author", "")))
-        self.txt_egyeb_szemelyek = create_field("Egyéb személyek:", data.get("egyeb_szemelyek", ""))
-        self.txt_kiado = create_field("Kiadó:", data.get("kiado", data.get("publisher", "")))
-        self.txt_hely = create_field("Kiadás helye:", data.get("hely", data.get("place", "")))
-        self.txt_ev = create_field("Kiadás éve:", data.get("ev", data.get("year", "")))
+        # A feliratok a constants.DEZIDERATA_MEZO_DEFINICIOK-ból jönnek.
+        felirat = dict(DEZIDERATA_MEZO_DEFINICIOK)
+        self.txt_cim = create_field(felirat["cim"], data.get("cim", ""))
+        self.txt_alcim = create_field(felirat["alcim"], data.get("alcim", ""))
+        self.txt_szerzo = create_field(felirat["szerzo"], data.get("szerzo", ""))
+        self.txt_egyeb_szemelyek = create_field(felirat["egyeb_szemelyek"], data.get("egyeb_szemelyek", ""))
+        self.txt_kiado = create_field(felirat["kiado"], data.get("kiado", ""))
+        self.txt_hely = create_field(felirat["hely"], data.get("hely", ""))
+        self.txt_ev = create_field(felirat["ev"], data.get("ev", ""))
 
         # --- Prioritás blokk ---
-        form.Add(wx.StaticText(panel, label="Prioritás:"), 0, wx.ALIGN_CENTER_VERTICAL)
+        form.Add(wx.StaticText(panel, label=felirat["priority"]), 0, wx.ALIGN_CENTER_VERTICAL)
         
         self.priority_primary = wx.RadioButton(
             panel, label="Elsődleges", style=wx.RB_GROUP, name="Elsődleges prioritás"
@@ -422,7 +410,7 @@ class BaseItemDialog(wx.Dialog):
         form.Add(prio_box)
 
         # --- Státusz blokk ---
-        form.Add(wx.StaticText(panel, label="Státusz:"), 0, wx.ALIGN_CENTER_VERTICAL)
+        form.Add(wx.StaticText(panel, label=felirat["status"]), 0, wx.ALIGN_CENTER_VERTICAL)
 
         self.status_available = wx.RadioButton(
             panel, label="Jelenleg kapható", style=wx.RB_GROUP, name="Jelenleg kapható státusz"
@@ -442,9 +430,9 @@ class BaseItemDialog(wx.Dialog):
         form.Add(status_box)
 
         # --- Lelőhely + ár ---
-        self.txt_location = create_field("Lelőhely:", data.get("location", ""))
-        self.txt_price = create_field("Jelenlegi ár (ft):", data.get("price", ""))
-        self.txt_link = create_field("Link:", data.get("link", ""))
+        self.txt_location = create_field(felirat["location"], data.get("location", ""))
+        self.txt_price = create_field(felirat["price"], data.get("price", ""))
+        self.txt_link = create_field(felirat["link"], data.get("link", ""))
 
         vbox.Add(form, 1, wx.ALL | wx.EXPAND, 15)
 
@@ -533,7 +521,7 @@ class EditItemDialog(BaseItemDialog):
         # A szerkesztett tétel azonosítója: a duplikátum-ellenőrzés ez alapján
         # hagyja ki saját magát (az index csak tartalék).
         self.current_id = data.get("id")
-        title_text = data.get("cim", data.get("title", ""))
+        title_text = data.get("cim", "")
         dialog_title = f"Szerkesztés: {title_text}" if title_text else "Tétel szerkesztése"
         super().__init__(parent, title=dialog_title, data=data)
 

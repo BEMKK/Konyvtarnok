@@ -16,13 +16,17 @@ from data_manager import (
     konyvek_tomeges_felvetele,
     kerj_tomeges_atemeles_megerositest,
     mutass_tomeges_atemeles_eredmenyt,
-    DEZIDERATA_MEZO_ALIASOK,
+    deziderata_regi_kulcsok_atalakitasa,
     allomany_rekord_dezideratabol,
     is_same_book,
     MentesiHiba,
 )
-from konyvdialogs import (
+from constants import (
     DEZIDERATA_MEZO_DEFINICIOK,
+    DEZIDERATA_OSZLOP_ADATOK,
+    DEZIDERATA_OSZLOP_KULCSOK,
+)
+from konyvdialogs import (
     DeziderataReszletekDialog,
     AddItemDialog,
     EditItemDialog,
@@ -53,32 +57,16 @@ APP_NAME = "KönyvTárnok Dezideráta-kezelő"
 BASE_DIR = alkalmazas_alapmappa()
 DATA_FILE = os.path.join(BASE_DIR, "deziderata.json")
 
-# A lista (és a katalóguslap) oszlopai: kulcsok sorrendben. A feliratok a
-# DEZIDERATA_MEZO_DEFINICIOK-ból jönnek (lásd katalogus_oszlop_definiciok).
-LISTA_OSZLOP_KULCSOK = [
-    "cim", "alcim", "szerzo", "egyeb_szemelyek", "kiado",
-    "hely", "ev", "priority", "status",
-]
-# kulcs: (alap szélesség pixelben, kitöltési súly átméretezéskor).
-# Ugyanazt a felépítést követi, mint a főlista constants.OSZLOP_DEFINICIOK /
-# OSZLOP_SULYOK párosa: az alap szélesség az ablak oszlopainak kiindulási
-# szélessége ÉS a PDF-katalóguslap oszlopainak aránya is (a katalogus_pdf
-# a defs értékeit egymáshoz viszonyítva használja), a súly pedig azt adja
-# meg, hogy az ablak átméretezésekor a többletszélességből mekkora részt kap.
-LISTA_OSZLOP_ADATOK = {
-    "cim":             (200, 3.0),
-    "alcim":             (170, 3.0),
-    "szerzo":          (130, 2.0),
-    "egyeb_szemelyek": (120, 2.0),
-    "kiado":           (140, 2.0),
-    "hely":            (100, 1.0),
-    "ev":              ( 80, 0.5),
-    "priority":        ( 85, 0.8),
-    "status":          (130, 1.5),
-}
-# A régi (angol kulcsos) rekordok kezelése
-_REGI_KULCSOK = {"cim": "title", "alcim": "subtitle", "szerzo": "author", "kiado": "publisher",
-                 "hely": "place", "ev": "year"}
+# A lista (és a katalóguslap) oszlopai: kulcsok sorrendben, illetve
+# kulcs: (alap szélesség pixelben, kitöltési súly átméretezéskor). Mindkettő a
+# constants.py-ban él (DEZIDERATA_OSZLOP_KULCSOK / DEZIDERATA_OSZLOP_ADATOK),
+# ugyanott, ahol a feliratok (DEZIDERATA_MEZO_DEFINICIOK). Az alap szélesség az
+# ablak oszlopainak kiindulási szélessége ÉS a PDF-katalóguslap oszlopainak
+# aránya is (a katalogus_pdf a defs értékeit egymáshoz viszonyítva használja),
+# a súly pedig azt adja meg, hogy az ablak átméretezésekor a többletszélességből
+# mekkora részt kap.
+LISTA_OSZLOP_KULCSOK = DEZIDERATA_OSZLOP_KULCSOK
+LISTA_OSZLOP_ADATOK = DEZIDERATA_OSZLOP_ADATOK
 
 
 def katalogus_oszlop_definiciok():
@@ -91,8 +79,8 @@ def katalogus_oszlop_definiciok():
 
 
 def lista_ertek(item, kulcs):
-    """Egy tétel mezőjének megjelenítendő szövege (régi kulcsokra is visszaesve)."""
-    return str(item.get(kulcs, item.get(_REGI_KULCSOK.get(kulcs, kulcs), "")) or "")
+    """Egy tétel mezőjének megjelenítendő szövege."""
+    return str(item.get(kulcs) or "")
 
 def uj_tetel_id():
     """Új, egyedi azonosító egy dezideráta-tételnek. A tételeket - a főlista
@@ -192,7 +180,9 @@ class DeziderataFajlTarolo(ListaTarolo):
         adat, ervenyes = load_hmac_json(DATA_FILE)
         if not ervenyes:
             raise ValueError("A dezideráta-fájl HMAC-aláírása érvénytelen.")
-        return [x for x in adat if isinstance(x, dict)] if isinstance(adat, list) else []
+        lista = [x for x in adat if isinstance(x, dict)] if isinstance(adat, list) else []
+        deziderata_regi_kulcsok_atalakitasa(lista)
+        return lista
 
     def masolat(self):
         try:
@@ -280,7 +270,7 @@ class Deziderata(wx.Frame):
         # --- Lista (táblázat) ---
         self.list = wx.ListCtrl(panel, style=wx.LC_REPORT | wx.BORDER_SUNKEN)
 
-        # A táblázat oszlopfejléceit a konyvdialogs.DEZIDERATA_MEZO_DEFINICIOK
+        # A táblázat oszlopfejléceit a constants.DEZIDERATA_MEZO_DEFINICIOK
         # feliratkészletéből származtatjuk (a meződefiníció végén álló
         # kettőspontot levágva), ahelyett hogy itt egy második, kézzel
         # karbantartott listát tartanánk ugyanezekre a feliratokra - korábban
@@ -351,7 +341,7 @@ class Deziderata(wx.Frame):
     def rendez_listat(self):
         """A tételek ábécérendbe rendezése Cím szerint a magyar ábécé szabályai alapján."""
         def get_sort_key(item):
-            val = item.get("cim", item.get("title", ""))
+            val = item.get("cim", "")
             return magyar_rendezesi_kulcs(val)
 
         self.items.sort(key=get_sort_key)
@@ -461,6 +451,8 @@ class Deziderata(wx.Frame):
 
         # Ellenőrizzük, hogy listát kaptunk-e, és rendeljük hozzá a self.items-hez!
         self.items = betoltott_adat if isinstance(betoltott_adat, list) else []
+        # Régi (angol kulcsú) tételek átalakítása; a fájlba a következő mentéskor kerül.
+        deziderata_regi_kulcsok_atalakitasa(self.items)
 
         # Lista frissítése a GUI-ban
         self.refresh_list()
@@ -972,6 +964,7 @@ class Deziderata(wx.Frame):
             save_settings(config)
 
             def _hozzaad(item):
+                deziderata_regi_kulcsok_atalakitasa([item])
                 if not self.is_duplicate(item):
                     # Az importált fájl id-je egy másik gépről/állományból
                     # jöhet, és ütközhetne a meglévőkkel: mindig újat adunk.

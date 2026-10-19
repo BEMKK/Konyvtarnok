@@ -19,6 +19,7 @@ from data_manager import (
     sor_alap_adatta_alakitasa,
     allomany_rekord_forras_dictbol,
     deziderata_tetel_forras_dictbol,
+    deziderata_regi_kulcsok_atalakitasa,
     load_kereso_json,
     is_same_book,
     MentesiHiba,
@@ -227,15 +228,16 @@ class KonyvtarnokKeresoApp(wx.Frame):
             return [], False
         if not isinstance(adat, list):
             return [], True
-        return [x for x in adat if isinstance(x, dict)], True
+        tetelek = [x for x in adat if isinstance(x, dict)]
+        deziderata_regi_kulcsok_atalakitasa(tetelek)
+        return tetelek, True
 
     @staticmethod
     def _csoportosit_cim_szerint(tetelek):
-        """Tételek cím szerinti csoportosítása (kisbetűsen, levágva). A
-        dezideráta régi, angol kulcsú tételeit (title) is felismeri."""
+        """Tételek cím szerinti csoportosítása (kisbetűsen, levágva)."""
         csoportok = {}
         for t in tetelek:
-            cim = str(t.get("cim", t.get("title", ""))).strip().lower()
+            cim = str(t.get("cim", "")).strip().lower()
             if cim:
                 csoportok.setdefault(cim, []).append(t)
         return csoportok
@@ -928,7 +930,9 @@ class KonyvtarnokKeresoApp(wx.Frame):
 
             with self._undo_csoport("átemelés a deziderátába"):
                 deziderata_lista = [x for x in adat if isinstance(x, dict)] if isinstance(adat, list) else []
-                # A meglévő, még id nélküli tételek is megkapják az id-t.
+                # A régi (angol kulcsú) tételek átalakítása, és a meglévő, még
+                # id nélküli tételek is megkapják az id-t.
+                deziderata_regi_kulcsok_atalakitasa(deziderata_lista)
                 tetelek_idjainak_potlasa(deziderata_lista)
                 sikeres, visszautasitott, _ = deziderata_tetelek_hozzaadasa(
                     deziderata_lista, uj_tetelek
