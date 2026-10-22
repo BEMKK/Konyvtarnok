@@ -233,7 +233,15 @@ class Konyvtarnok(wx.Frame):
 
     def FrissitStatusBar(self):
         db_szam = self.lista.GetItemCount()
-        self.statusbar.SetStatusText(f"Állományban lévő kötetek száma: {db_szam}.")
+        if self.aktiv_szurt_lista is not None:
+            # Aktív szűrésnél a lista csak az állomány egy részét mutatja,
+            # ezért a felirat is külön jelzi a szűrt és az összes darabszámot.
+            osszes = len(self.db.konyvek)
+            self.statusbar.SetStatusText(
+                f"Találatok száma: {db_szam} a {osszes} kötetből."
+            )
+        else:
+            self.statusbar.SetStatusText(f"Állományban lévő kötetek száma: {db_szam}.")
 
         # Ha a "KönyvTárnok kereső" ablak épp nyitva van, az ottani
         # találati táblázat "Állományban" jelzése egy korábbi keresés
@@ -318,7 +326,12 @@ class Konyvtarnok(wx.Frame):
         # azonnal látszik rajta, a szűrés típusától (szöveges keresés vagy
         # statisztikai szűrés) függetlenül.
         if self.aktiv_szurt_lista is not None:
+            # A szerkesztés megváltoztathatta, hogy a könyv megfelel-e a
+            # szűrésnek: a feltételt újra kiértékeljük, így ami már nem
+            # illik bele, eltűnik a listából.
+            self._szurt_lista_ujraszamolasa()
             self.lista.FeltoltLista(self.aktiv_szurt_lista)
+            self._frissit_szuro_cimke_darabszamot(len(self.aktiv_szurt_lista))
         else:
             self.lista.FeltoltLista(self.db.konyvek)
         self.FrissitStatusBar()
@@ -592,6 +605,30 @@ class Konyvtarnok(wx.Frame):
             finally:
                 lista.Thaw()
 
+    def _szurt_lista_ujraszamolasa(self):
+        """Az aktív szűrés újraszámolása az adatbázis jelenlegi állapotából.
+
+        A szűrt lista ugyanazokra a könyvobjektumokra mutat, mint az
+        adatbázis, ezért egy szerkesztés (vagy visszavonás) után a szűrő
+        feltételét újra ki kell értékelni: aki már nem felel meg neki, kikerül
+        a listából (és fordítva). Szűrés nélkül nem csinál semmit.
+        """
+        if self.aktiv_szurt_lista is None:
+            return
+        predikatum = self.aktiv_szuro_predikatum
+        if predikatum is not None:
+            def _illeszkedik(konyv):
+                try:
+                    return bool(predikatum(konyv))
+                except Exception:
+                    return False
+            self.aktiv_szurt_lista = [k for k in self.db.konyvek if _illeszkedik(k)]
+        else:
+            korabbi_idk = {k.get("id") for k in self.aktiv_szurt_lista}
+            self.aktiv_szurt_lista = [
+                k for k in self.db.konyvek if k.get("id") in korabbi_idk
+            ]
+
     def _nezet_frissitese_visszavonas_utan(self, kijelolendo_idk, kijelol=True):
         """Újraépíti a listát a visszaállított adatokból, megőrizve az aktív
         szűrést és a lista helyzetét (fókusz, kijelölés, görgetés). Ha az
@@ -604,19 +641,7 @@ class Konyvtarnok(wx.Frame):
 
         with self._lista_helyzet_megtartasa(erintett):
             if self.aktiv_szurt_lista is not None:
-                predikatum = self.aktiv_szuro_predikatum
-                if predikatum is not None:
-                    def _illeszkedik(konyv):
-                        try:
-                            return bool(predikatum(konyv))
-                        except Exception:
-                            return False
-                    self.aktiv_szurt_lista = [k for k in self.db.konyvek if _illeszkedik(k)]
-                else:
-                    korabbi_idk = {k.get("id") for k in self.aktiv_szurt_lista}
-                    self.aktiv_szurt_lista = [
-                        k for k in self.db.konyvek if k.get("id") in korabbi_idk
-                    ]
+                self._szurt_lista_ujraszamolasa()
                 self.lista.FeltoltLista(self.aktiv_szurt_lista)
                 self._frissit_szuro_cimke_darabszamot(len(self.aktiv_szurt_lista))
             else:

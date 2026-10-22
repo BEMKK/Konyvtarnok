@@ -78,7 +78,8 @@ class UjdonsagokDialog(wx.Dialog):
         main_sizer.Add(wx.StaticLine(self), 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 15)
         
         ujdonsagok_lista = [
-            "A Dezideráta-kezelő alcím-mezője az állományhoz hasonlóan többsoros, az adatlap nézetben pedig ugyanúgy a vonal felett jelenik meg."
+            "Javítva a státuszsor felirata szűrt lista esetén.",
+            "Javítva a szűrt lista frissítése az egyes találatok szűrési feltételének megváltoztatásakor."
         ]
 
         szoveg_box = wx.BoxSizer(wx.VERTICAL)

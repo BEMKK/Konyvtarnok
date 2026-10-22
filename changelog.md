@@ -4,6 +4,13 @@ A projekten végrehajtott lényegi változtatások dokumentációja.
 
 
 
+## [3.20.2] - 2026-10-22
+
+- Javítva a státuszsor felirata szűrt lista esetén.
+- Javítva a szűrt lista frissítése az egyes találatok szűrési feltételének megváltoztatásakor.
+
+
+
 ## [3.20.1] - 2026-10-19
 
 - A Dezideráta-kezelő alcím-mezője az állományhoz hasonlóan többsoros, az adatlap nézetben pedig ugyanúgy a vonal felett jelenik meg.
