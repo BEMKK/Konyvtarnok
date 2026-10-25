@@ -110,7 +110,7 @@ class StatisztikaDialog(wx.Dialog):
         # Eredmény megjelenítő doboz (NVDA barát olvasómező)
         self.eredmeny_ctrl = wx.TextCtrl(
             self,
-            style=wx.TE_MULTILINE | wx.TE_READONLY | wx.TE_RICH2 | wx.BORDER_SUNKEN
+            style=wx.TE_MULTILINE | wx.TE_READONLY | wx.BORDER_SUNKEN
         )
         self.eredmeny_ctrl.SetMargins(15, 10)
         self.eredmeny_ctrl.SetValue("Kérjük, válasszon szempontot és értéket, majd kattintson a 'Statisztika lekérdezése' gombra.")
