@@ -78,8 +78,10 @@ class UjdonsagokDialog(wx.Dialog):
         main_sizer.Add(wx.StaticLine(self), 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 15)
         
         ujdonsagok_lista = [
-            "Javítva a státuszsor felirata szűrt lista esetén.",
-            "Javítva a szűrt lista frissítése az egyes találatok szűrési feltételének megváltoztatásakor."
+            "Javítva a statisztika ablak képernyőolvasóval való fókuszkezelési hibája ablakváltás után.",
+            "Duplikációellenőrzés a főablakban könyv szerkesztése után.",
+            "A Keresés a gyűjteményekben dialog találati listája a keresőmező ürítésével is törlődik, hasonlóan a KönyvTárnok-keresőhöz.",
+            "Javítva a hibaüzenet hiánya sikertelen állományjegyzék export esetén."
         ]
 
         szoveg_box = wx.BoxSizer(wx.VERTICAL)

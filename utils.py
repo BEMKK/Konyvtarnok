@@ -397,21 +397,43 @@ def masolas_win32_vagolapra(szoveg):
         import ctypes
         user32 = ctypes.windll.user32
         kernel32 = ctypes.windll.kernel32
-        
+
+        # 64 bites pointerek és típusok explicit beállítása
+        kernel32.GlobalAlloc.restype = ctypes.c_void_p
+        kernel32.GlobalAlloc.argtypes = [ctypes.c_uint, ctypes.c_size_t]
+        kernel32.GlobalLock.restype = ctypes.c_void_p
+        kernel32.GlobalLock.argtypes = [ctypes.c_void_p]
+        kernel32.GlobalUnlock.argtypes = [ctypes.c_void_p]
+        kernel32.GlobalFree.argtypes = [ctypes.c_void_p]
+
+        user32.OpenClipboard.argtypes = [ctypes.c_void_p]
+        user32.SetClipboardData.restype = ctypes.c_void_p
+        user32.SetClipboardData.argtypes = [ctypes.c_uint, ctypes.c_void_p]
+
         GMEM_MOVEABLE = 0x0002
         CF_UNICODETEXT = 13
 
         if user32.OpenClipboard(None):
-            user32.EmptyClipboard()
-            encoded = szoveg.encode('utf-16le') + b'\x00\x00'
-            h_mem = kernel32.GlobalAlloc(GMEM_MOVEABLE, len(encoded))
-            if h_mem:
+            try:
+                user32.EmptyClipboard()
+                encoded = szoveg.encode('utf-16le') + b'\x00\x00'
+                h_mem = kernel32.GlobalAlloc(GMEM_MOVEABLE, len(encoded))
+                if not h_mem:
+                    return False
                 p_mem = kernel32.GlobalLock(h_mem)
-                ctypes.memmove(p_mem, encoded, len(encoded))
-                kernel32.GlobalUnlock(h_mem)
-                user32.SetClipboardData(CF_UNICODETEXT, h_mem)
-            user32.CloseClipboard()
-            return True
+                if not p_mem:
+                    kernel32.GlobalFree(h_mem)
+                    return False
+                try:
+                    ctypes.memmove(p_mem, encoded, len(encoded))
+                finally:
+                    kernel32.GlobalUnlock(h_mem)
+                if not user32.SetClipboardData(CF_UNICODETEXT, h_mem):
+                    kernel32.GlobalFree(h_mem)
+                    return False
+                return True
+            finally:
+                user32.CloseClipboard()
     except Exception as e:
         logging.error(f"Win32 vágólap másolási hiba: {e}")
     return False

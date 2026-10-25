@@ -467,14 +467,20 @@ class KonyvAdatbazis:
         self._mentes_fuggoben = False
         self.AdatokBetoltese()
 
-    def is_duplikalat(self, uj_adatok):
+    def is_duplikalat(self, uj_adatok, exclude_id=None):
         """
         Duplikátum-vizsgálat: megegyezik-e uj_adatok az állományban már
         szereplő valamelyik könyvvel (lásd tetelek_egyeznek).
+        Ha exclude_id meg van adva, az adott azonosítójú könyvet figyelmen
+        kívül hagyja (szerkesztés esetére).
         """
         if not _norm_ertek(uj_adatok.get("cim", "")):
             return False
-        return any(tetelek_egyeznek(uj_adatok, konyv) for konyv in self.konyvek)
+        return any(
+            tetelek_egyeznek(uj_adatok, konyv)
+            for konyv in self.konyvek
+            if exclude_id is None or konyv.get("id") != exclude_id
+        )
 
     def AdatokBetoltese(self):
         self.undo.torol()
@@ -556,11 +562,12 @@ class KonyvAdatbazis:
 
     # --- ID ALAPÚ MENTÉS ---
     @_undo_lepes("könyv módosítása")
-    def konyv_mentese_by_id(self, konyv_id, uj_adatok):
+    def konyv_mentese_by_id(self, konyv_id, uj_adatok, engedelyez_duplikaciot=False):
         """Frissíti a konyv_id azonosítójú könyvet uj_adatok-kal.
 
         Visszatérési érték: True sikeres mentés esetén; False, ha a
-        konyv_id-hoz KIFEJEZETTEN nem található könyv az állományban.
+        konyv_id-hoz KIFEJEZETTEN nem található könyv az állományban, vagy
+        ha a módosított adatok alapján a könyv már szerepelne duplikátumként.
 
         Ha a könyvet megtaláltuk és módosítottuk a memóriában, de a lemezre
         mentés meghiúsul, a módosítást visszavonjuk (az eredeti adatokat
@@ -571,6 +578,9 @@ class KonyvAdatbazis:
         megegyező False értékként kapta meg, ami félrevezető volt egy
         ténylegesen sikeres keresés + sikertelen lemezre írás esetén.
         """
+        if not engedelyez_duplikaciot and self.is_duplikalat(uj_adatok, exclude_id=konyv_id):
+            return False
+
         for konyv in self.konyvek:
             if konyv.get("id") == konyv_id:
                 eredeti_adatok = dict(konyv)

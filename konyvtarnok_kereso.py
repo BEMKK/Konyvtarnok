@@ -837,7 +837,7 @@ class KonyvtarnokKeresoApp(wx.Frame):
         # szándékosan külön kezeljük, hogy ne keveredjen össze a
         # duplikátum miatti elutasítással (lásd data_manager.MentesiHiba).
         try:
-            sikeres, visszautasitott, sikeres_relativ_indexek, _ = konyvek_tomeges_felvetele(
+            sikeres, visszautasitott, _ = konyvek_tomeges_felvetele(
                 self.parent.db, konyv_adatok, utani_frissites_fv=_frissites
             )
         except MentesiHiba as e:

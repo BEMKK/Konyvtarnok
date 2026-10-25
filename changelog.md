@@ -4,6 +4,15 @@ A projekten végrehajtott lényegi változtatások dokumentációja.
 
 
 
+## [3.20.3] - 2026-10-25
+
+- Javítva a statisztika ablak képernyőolvasóval való fókuszkezelési hibája ablakváltás után.
+- Duplikációellenőrzés a főablakban könyv szerkesztése után.
+- A Keresés a gyűjteményekben dialog találati listája a keresőmező ürítésével is törlődik, hasonlóan a KönyvTárnok-keresőhöz.
+- Javítva a hibaüzenet hiánya sikertelen állományjegyzék export esetén.
+
+
+
 ## [3.20.2] - 2026-10-22
 
 - Javítva a státuszsor felirata szűrt lista esetén.

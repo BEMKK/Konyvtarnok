@@ -232,6 +232,14 @@ class KonyvSzerkesztoDialog(wx.Dialog):
                         return
                 else:
                     konyv_id = self.konyv_adatok.get("id")
+                    if hasattr(self.db, "is_duplikalat") and self.db.is_duplikalat(uj_adatok, exclude_id=konyv_id):
+                        wx.MessageBox(
+                            "Ez a könyv a megadott adatok alapján már szerepel az állományban!\n(Ugyanaz a cím, szerző, kiadó, hely és év)",
+                            "Duplikátum",
+                            wx.OK | wx.ICON_WARNING,
+                            parent=self,
+                        )
+                        return
                     sikeres = self.db.konyv_mentese_by_id(konyv_id, uj_adatok)
 
                     if not sikeres:

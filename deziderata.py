@@ -3,7 +3,6 @@ import locale
 import logging
 import os
 import uuid
-import webbrowser
 from contextlib import contextmanager
 import wx
 from config_manager import load_settings, save_settings
@@ -11,7 +10,6 @@ from theme_manager import apply_theme_from_settings
 from data_manager import (
     load_hmac_json,
     save_hmac_json,
-    tetelek_egyeznek,
     additiv_lista_import,
     konyvek_tomeges_felvetele,
     kerj_tomeges_atemeles_megerositest,

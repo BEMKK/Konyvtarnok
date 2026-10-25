@@ -173,18 +173,26 @@ class KeresoDialog(wx.Dialog):
     # ADATFORRÁSOK LEKÉRÉSE
     # =========================================================================
 
+    def _get_foablak(self):
+        """Visszaadja a főablakot (Konyvtarnok), akár a főablakból, akár a
+        Dezideráta-kezelőből nyitották meg a keresőt."""
+        jeloltek = [self.parent]
+        if hasattr(self.parent, "GetParent"):
+            jeloltek.append(self.parent.GetParent())
+        if hasattr(self.parent, "parent"):
+            jeloltek.append(getattr(self.parent, "parent", None))
+        for w in jeloltek:
+            if w is not None and hasattr(w, "db"):
+                return w
+        return None
+
     def _get_allomany_adatok(self):
         """Visszaadja a könyvállomány legfrissebb adatait."""
-        if hasattr(self.parent, "db") and getattr(self.parent.db, "konyvek", None) is not None:
-            return list(self.parent.db.konyvek)
-        if hasattr(self.parent, "teljes_adatlista") and self.parent.teljes_adatlista:
-            return list(self.parent.teljes_adatlista)
-        if (
-            hasattr(self.parent, "parent")
-            and hasattr(self.parent.parent, "db")
-            and getattr(self.parent.parent.db, "konyvek", None) is not None
-        ):
-            return list(self.parent.parent.db.konyvek)
+        foablak = self._get_foablak()
+        if foablak and getattr(foablak, "db", None) and getattr(foablak.db, "konyvek", None) is not None:
+            return list(foablak.db.konyvek)
+        if foablak and hasattr(foablak, "teljes_adatlista") and foablak.teljes_adatlista:
+            return list(foablak.teljes_adatlista)
 
         try:
             adatok, ervenyes = load_hmac_json(DEFAULT_ADATBAZIS_FAJL)
@@ -199,21 +207,16 @@ class KeresoDialog(wx.Dialog):
 
     def _get_deziderata_adatok(self):
         """Visszaadja a dezideráta jegyzék legfrissebb adatait."""
-        if (
-            hasattr(self.parent, "deziderata_frame")
-            and self.parent.deziderata_frame is not None
-            and hasattr(self.parent.deziderata_frame, "items")
-        ):
-            return list(self.parent.deziderata_frame.items)
         if hasattr(self.parent, "items") and hasattr(self.parent, "load_data"):
             return list(self.parent.items)
+        foablak = self._get_foablak()
         if (
-            hasattr(self.parent, "parent")
-            and hasattr(self.parent.parent, "deziderata_frame")
-            and self.parent.parent.deziderata_frame is not None
-            and hasattr(self.parent.parent.deziderata_frame, "items")
+            foablak
+            and hasattr(foablak, "deziderata_frame")
+            and foablak.deziderata_frame is not None
+            and hasattr(foablak.deziderata_frame, "items")
         ):
-            return list(self.parent.parent.deziderata_frame.items)
+            return list(foablak.deziderata_frame.items)
 
         try:
             adatok, ervenyes = load_hmac_json(DEZIDERATA_DATA_FILE)
@@ -228,11 +231,8 @@ class KeresoDialog(wx.Dialog):
 
     def _get_db(self):
         """Visszaadja a KonyvAdatbazis példányt, ha elérhető."""
-        if hasattr(self.parent, "db"):
-            return self.parent.db
-        if hasattr(self.parent, "parent") and hasattr(self.parent.parent, "db"):
-            return self.parent.parent.db
-        return None
+        foablak = self._get_foablak()
+        return foablak.db if foablak and hasattr(foablak, "db") else None
 
     # =========================================================================
     # SZERKESZTÉSI VISSZAJELZÉSEK KEZELÉSE
@@ -240,22 +240,24 @@ class KeresoDialog(wx.Dialog):
 
     def frissit_lista_szerkesztes_utan(self, konyv_id):
         """Ha a részletek dialógusból indított könyvszerkesztés sikeres volt."""
-        if hasattr(self.parent, "frissit_lista_szerkesztes_utan"):
-            self.parent.frissit_lista_szerkesztes_utan(konyv_id)
-        elif hasattr(self.parent, "parent") and hasattr(self.parent.parent, "frissit_lista_szerkesztes_utan"):
-            self.parent.parent.frissit_lista_szerkesztes_utan(konyv_id)
+        foablak = self._get_foablak()
+        if foablak and hasattr(foablak, "frissit_lista_szerkesztes_utan"):
+            foablak.frissit_lista_szerkesztes_utan(konyv_id)
         self.on_kereses()
 
     def tetel_modositasa(self, tetel_id, uj_adatok, eredeti_sorindex=None):
         """Ha a részletek dialógusból indított dezideráta módosítás sikeres volt."""
         if hasattr(self.parent, "tetel_modositasa"):
             self.parent.tetel_modositasa(tetel_id, uj_adatok, eredeti_sorindex)
-        elif (
-            hasattr(self.parent, "deziderata_frame")
-            and self.parent.deziderata_frame is not None
-            and hasattr(self.parent.deziderata_frame, "tetel_modositasa")
-        ):
-            self.parent.deziderata_frame.tetel_modositasa(tetel_id, uj_adatok, eredeti_sorindex)
+        else:
+            foablak = self._get_foablak()
+            if (
+                foablak
+                and hasattr(foablak, "deziderata_frame")
+                and foablak.deziderata_frame is not None
+                and hasattr(foablak.deziderata_frame, "tetel_modositasa")
+            ):
+                foablak.deziderata_frame.tetel_modositasa(tetel_id, uj_adatok, eredeti_sorindex)
         self.on_kereses()
 
     # =========================================================================
@@ -268,14 +270,24 @@ class KeresoDialog(wx.Dialog):
         self.eredmeny_szoveg.SetLabel(f"Találatok ({darabszam} db):")
         self.list_ctrl.SetName(szoveg)
 
+    def _lista_uritese(self):
+        """Kiüríti a találati listát és a belső találattárolót."""
+        self.list_ctrl.DeleteAllItems()
+        self._talalatok = []
+
     def frissit_torles_gomb(self):
         """A Keresés törlése gomb csak akkor érhető el, ha van szöveg a mezőben
         vagy találat a listában."""
-        van_szoveg = bool(self.text_ctrl.GetValue())
+        van_szoveg = bool(self.text_ctrl.GetValue().strip())
         van_talalat = self.list_ctrl.GetItemCount() > 0
         self.btn_clear.Enable(van_szoveg or van_talalat)
 
     def on_text_changed(self, event):
+        """Ha a felhasználó kiüríti a keresőmezőt, a találati lista is kiürül, és frissül a törlés gomb."""
+        if not self.text_ctrl.GetValue().strip():
+            self._lista_uritese()
+            self.frissit_akadalymentesites(0)
+            self.statusz_text.SetLabel("")
         self.frissit_torles_gomb()
         event.Skip()
 
@@ -327,8 +339,7 @@ class KeresoDialog(wx.Dialog):
     def on_clear(self, event=None):
         """Kiüríti a keresőmezőt és a találati listát."""
         self.text_ctrl.Clear()
-        self.list_ctrl.DeleteAllItems()
-        self._talalatok = []
+        self._lista_uritese()
         self.frissit_akadalymentesites(0)
         self.statusz_text.SetLabel("")
         self.frissit_torles_gomb()
@@ -370,8 +381,7 @@ class KeresoDialog(wx.Dialog):
         pontos_egyezes = self.exact_match_cb.IsChecked()
         scope = self.scope_choice.GetSelection()  # 0: Mindenhol, 1: Dezideráta, 2: Állomány
 
-        self.list_ctrl.DeleteAllItems()
-        self._talalatok = []
+        self._lista_uritese()
 
         allomany_talalatok = []
         deziderata_talalatok = []

@@ -962,8 +962,18 @@ class Konyvtarnok(wx.Frame):
 
             try:
                 if hasattr(self.db, 'save_to_json'):
-                    self.db.save_to_json(kivalasztott_utvonal)
-                    wx.MessageBox("A teljes adatbázis kimentve!", "Sikeres mentés", wx.OK | wx.ICON_INFORMATION)
+                    sikeres = self.db.save_to_json(kivalasztott_utvonal)
+                    if sikeres:
+                        wx.MessageBox("A teljes adatbázis kimentve!", "Sikeres mentés", wx.OK | wx.ICON_INFORMATION)
+    
+                    else:
+                        wx.MessageBox(
+                            f"Nem sikerült elmenteni az állományjegyzéket a megadott fájlba:\n{kivalasztott_utvonal}",
+                            "Mentési hiba",
+                            wx.OK | wx.ICON_ERROR,
+                        )
+
+
             except Exception as e:
                 wx.MessageBox(f"Hiba történt a mentés során:\n{e}", "Hiba", wx.OK | wx.ICON_ERROR)
         ment_dlg.Destroy()
