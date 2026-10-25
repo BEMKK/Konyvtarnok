@@ -1,3 +1,4 @@
+import copy
 import os as _os
 import json
 import logging
@@ -32,11 +33,11 @@ def load_settings():
                 config = json.load(f)
                 # Összefésülés az alapértelmezettel (ha hiányozna valamilyen kulcs)
                 for key, val in DEFAULT_CONFIG.items():
-                    config.setdefault(key, val)
+                    config.setdefault(key, copy.deepcopy(val))
                 return config
-        except Exception as e:
+        except Exception:
             logging.error("Hiba a beállítások betöltésekor", exc_info=True)
-    return DEFAULT_CONFIG.copy()
+    return copy.deepcopy(DEFAULT_CONFIG)
 
 def save_settings(config_data):
     """Elmenti a beállítások szótárát (dict) a JSON fájlba."""
@@ -44,6 +45,6 @@ def save_settings(config_data):
         with open(SETTINGS_FILE, "w", encoding="utf-8") as f:
             json.dump(config_data, f, ensure_ascii=False, indent=4)
         return True
-    except Exception as e:
+    except Exception:
         logging.error("Hiba a beállítások mentésekor", exc_info=True)
         return False

@@ -175,7 +175,8 @@ class KonyvListaCtrl(wx.ListCtrl):
             konyv = self.jelenlegi_adatok[item]
             if 0 <= col < len(self.aktiv_oszlopok):
                 kulcs = self.aktiv_oszlopok[col]
-                return str(konyv.get(kulcs, ""))
+                ertek = konyv.get(kulcs)
+                return "" if ertek is None else str(ertek)
         return ""
 
     def OnGetItemAttr(self, item):
@@ -192,7 +193,7 @@ class KonyvListaCtrl(wx.ListCtrl):
         self.gyors_kereses.feldolgoz(
             karakter,
             total_lekero=lambda: len(self.jelenlegi_adatok),
-            szoveg_lekero=lambda i: self.jelenlegi_adatok[i].get("cim", ""),
+            szoveg_lekero=lambda i: self.jelenlegi_adatok[i].get("cim") or "",
             kivalasztott_lekero=self.GetFirstSelected,
             kivalasztas_beallito=kijeloles_beallitasa,
         )

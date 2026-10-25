@@ -219,6 +219,12 @@ def export_konyv_pdf(konyv, fajlnev):
     _sorok_pdf_be(sorok, fajlnev, meret=11, sorkoz=18)
     logging.info(f"PDF mentve: {fajlnev}")
 
+def _mezo_szoveg(konyv, kulcs):
+    """A könyv mezőjének szövege; a hiányzó és a None érték is üres szöveg."""
+    ertek = konyv.get(kulcs)
+    return "" if ertek is None else str(ertek)
+
+
 def general_sablon(konyv):
     """Visszaadja a sablon szövegét a könyv adataival kitöltve.
 
@@ -230,12 +236,12 @@ def general_sablon(konyv):
     """
     sorok = ["Bibliográfiai adatok"]
     for kulcs, felirat in BIBLIOGRAFIAI_MEZO_DEFINICIOK:
-        sorok.append(f"{felirat} {konyv.get(kulcs, '')}")
+        sorok.append(f"{felirat} {_mezo_szoveg(konyv, kulcs)}")
 
     sorok.append("")
     sorok.append("Példány adatai")
     for kulcs, felirat in PELDANY_MEZO_DEFINICIOK:
-        sorok.append(f"{felirat} {konyv.get(kulcs, '')}")
+        sorok.append(f"{felirat} {_mezo_szoveg(konyv, kulcs)}")
 
     return "\n".join(sorok)
 
@@ -251,12 +257,12 @@ def export_statisztika_pdf(szoveg, fajlnev):
     _sorok_pdf_be(sorok, fajlnev, meret=9, sorkoz=13, betutipus=PDF_MONO_FONT)
 
 def get_biztonsagos_pdf_fajlnev(konyv):
-    cim = konyv.get('cim', '')
+    cim = str(konyv.get('cim') or '')
     biztonsagos_cim = "".join([c for c in cim if c.isalpha() or c.isdigit() or c in (' ', '-', '_')]).rstrip()
     if not biztonsagos_cim:
         biztonsagos_cim = "konyv"
 
-    ev = str(konyv.get('ev', '')).strip()
+    ev = str(konyv.get('ev') or '').strip()
     biztonsagos_ev = "".join([c for c in ev if c.isalnum() or c in ('-', '_')]).rstrip()
 
     if biztonsagos_ev:
