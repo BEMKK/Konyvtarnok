@@ -2,7 +2,7 @@ import logging
 import wx
 
 from theme_manager import apply_theme_from_settings
-from data_manager import szuresi_talalatok, load_hmac_json, DEFAULT_ADATBAZIS_FAJL
+from data_manager import szuresi_talalatok, load_hmac_json, is_same_book, DEFAULT_ADATBAZIS_FAJL
 from deziderata import DATA_FILE as DEZIDERATA_DATA_FILE
 from konyvdialogs import KonyvReszletekDialog, DeziderataReszletekDialog
 from utils import masolas_vagolapra_szoveg
@@ -42,6 +42,10 @@ class KeresoDialog(wx.Dialog):
         )
         self.parent = parent
         self._talalatok = []
+        # Az utoljára LEFUTTATOTT keresés feltételei. A találati lista ezeknek
+        # felel meg (nem az űrlap pillanatnyi állapotának), ezért szerkesztés
+        # után ezekkel futtatjuk újra a keresést.
+        self._utolso_kereses = None
 
         # =====================================================================
         # VEZÉRLŐK LÉTREHOZÁSA
@@ -243,22 +247,71 @@ class KeresoDialog(wx.Dialog):
         foablak = self._get_foablak()
         if foablak and hasattr(foablak, "frissit_lista_szerkesztes_utan"):
             foablak.frissit_lista_szerkesztes_utan(konyv_id)
-        self.on_kereses()
+        # A szerkesztés megváltoztathatta, hogy a tétel megfelel-e még a
+        # keresési feltételeknek: újrakeresés, így ami már nem egyezik, eltűnik.
+        self._ujrakereses()
+
+    @staticmethod
+    def _ablak_el(ablak):
+        """True, ha az ablak létezik és a mögötte lévő wx-objektum nem szűnt meg."""
+        if ablak is None:
+            return False
+        try:
+            return bool(ablak)
+        except RuntimeError:
+            return False
+
+    def _deziderata_ablak(self, megnyit=False):
+        """Visszaadja azt az ablakot, amelyen keresztül a dezideráta módosítható
+        (a keresőt megnyitó Dezideráta-kezelő, vagy a főablak Dezideráta-kezelője).
+
+        megnyit=True esetén, ha a Dezideráta-kezelő még nincs nyitva, megnyitja
+        - korábban ilyenkor a szerkesztés csendben elveszett.
+        """
+        if hasattr(self.parent, "tetel_modositasa"):
+            return self.parent
+        foablak = self._get_foablak()
+        if foablak is None:
+            return None
+        frame = getattr(foablak, "deziderata_frame", None)
+        if not self._ablak_el(frame):
+            frame = None
+            if megnyit and hasattr(foablak, "on_deziderata"):
+                foablak.deziderata_frame = None
+                foablak.on_deziderata(None)
+                frame = getattr(foablak, "deziderata_frame", None)
+        return frame if self._ablak_el(frame) and hasattr(frame, "tetel_modositasa") else None
+
+    def is_duplicate(self, candidate, exclude_idx=None, exclude_id=None):
+        """A dezideráta-szerkesztő (EditItemDialog) duplikáció-ellenőrzéséhez:
+        van-e a jegyzékben másik, azonos tétel. Korábban a keresőből indított
+        szerkesztésnél ez az ellenőrzés kimaradt, mert a szerkesztő szülője
+        (ez az ablak) nem rendelkezett ilyen metódussal."""
+        for item in self._get_deziderata_adatok():
+            if exclude_id is not None and item.get("id") == exclude_id:
+                continue
+            if is_same_book(candidate, item):
+                return True
+        return False
 
     def tetel_modositasa(self, tetel_id, uj_adatok, eredeti_sorindex=None):
-        """Ha a részletek dialógusból indított dezideráta módosítás sikeres volt."""
-        if hasattr(self.parent, "tetel_modositasa"):
-            self.parent.tetel_modositasa(tetel_id, uj_adatok, eredeti_sorindex)
+        """Ha a részletek dialógusból indított dezideráta módosítás sikeres volt.
+
+        Ha a Dezideráta-kezelő nincs nyitva, megnyitja, hogy a módosítás
+        ténylegesen elmentődjön. Ha így sem menthető, hibaüzenetet ad."""
+        frame = self._deziderata_ablak(megnyit=True)
+        if frame is not None:
+            # Sikertelenség esetén (letiltott szerkesztés, eltűnt tétel) a
+            # Dezideráta-kezelő maga ad hibaüzenetet.
+            frame.tetel_modositasa(tetel_id, uj_adatok, eredeti_sorindex)
         else:
-            foablak = self._get_foablak()
-            if (
-                foablak
-                and hasattr(foablak, "deziderata_frame")
-                and foablak.deziderata_frame is not None
-                and hasattr(foablak.deziderata_frame, "tetel_modositasa")
-            ):
-                foablak.deziderata_frame.tetel_modositasa(tetel_id, uj_adatok, eredeti_sorindex)
-        self.on_kereses()
+            wx.MessageBox(
+                "A módosítást nem sikerült elmenteni: a Dezideráta-kezelő nem érhető el.",
+                "Szerkesztés", wx.OK | wx.ICON_ERROR, parent=self,
+            )
+        # Sikertelen mentés után is újrakeresünk: a lista így a tényleges
+        # adatokat mutatja.
+        self._ujrakereses()
 
     # =========================================================================
     # AKADÁLYMENTESÍTÉS ÉS BILLENTYŰKEZELÉS
@@ -286,6 +339,7 @@ class KeresoDialog(wx.Dialog):
         """Ha a felhasználó kiüríti a keresőmezőt, a találati lista is kiürül, és frissül a törlés gomb."""
         if not self.text_ctrl.GetValue().strip():
             self._lista_uritese()
+            self._utolso_kereses = None
             self.frissit_akadalymentesites(0)
             self.statusz_text.SetLabel("")
         self.frissit_torles_gomb()
@@ -340,6 +394,7 @@ class KeresoDialog(wx.Dialog):
         """Kiüríti a keresőmezőt és a találati listát."""
         self.text_ctrl.Clear()
         self._lista_uritese()
+        self._utolso_kereses = None
         self.frissit_akadalymentesites(0)
         self.statusz_text.SetLabel("")
         self.frissit_torles_gomb()
@@ -381,6 +436,26 @@ class KeresoDialog(wx.Dialog):
         pontos_egyezes = self.exact_match_cb.IsChecked()
         scope = self.scope_choice.GetSelection()  # 0: Mindenhol, 1: Dezideráta, 2: Állomány
 
+        self._utolso_kereses = {
+            "keresett_szoveg": keresett_szoveg,
+            "mezok": list(mezok),
+            "pontos_egyezes": pontos_egyezes,
+            "scope": scope,
+        }
+        self._kereses_vegrehajtasa(**self._utolso_kereses)
+
+        # A fókusz minden keresés után a találati listára kerül - 0 találatnál
+        # is, a KönyvTárnok-keresőhöz hasonlóan. A lista neve ilyenkor
+        # "Találatok listája, 0 elem", így a képernyőolvasó felolvassa az
+        # eredményt.
+        self.list_ctrl.SetFocus()
+
+        self.frissit_torles_gomb()
+        self.Layout()
+
+    def _kereses_vegrehajtasa(self, keresett_szoveg, mezok, pontos_egyezes, scope):
+        """A megadott feltételekkel lefuttatja a keresést, és feltölti a találati
+        listát (fókuszt nem mozgat, üzenetet nem ad)."""
         self._lista_uritese()
 
         allomany_talalatok = []
@@ -436,12 +511,45 @@ class KeresoDialog(wx.Dialog):
         else:
             self.statusz_text.SetLabel("Nincs találat.")
 
-        # A fókusz minden keresés után a találati listára kerül - 0 találatnál
-        # is, a KönyvTárnok-keresőhöz hasonlóan. A lista neve ilyenkor
-        # "Találatok listája, 0 elem", így a képernyőolvasó felolvassa az
-        # eredményt.
-        self.list_ctrl.SetFocus()
+    def _kijelolt_talalat_kulcsa(self):
+        """(kijelölt sor indexe, (forrás, id)) - az újrakeresés utáni
+        visszaálláshoz. (-1, None), ha nincs kijelölés."""
+        sor = self.list_ctrl.GetFirstSelected()
+        if sor == -1:
+            return -1, None
+        adat_idx = self.list_ctrl.GetItemData(sor)
+        if 0 <= adat_idx < len(self._talalatok):
+            talalat = self._talalatok[adat_idx]
+            return sor, (talalat["forras"], talalat["adat"].get("id"))
+        return sor, None
 
+    def _ujrakereses(self):
+        """Az utoljára lefuttatott keresés megismétlése a friss adatokon.
+
+        Szerkesztés után hívódik: ha a módosított tétel már nem felel meg a
+        keresési feltételnek, eltűnik a találati listából. A kijelölés a
+        tételen marad, ha az még szerepel a listában; különben a lista ugyanazon
+        (vagy az utolsó) sorára kerül, így a billentyűzetes/képernyőolvasós
+        felhasználó nem veszíti el a helyét."""
+        if not self._utolso_kereses:
+            return
+        regi_sor, kulcs = self._kijelolt_talalat_kulcsa()
+        self._kereses_vegrehajtasa(**self._utolso_kereses)
+
+        db_van = self.list_ctrl.GetItemCount()
+        if db_van:
+            uj_sor = -1
+            if kulcs is not None and kulcs[1] is not None:
+                for i, talalat in enumerate(self._talalatok):
+                    if (talalat["forras"], talalat["adat"].get("id")) == kulcs:
+                        uj_sor = i
+                        break
+            if uj_sor == -1:
+                uj_sor = min(max(regi_sor, 0), db_van - 1)
+            self.list_ctrl.Select(uj_sor)
+            self.list_ctrl.Focus(uj_sor)
+            self.list_ctrl.EnsureVisible(uj_sor)
+        self.list_ctrl.SetFocus()
         self.frissit_torles_gomb()
         self.Layout()
 

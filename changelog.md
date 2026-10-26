@@ -7,9 +7,16 @@ A projekten végrehajtott lényegi változtatások dokumentációja.
 ## \[3.20.3] - 2026-10-26
 
 * Javítva a statisztika ablak képernyőolvasóval való fókuszkezelési hibája ablakváltás után.
-* Duplikációellenőrzés a főablakban könyv szerkesztése után.
+* Duplikációellenőrzés a főablakban könyv szerkesztése után, valamint a Kereső-dialogból indított szerkesztés esetén is.
 * A Keresés a gyűjteményekben dialog találati listája a keresőmező ürítésével is törlődik, hasonlóan a KönyvTárnok-keresőhöz.
 * Javítva a hibaüzenet hiánya sikertelen állományjegyzék export esetén.
+* Javítva a keresés a gyűjteményekben funkció hibája, ami miatt a könyvek id mezőjében is keresett.
+* Javítva a Keresés ablakból módosított Dezideráta-tételek mentésének hibája.
+* Javítva az oldalszám és kiadás éve szerinti rendezés hibája, ha a mezőben több érték szerepel.
+* Javítva a sikertelen pdf export hibája, mely mostantól felsorolja a nem exportált könyveket.
+* Javítás a beállítások mentésekor, sikertelen mentés esetén hibaüzenet jelenik meg.
+* Javítás a súgóban.
+* Kisebb kódjavítások
 
 
 

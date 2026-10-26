@@ -735,7 +735,9 @@ def mutass_tomeges_atemeles_eredmenyt(parent, sikeres, visszautasitott, hozzaadv
 def szoveg_szuro_egyezik(tetel, keresett, pontos_egyezes, mezok=None, szavankent=False):
     """Egy tétel egyezik-e a keresett szöveggel.
 
-    mezok=None (alapeset): a tétel MINDEN mezőértékében keres.
+    mezok=None (alapeset): a tétel MINDEN mezőértékében keres, kivéve a
+    belső "id" azonosítót (UUID): az nem a felhasználónak szánt adat, és
+    rövid keresőszavaknál (pl. "4", "ab") téves találatokat adna.
     mezok=[...]: csak a megadott logikai mezőkben (pl. "cim", "szerzo",
     "kiado", "hely", "ev") keres. Listaként/tuple-ként megadott
     tételnél a mezőnevek nem értelmezhetők, ott a mezok figyelmen kívül marad.
@@ -759,11 +761,12 @@ def szoveg_szuro_egyezik(tetel, keresett, pontos_egyezes, mezok=None, szavankent
             forras = {}
         ertekek = [forras.get(mezo) or "" for mezo in mezok]
     elif isinstance(tetel, dict):
-        ertekek = tetel.values()
+        ertekek = [ertek for kulcs, ertek in tetel.items() if kulcs != "id"]
     elif isinstance(tetel, (list, tuple)):
         ertekek = tetel
     else:
-        ertekek = vars(tetel).values() if hasattr(tetel, '__dict__') else []
+        ertekek = ([ertek for kulcs, ertek in vars(tetel).items() if kulcs != "id"]
+                   if hasattr(tetel, '__dict__') else [])
 
     ertek_szovegek = [str(ertek).lower().strip() for ertek in ertekek if ertek]
 

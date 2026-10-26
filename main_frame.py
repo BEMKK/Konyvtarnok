@@ -861,16 +861,30 @@ class Konyvtarnok(wx.Frame):
                 if self.lista.GetKonyvByRowIndex(idx) is not None
             ]            
 
-            sikeres = tomeges_export_pdf(
+            eredmeny = tomeges_export_pdf(
                 konyvek_listaja, 
                 mentesi_utvonal, 
                 fajl_letezik_callback=self.kezel_fajlutkozes
             )
-            
+
+            uzenet = (
+                f"Tömeges exportálás kész!\n"
+                f"Sikeresen mentve: {eredmeny.sikeres}/{len(indexek)} db PDF."
+            )
+            if eredmeny.kihagyott:
+                uzenet += f"\nKihagyva: {eredmeny.kihagyott} db."
+            if eredmeny.hibas:
+                uzenet += f"\n\nHibás exportok ({eredmeny.hibas} db):"
+                for cim, hiba in eredmeny.hibak[:10]:
+                    uzenet += f"\n• {cim}: {hiba}"
+                if eredmeny.hibas > 10:
+                    uzenet += f"\n… és még {eredmeny.hibas - 10} további hiba (részletek a hibanaplóban)."
+
             wx.MessageBox(
-                f"Tömeges exportálás kész!\nSikeresen mentve: {sikeres}/{len(indexek)} db PDF.", 
-                "Exportálás eredménye", 
-                wx.OK | wx.ICON_INFORMATION
+                uzenet,
+                "Exportálás eredménye",
+                wx.OK | (wx.ICON_WARNING if eredmeny.hibas else wx.ICON_INFORMATION),
+                self,
             )
 
     def OnJsonImport(self, event):
@@ -1093,7 +1107,7 @@ class Konyvtarnok(wx.Frame):
             config["last_json_dir"] = dlg.GetKivalasztottJsonDir()
             config["auto_update_check"] = dlg.GetAutoUpdateCheck()
             config["update_frequency"] = dlg.GetUpdateFrequency()
-            save_settings(config)
+            mentve = save_settings(config)
 
             if tema_valtozott:
                 self._aktualis_tema = uj_tema
@@ -1105,7 +1119,15 @@ class Konyvtarnok(wx.Frame):
                     apply_theme(self.konyvtarnok_kereso_frame, uj_tema)
                     self.konyvtarnok_kereso_frame.current_theme = uj_tema
 
-            wx.MessageBox("A beállítások sikeresen mentésre kerültek!", "Beállítások", wx.OK | wx.ICON_INFORMATION)
+            if mentve:
+                wx.MessageBox("A beállítások sikeresen mentésre kerültek!", "Beállítások", wx.OK | wx.ICON_INFORMATION)
+            else:
+                wx.MessageBox(
+                    "A beállításokat nem sikerült elmenteni a settings.json fájlba "
+                    "(például nincs írási jogosultság a program mappájában, vagy tele van a lemez).\n\n"
+                    "A módosítások csak a program bezárásáig érvényesek.",
+                    "Mentési hiba", wx.OK | wx.ICON_ERROR, self,
+                )
         dlg.Destroy()
 
     def OnAbout(self, event):

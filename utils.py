@@ -205,10 +205,11 @@ def statisztikai_szures(teljes_adatlista, kulcs, keresett_ertek):
 
 def szam_mezo_kulcs(ertek):
     """Egy nyers mezőérték (pl. 'oldalszam' vagy 'ev') rendezési kulcsa:
-    a benne szereplő számjegyeket veszi ki, vagy 0-t ad vissza, ha nincs
-    bennük számjegy."""
-    szam_str = "".join(filter(str.isdigit, str(ertek)))
-    return int(szam_str) if szam_str else 0
+    az érték ELSŐ számjegysorozatát adja vissza egész számként, vagy 0-t, ha
+    nincs benne számjegy. (Korábban az összes számjegyet összefűzte, így pl.
+    az '1987-1990' 19871990, az '1987 (2. kiad.)' 19872 lett.)"""
+    match = re.search(r"\d+", str(ertek))
+    return int(match.group(0)) if match else 0
 
 
 def meret_mezo_kulcs(ertek):
