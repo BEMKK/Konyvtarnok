@@ -243,7 +243,29 @@ class StatisztikaDialog(wx.Dialog):
                 else:
                     ures_db += 1
 
-            for low_val, count in sorted(megoszlas.items(), key=lambda item: item[1], reverse=True):
+            if kulcs == "evszazad":
+                def megoszlas_kulcs(item):
+                    # Római számmal kezdődő évszázad-felirat kronologikus sorrendje
+                    romai_ertekek = {"I": 1, "V": 5, "X": 10, "L": 50, "C": 100}
+                    m = re.match(r"\s*([IVXLC]+)", megoszlas_nev[item[0]].upper())
+                    if not m:
+                        return 9999
+                    ossz, elozo = 0, 0
+                    for ch in reversed(m.group(1)):
+                        ertek = romai_ertekek[ch]
+                        ossz += ertek if ertek >= elozo else -ertek
+                        elozo = max(elozo, ertek)
+                    return ossz
+                rendezett_megoszlas = sorted(megoszlas.items(), key=megoszlas_kulcs)
+            elif kulcs == "evtized":
+                def megoszlas_kulcs(item):
+                    m = re.search(r"\d+", megoszlas_nev[item[0]])
+                    return int(m.group(0)) if m else 0
+                rendezett_megoszlas = sorted(megoszlas.items(), key=megoszlas_kulcs)
+            else:
+                rendezett_megoszlas = sorted(megoszlas.items(), key=lambda item: item[1], reverse=True)
+
+            for low_val, count in rendezett_megoszlas:
                 szazalek = (count / osszes_szam * 100) if osszes_szam > 0 else 0
                 szoveg += f"{megoszlas_nev[low_val]}: {count} db ({szazalek:.1f}%)\n"
             
