@@ -78,17 +78,8 @@ class UjdonsagokDialog(wx.Dialog):
         main_sizer.Add(wx.StaticLine(self), 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 15)
         
         ujdonsagok_lista = [
-            "Javítva a statisztika ablak képernyőolvasóval való fókuszkezelési hibája ablakváltás után.",
-            "Duplikációellenőrzés a főablakban könyv szerkesztése után.",
-            "A Keresés a gyűjteményekben dialog találati listája a keresőmező ürítésével is törlődik, hasonlóan a KönyvTárnok-keresőhöz.",
-            "Javítva a hibaüzenet hiánya sikertelen állományjegyzék export esetén.",
-            "Javítva a keresés a gyűjteményekben funkció hibája, ami miatt a könyvek id mezőjében is keresett.",
-            "Javítva a Keresés ablakból módosított Dezideráta-tételek mentésének hibája.",
-            "Javítva az oldalszám és kiadás éve szerinti rendezés hibája, ha a mezőben több érték szerepel.",
-            "Javítva a sikertelen pdf export hibája, mely mostantól felsorolja a nem exportált könyveket.",
-            "Javítás a beállítások mentésekor, sikertelen mentés esetén hibaüzenet jelenik meg.",
-            "Javítás a súgóban.",
-            "Kisebb kódjavítások."
+            "A Dezideráta és az állományjegyzék tételei mostantól a Keresés a gyűjteményekben dialogból indítva is törölhetők.",
+            "Javítva az évszázadok megjelenítési sorrendje az állománystatisztikában Kiadási évszázad, Összes érték szerinti megoszlás esetén."
         ]
 
         szoveg_box = wx.BoxSizer(wx.VERTICAL)

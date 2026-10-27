@@ -4,6 +4,13 @@ A projekten végrehajtott lényegi változtatások dokumentációja.
 
 
 
+## [3.21.0] - 2026-10-27
+
+* A Dezideráta és az állományjegyzék tételeinek törlése mostantól a Keresés a gyűjteményekben dialog találati listájából indítva is lehetséges.
+* Javítva az évszázadok megjelenítési sorrendje az állománystatisztikában Kiadási évszázad, Összes érték szerinti megoszlásnál.
+
+
+
 ## \[3.20.3] - 2026-10-26
 
 * Javítva a statisztika ablak képernyőolvasóval való fókuszkezelési hibája ablakváltás után.
@@ -16,7 +23,7 @@ A projekten végrehajtott lényegi változtatások dokumentációja.
 * Javítva a sikertelen pdf export hibája, mely mostantól felsorolja a nem exportált könyveket.
 * Javítás a beállítások mentésekor, sikertelen mentés esetén hibaüzenet jelenik meg.
 * Javítás a súgóban.
-* Kisebb kódjavítások
+* Kisebb kódjavítások.
 
 
 

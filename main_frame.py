@@ -395,19 +395,8 @@ class Konyvtarnok(wx.Frame):
                     self,
                 )
 
-            self.teljes_adatlista = []
-            if self.aktiv_szurt_lista is not None:
-                torolt_id_halmaz = set(torlendo_id_k)
-                self.aktiv_szurt_lista = [
-                    konyv for konyv in self.aktiv_szurt_lista
-                    if konyv.get("id") not in torolt_id_halmaz
-                ]
-                self.lista.FeltoltLista(self.aktiv_szurt_lista)
-                self._frissit_szuro_cimke_darabszamot(len(self.aktiv_szurt_lista))
-            else:
-                self.lista.FeltoltLista()
-            self.FrissitStatusBar()
-            
+            self.frissit_lista_torles_utan(torlendo_id_k)
+
             osszesen = self.lista.GetItemCount()
             if osszesen > 0:
                 uj_idx = min(cel_index, osszesen - 1)
@@ -418,6 +407,23 @@ class Konyvtarnok(wx.Frame):
             self.lista.SetFocus()
 
         kerdes.Destroy()
+
+    def frissit_lista_torles_utan(self, torolt_idk):
+        """A könyvlista és a státuszsor frissítése könyv(ek) törlése után, az
+        esetleges aktív szűrés megőrzésével. Az OnKonyvTorles és a
+        "Keresés a gyűjteményekben" ablak törlése is ezt hívja."""
+        self.teljes_adatlista = []
+        if self.aktiv_szurt_lista is not None:
+            torolt_id_halmaz = set(torolt_idk)
+            self.aktiv_szurt_lista = [
+                konyv for konyv in self.aktiv_szurt_lista
+                if konyv.get("id") not in torolt_id_halmaz
+            ]
+            self.lista.FeltoltLista(self.aktiv_szurt_lista)
+            self._frissit_szuro_cimke_darabszamot(len(self.aktiv_szurt_lista))
+        else:
+            self.lista.FeltoltLista()
+        self.FrissitStatusBar()
 
     def OnMasolas(self, event):
         """Szerkesztés > Másolás (Ctrl+C): a kijelölt könyvek a vágólapra.

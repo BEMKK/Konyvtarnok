@@ -2,7 +2,9 @@ import logging
 import wx
 
 from theme_manager import apply_theme_from_settings
-from data_manager import szuresi_talalatok, load_hmac_json, is_same_book, DEFAULT_ADATBAZIS_FAJL
+from data_manager import (
+    szuresi_talalatok, load_hmac_json, is_same_book, MentesiHiba, DEFAULT_ADATBAZIS_FAJL,
+)
 from deziderata import DATA_FILE as DEZIDERATA_DATA_FILE
 from konyvdialogs import KonyvReszletekDialog, DeziderataReszletekDialog
 from utils import masolas_vagolapra_szoveg
@@ -29,7 +31,9 @@ class KeresoDialog(wx.Dialog):
     Keresés helye, Csak teljes szó, Keresett kifejezés, Keresés törlése,
     Keresés, Összes oszlop, az egyes oszlopok jelölőnégyzetei (Cím,
     Összeállító, Kiadó, Kiadás helye, Kiadás éve), Találati lista, Részletek,
-    Bezárás.
+    Törlés, Bezárás.
+    A találati listában a Delete billentyű és a Törlés gomb a kijelölt tételt
+    (megerősítés után) törli az állományból, illetve a deziderátából.
     A kezdőfókusz a Keresett kifejezés mezőn van.
     """
 
@@ -116,6 +120,10 @@ class KeresoDialog(wx.Dialog):
         self.btn_reszletek = wx.Button(self, label="Részletek...")
         self.btn_reszletek.Bind(wx.EVT_BUTTON, self.on_reszletek)
 
+        # 8/b. Törlés
+        self.btn_torles = wx.Button(self, label="Törlés...")
+        self.btn_torles.Bind(wx.EVT_BUTTON, self.on_torles)
+
         # 9. Bezárás
         self.btn_bezaras = wx.Button(self, wx.ID_CANCEL, label="Bezárás")
 
@@ -159,6 +167,7 @@ class KeresoDialog(wx.Dialog):
         bottom_sizer.Add(self.statusz_text, 0, wx.ALIGN_CENTER_VERTICAL)
         bottom_sizer.AddStretchSpacer(1)
         bottom_sizer.Add(self.btn_reszletek, 0, wx.RIGHT, 5)
+        bottom_sizer.Add(self.btn_torles, 0, wx.RIGHT, 5)
         bottom_sizer.Add(self.btn_bezaras, 0)
         main_sizer.Add(bottom_sizer, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 10)
 
@@ -353,6 +362,9 @@ class KeresoDialog(wx.Dialog):
         # Ctrl+C másolja a kijelölt sort
         elif event.ControlDown() and keycode == ord('C'):
             self._masolas_vagolapra()
+        # Delete törli a kijelölt tételt (megerősítés után)
+        elif keycode in (wx.WXK_DELETE, wx.WXK_NUMPAD_DELETE):
+            self.on_torles()
         else:
             event.Skip()
 
@@ -552,6 +564,99 @@ class KeresoDialog(wx.Dialog):
         self.list_ctrl.SetFocus()
         self.frissit_torles_gomb()
         self.Layout()
+
+    def on_torles(self, event=None):
+        """A kijelölt találat törlése az állományból vagy a deziderátából
+        (megerősítés után), majd a találati lista újraépítése."""
+        sor = self.list_ctrl.GetFirstSelected()
+        if sor == -1:
+            wx.MessageBox(
+                "Kérjük, jelöljön ki egy tételt a listából a törléshez!",
+                "Nincs kijelölés", wx.OK | wx.ICON_INFORMATION, parent=self,
+            )
+            return
+
+        adat_idx = self.list_ctrl.GetItemData(sor)
+        if not (0 <= adat_idx < len(self._talalatok)):
+            return
+        talalat = self._talalatok[adat_idx]
+        forras = talalat["forras"]
+        adat = talalat["adat"]
+        tetel_id = adat.get("id")
+        cim = str(adat.get("cim") or "").strip() or "cím nélküli tétel"
+
+        if not tetel_id:
+            wx.MessageBox(
+                f"A(z) '{cim}' tételnek nincs azonosítója, ezért innen nem törölhető.",
+                "Törlés", wx.OK | wx.ICON_WARNING, parent=self,
+            )
+            return
+
+        if forras == "Állomány":
+            uzenet = f"Biztosan törölni szeretné a(z) '{cim}' című könyvet az állományból?"
+        else:
+            uzenet = f"Biztosan törölni szeretné a(z) '{cim}' című tételt a deziderátából?"
+        kerdes = wx.MessageDialog(
+            self, uzenet, "Törlés megerősítése",
+            wx.YES_NO | wx.NO_DEFAULT | wx.ICON_QUESTION,
+        )
+        try:
+            megerositve = kerdes.ShowModal() == wx.ID_YES
+        finally:
+            kerdes.Destroy()
+        if not megerositve:
+            self.list_ctrl.SetFocus()
+            return
+
+        if forras == "Állomány":
+            self._torles_allomanybol(tetel_id)
+        else:
+            self._torles_deziderabol(tetel_id)
+
+        # Újrakeresés: a törölt tétel kikerül a listából, a kijelölés pedig
+        # ugyanarra a sorszámra (vagy az utolsó sorra) kerül.
+        self._ujrakereses()
+
+    def _torles_allomanybol(self, konyv_id):
+        """Egy könyv törlése az állományból (visszavonható), a főablak
+        könyvlistájának frissítésével. True, ha a törlés megtörtént."""
+        db = self._get_db()
+        foablak = self._get_foablak()
+        if db is None:
+            wx.MessageBox("Az állomány nem érhető el, a törlés nem végezhető el.",
+                          "Törlés", wx.OK | wx.ICON_ERROR, parent=self)
+            return False
+
+        torolve = False
+        try:
+            with db.undo.muvelet("könyv törlése"):
+                torolve = db.konyv_torlese_by_id(konyv_id)
+        except MentesiHiba as e:
+            wx.MessageBox(
+                f"Hiba történt a törlés mentése közben:\n{e}\n\nA könyv nem lett törölve.",
+                "Mentési hiba", wx.OK | wx.ICON_ERROR, parent=self,
+            )
+        else:
+            if not torolve:
+                wx.MessageBox("A könyv időközben eltűnt az állományból.",
+                              "Törlés", wx.OK | wx.ICON_WARNING, parent=self)
+
+        if foablak is not None and hasattr(foablak, "frissit_lista_torles_utan"):
+            foablak.frissit_lista_torles_utan([konyv_id])
+        return bool(torolve)
+
+    def _torles_deziderabol(self, tetel_id):
+        """Egy tétel törlése a deziderátából (visszavonható). Ha a
+        Dezideráta-kezelő nincs nyitva, megnyitja, hogy a törlés a megszokott
+        módon (mentés, visszavonási lépés) menjen végbe. True, ha megtörtént."""
+        frame = self._deziderata_ablak(megnyit=True)
+        if frame is None or not hasattr(frame, "tetelek_torlese"):
+            wx.MessageBox("A Dezideráta-kezelő nem érhető el, a törlés nem végezhető el.",
+                          "Törlés", wx.OK | wx.ICON_ERROR, parent=self)
+            return False
+        # Sikertelenség esetén (pl. letiltott szerkesztés) a Dezideráta-kezelő
+        # maga ad hibaüzenetet.
+        return bool(frame.tetelek_torlese([tetel_id]))
 
     def on_reszletek(self, event=None):
         """Megnyitja a kijelölt találat adatlapját."""

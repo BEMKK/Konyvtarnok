@@ -873,6 +873,22 @@ class Deziderata(wx.Frame):
         # Mégse / Escape esetén a fókusz különben a gombon maradna.
         self.list.SetFocus()
 
+    def tetelek_torlese(self, idk):
+        """A megadott azonosítójú tételek törlése, mentéssel, újrarajzolással és
+        visszavonási lépéssel - megerősítés nélkül (azt a hívó kéri). A
+        Törlés menüpont és a "Keresés a gyűjteményekben" ablak is ezt hívja.
+        True, ha a törlés megtörtént."""
+        if not self._szerkesztes_engedelyezett():
+            return False
+        idk = [i for i in idk if i]
+        if not idk:
+            return False
+        with self.undo.muvelet(f"{len(idk)} tétel törlése" if len(idk) > 1 else "tétel törlése"):
+            self._torles_idk_alapjan(idk)
+            self.save_data()
+            self.refresh_list()
+        return True
+
     def on_delete(self, event):
         """Kijelölt tétel(ek) törlése (tömeges törlés támogatásával)."""
         if not self._szerkesztes_engedelyezett():
@@ -902,10 +918,7 @@ class Deziderata(wx.Frame):
         )
 
         if confirm == wx.YES:
-            with self.undo.muvelet(f"{db} tétel törlése" if db > 1 else "tétel törlése"):
-                self._torles_idk_alapjan(selected_ids)
-                self.save_data()
-                self.refresh_list()
+            self.tetelek_torlese(selected_ids)
             osszesen = self.list.GetItemCount()
             if osszesen > 0:
                 uj_idx = min(selected_indices[0], osszesen - 1)
