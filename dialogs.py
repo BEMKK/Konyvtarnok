@@ -2,7 +2,7 @@ import os
 import sys
 import logging
 import wx
-from constants import APP_NAME, APP_VERSION, APP_STAGE
+from constants import APP_NAME, APP_VERSION
 from theme_manager import apply_theme_from_settings
 from config_manager import load_settings, save_settings
 from export_manager import export_konyv_pdf, get_biztonsagos_pdf_fajlnev
@@ -39,7 +39,7 @@ class NevjegyDialog(wx.Dialog):
         cim_label.SetFont(font)
         sizer.Add(cim_label, 0, wx.ALIGN_CENTER | wx.TOP, 20)
         
-        verzio_label = wx.StaticText(self, label=f"v{APP_VERSION} {APP_STAGE}".strip())
+        verzio_label = wx.StaticText(self, label=f"{APP_VERSION}".strip())
         sizer.Add(verzio_label, 0, wx.ALIGN_CENTER | wx.TOP, 5)
         
         leiras_label = wx.StaticText(self, label="Akadálymentes könyvkatalógus-kezelő magángyűjtemények számára.")
@@ -72,14 +72,13 @@ class UjdonsagokDialog(wx.Dialog):
         cim_label.SetFont(font_cim)
         main_sizer.Add(cim_label, 0, wx.ALIGN_CENTER | wx.TOP, 15)
         
-        verzio_label = wx.StaticText(self, label=F"v{APP_VERSION}".strip())
+        verzio_label = wx.StaticText(self, label=F"{APP_VERSION}".strip())
         main_sizer.Add(verzio_label, 0, wx.ALIGN_CENTER | wx.TOP | wx.BOTTOM, 5)        
 
         main_sizer.Add(wx.StaticLine(self), 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 15)
         
         ujdonsagok_lista = [
-            "A Dezideráta és az állományjegyzék tételei mostantól a Keresés a gyűjteményekben dialogból indítva is törölhetők.",
-            "Javítva az évszázadok megjelenítési sorrendje az állománystatisztikában Kiadási évszázad, Összes érték szerinti megoszlás esetén."
+            ""
         ]
 
         szoveg_box = wx.BoxSizer(wx.VERTICAL)
