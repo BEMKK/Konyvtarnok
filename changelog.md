@@ -4,6 +4,13 @@ A projekten végrehajtott lényegi változtatások dokumentációja.
 
 
 
+## [3.21.1] - 2026-11-03
+
+* Javítva a lista rendezése számokkal kezdődő könyvcímek esetén, valamint a római számok hibás kezelése.",
+* Program függőségei frissítve.",
+
+
+
 ## [3.21.0] - 2026-10-27
 
 * A Dezideráta és az állományjegyzék tételeinek törlése mostantól a Keresés a gyűjteményekben dialog találati listájából indítva is lehetséges.

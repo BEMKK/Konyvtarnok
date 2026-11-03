@@ -1,2 +1,2 @@
-reportlab==5.0.0
-wxpython==4.2.5
+reportlab==5.1.0
+wxpython==4.3.2

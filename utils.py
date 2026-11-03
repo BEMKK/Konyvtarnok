@@ -82,38 +82,68 @@ def bekerult_datum_kulcs(datum_str):
     return datetime.date(1900, 1, 1)
 
 
-def romai_szam_atlakito(match):
-    romai_terkep = {
-        'I': 1, 'V': 5, 'X': 10, 'L': 50,
-        'C': 100, 'D': 500, 'M': 1000
-    }
-    s = match.group(0).rstrip('.').upper()
-    if not s:
-        return match.group(0)
+def _egesz_romaira(n):
+    """Egy egész szám (1..3999) szabályos római szám alakja, pl. 19 -> 'XIX'."""
+    jegyek = ((1000, "M"), (900, "CM"), (500, "D"), (400, "CD"),
+              (100, "C"), (90, "XC"), (50, "L"), (40, "XL"),
+              (10, "X"), (9, "IX"), (5, "V"), (4, "IV"), (1, "I"))
+    eredmeny = ""
+    for ertek, jel in jegyek:
+        while n >= ertek:
+            eredmeny += jel
+            n -= ertek
+    return eredmeny
 
-    ertek = 0
-    prev = 0
-    for c in reversed(s):
-        curr = romai_terkep.get(c, 0)
-        if curr < prev:
-            ertek -= curr
-        else:
-            ertek += curr
-            prev = curr
+
+# A rendezéskor római számnak tekintett szavak szótára (pl. 'XIX' -> 19).
+# Csak ez a kis, valóban előforduló tartomány számít római számnak (századok,
+# uralkodói sorszámok, kötetszámok), ezért az 'M', 'D', 'C', 'L' betűket
+# tartalmazó közönséges szavak ('Mi', 'Di', 'Civil'), valamint a
+# szerzői monogramok ('M.', 'C.', 'D.', 'L.') nem kerülnek összetévesztésre.
+# Ha ennél nagyobb sorszámokra is szükség van, csak ROMAI_MAX-ot kell emelni.
+ROMAI_MAX = 49
+ROMAI_SZAMOK = {_egesz_romaira(n): n for n in range(1, ROMAI_MAX + 1)}
+
+# Csak NAGYBETŰS, szó határolta betűcsoport lehet római szám (az utána álló
+# pont elhagyható). A kisbetűs 'Mi', 'Xi', 'Li' stb. így sosem jelölt.
+ROMAI_MINTA = re.compile(r'\b[IVXLCDM]+\b\.?')
+
+
+def romai_szam_atlakito(match):
+    """re.sub-hoz: a találatot négyjegyű, nullával kitöltött számra cseréli,
+    ha az szerepel a ROMAI_SZAMOK szótárban; különben változatlanul hagyja."""
+    szoveg = match.group(0)
+    s = szoveg.rstrip('.')
+    ertek = ROMAI_SZAMOK.get(s)
+    if ertek is None:
+        return szoveg
+    # Az önálló 'I' pont nélkül többnyire angol névmás ('I Am Legend'),
+    # nem római szám; csak 'I.' alakban tekintjük annak.
+    if s == "I" and not szoveg.endswith('.'):
+        return szoveg
     return f"{ertek:04d}"
 
 
-def magyar_rendezesi_kulcs(szoveg):
-    HU_SORREND = " aábcdeéfghiíjklmnoóöőpqrstuúüűvwxyz0123456789"
-    HU_TERKEP = {karakter: index for index, karakter in enumerate(HU_SORREND)}
+def szamjegysor_atlakito(match):
+    """re.sub-hoz: egy számjegysorozatot hosszelőtaggal látja el, hogy a
+    karakterenkénti összehasonlítás a számértéket kövesse.
+    Pl. '9' -> '019', '10' -> '0210', '150' -> '03150'."""
+    szamjegyek = match.group(0).lstrip('0') or '0'
+    return f"{min(len(szamjegyek), 99):02d}{szamjegyek}"
 
-    tisztitott = str(szoveg).lower().strip()
-    tisztitott = re.sub(
-        r'\b(?=[MDCLXVI]+\bM{0,4}(CM|CD|D?C{0,3})(XC|XL|L?X{0,3})(IX|IV|V?I{0,3}))[MDCLXVI]+\.?',
-        romai_szam_atlakito,
-        tisztitott,
-        flags=re.IGNORECASE
-    )
+
+HU_SORREND = " 0123456789aábcdeéfghiíjklmnoóöőpqrstuúüűvwxyz"
+HU_TERKEP = {karakter: index for index, karakter in enumerate(HU_SORREND)}
+
+
+def magyar_rendezesi_kulcs(szoveg):
+    # 1. A római számok cseréje még az EREDETI (nagybetűs) szövegen történik,
+    #    mert a kisbetűsítés után már nem lehetne megkülönböztetni a 'XX.'-et
+    #    a 'xx'-től, illetve a 'Mi'-t az 'MI'-től.
+    tisztitott = ROMAI_MINTA.sub(romai_szam_atlakito, str(szoveg).strip())
+    tisztitott = tisztitott.lower()
+    # 2. Az arab (és a fent átváltott római) számok számérték szerint rendeződnek.
+    tisztitott = re.sub(r'[0-9]+', szamjegysor_atlakito, tisztitott)
     return [HU_TERKEP.get(c, ord(c) + 1000) for c in tisztitott]
 
 
@@ -362,7 +392,7 @@ def kereszttabla_statisztika(konyvek, mezo_nevek, kulcs1, kulcs2, szures_kifejez
     szoveg += "\n"
 
     talalat_van = False
-    for norm_r1 in sorted(matrix.keys(), key=lambda v: kereszttabla_rendezesi_kulcs(kulcs1, v)):
+    for norm_r1 in sorted(matrix.keys(), key=lambda v: kereszttabla_rendezesi_kulcs(kulcs1, megjelenített_nevek[v])):
         # Pontos egyezés vizsgálata a részszöveg-keresés helyett
         if szuro_text and norm_r1 != szuro_text:
             continue
@@ -377,7 +407,7 @@ def kereszttabla_statisztika(konyvek, mezo_nevek, kulcs1, kulcs2, szures_kifejez
         # jelezné, melyik "Találatok száma" melyik csoportra vonatkozik.
         szoveg += f"{r1_nev}\n"
         szoveg += f"Találatok száma: {osszesen_r1}\n"
-        for norm_r2, db in sorted(matrix[norm_r1].items(), key=lambda x: kereszttabla_rendezesi_kulcs(kulcs2, x[0])):
+        for norm_r2, db in sorted(matrix[norm_r1].items(), key=lambda x: kereszttabla_rendezesi_kulcs(kulcs2, megjelenített_nevek2.get(x[0], x[0]))):
             r2_nev = megjelenített_nevek2.get(norm_r2, norm_r2)
             szoveg += f"    - {r2_nev}: {db}\n"
         szoveg += "\n"

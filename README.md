@@ -1,6 +1,6 @@
 # KönyvTárnok
 
-> **Verzió:** 4.0.0
+> **Verzió:** 3.21.0
 
 ## Leírás
 
@@ -47,8 +47,8 @@ python main.py
 
 | Csomag | Verzió | Funkció |
 |--------|--------|---------|
-| `wxpython` | 4.2.5 | Grafikus felület (GUI keretrendszer) |
-| `reportlab` | 5.0.0 | PDF adatlapok és statisztikai jelentések generálása |
+| `wxpython` | 4.3.2 | Grafikus felület (GUI keretrendszer) |
+| `reportlab` | 5.1.0 | PDF adatlapok és statisztikai jelentések generálása |
 
 ## Projektstruktúra
 
