@@ -18,8 +18,13 @@ from data_manager import (
     allomany_rekord_dezideratabol,
     is_same_book,
     MentesiHiba,
+    allomany_szerkesztheto,
+    elemez_json_import,
+    DEZIDERATA_ALAPERTEKEK,
 )
+from dialogs import JsonImportValasztoDialog
 from constants import (
+    DEZIDERATA_APP_TITLE,
     DEZIDERATA_MEZO_DEFINICIOK,
     DEZIDERATA_OSZLOP_ADATOK,
     DEZIDERATA_OSZLOP_KULCSOK,
@@ -34,6 +39,7 @@ from export_manager import katalogus_mentese
 from menu_bar import DeziderataMenuBar
 from undo_manager import (
     UndoRegiszter, UndoKezelo, ListaTarolo, rekordlista_masolata, frissit_undo_menu,
+    utkozes_uzenet,
 )
 # A magyar_rendezesi_kulcs és az alkalmazas_alapmappa az utils.py-ba
 # kerültek át: tisztán szövegfeldolgozó, illetve az alkalmazás mappáját
@@ -51,7 +57,6 @@ except Exception:
     except Exception as e:
         logging.debug(f"Magyar locale beállítása nem sikerült: {e}")
 
-APP_NAME = "KönyvTárnok Dezideráta-kezelő"
 BASE_DIR = alkalmazas_alapmappa()
 DATA_FILE = os.path.join(BASE_DIR, "deziderata.json")
 
@@ -178,7 +183,9 @@ class DeziderataFajlTarolo(ListaTarolo):
         adat, ervenyes = load_hmac_json(DATA_FILE)
         if not ervenyes:
             raise ValueError("A dezideráta-fájl HMAC-aláírása érvénytelen.")
-        lista = [x for x in adat if isinstance(x, dict)] if isinstance(adat, list) else []
+        if not isinstance(adat, list):
+            raise ValueError("A dezideráta-fájl tartalma nem tételek listája.")
+        lista = [x for x in adat if isinstance(x, dict)]
         deziderata_regi_kulcsok_atalakitasa(lista)
         return lista
 
@@ -214,7 +221,7 @@ class DeziderataFajlTarolo(ListaTarolo):
 
 class Deziderata(wx.Frame):
     def __init__(self, parent=None):
-        super().__init__(parent, title=f"{APP_NAME}", size=(1050, 500))
+        super().__init__(parent, title=DEZIDERATA_APP_TITLE, size=(1050, 500))
 
         # Adatmodell: a tételek listája (szótárakból álló listaként)
         self.items = []
@@ -447,8 +454,22 @@ class Deziderata(wx.Frame):
             self.FrissitStatusBar()
             return
 
-        # Ellenőrizzük, hogy listát kaptunk-e, és rendeljük hozzá a self.items-hez!
-        self.items = betoltott_adat if isinstance(betoltott_adat, list) else []
+        if not isinstance(betoltott_adat, list):
+            # Érvényes aláírás, de nem tétellista: nem szabad üres listaként
+            # továbbvinni, mert a következő mentés felülírná a fájlt.
+            logging.error(f"A dezideráta-lista ({DATA_FILE}) tartalma nem lista.")
+            self._mentes_tiltva = True
+            wx.MessageBox(
+                "Az adatfájl tartalma nem tételek listája, ezért a fájl védelme "
+                "érdekében a dezideráta szerkesztése le van tiltva.",
+                "Hiba",
+                wx.OK | wx.ICON_ERROR,
+            )
+            self.items = []
+            self.FrissitStatusBar()
+            return
+
+        self.items = betoltott_adat
         # Régi (angol kulcsú) tételek átalakítása; a fájlba a következő mentéskor kerül.
         deziderata_regi_kulcsok_atalakitasa(self.items)
 
@@ -462,7 +483,7 @@ class Deziderata(wx.Frame):
             return True
         wx.MessageBox(
             "A dezideráta-jegyzék betöltése nem sikerült, ezért a szerkesztése "
-            "le van tiltva: a program nem írja felül a meglévő (esetleg sérült) fájlt.\n\n"
+            "le van tiltva: a program nem írja felül a meglévő (esetleg sérült) fájlt.\nKérjük, távolítsa el a meglévő JSON fájlt a program mappájából, és próbálja újra!\n\n"
             f"Fájl: {DATA_FILE}\n\n"
             "Ha a fájl sérült, állítsa vissza egy biztonsági másolatból, vagy "
             "nevezze át (pl. deziderata_serult.json), majd nyissa meg újra a "
@@ -579,11 +600,18 @@ class Deziderata(wx.Frame):
         # Kapcsolt lépésnél (pl. átemelés az állományba) a főablak
         # könyvlistáját is a regiszter frissíti.
         if not (self.undo.ismet() if ismet else self.undo.visszavon()):
-            wx.MessageBox(
-                "A művelet nem hajtható végre (a változás nem menthető), ezért "
-                "az adatok a korábbi állapotukban maradtak.",
-                "Mentési hiba", wx.OK | wx.ICON_ERROR, self,
-            )
+            uzenet = utkozes_uzenet(self.undo, ismet)
+            if uzenet:
+                wx.MessageBox(
+                    uzenet, "A művelet most nem hajtható végre",
+                    wx.OK | wx.ICON_INFORMATION, self,
+                )
+            else:
+                wx.MessageBox(
+                    "A művelet nem hajtható végre (a változás nem menthető), ezért "
+                    "az adatok a korábbi állapotukban maradtak.",
+                    "Mentési hiba", wx.OK | wx.ICON_ERROR, self,
+                )
             self.list.SetFocus()
             return
         self.statusbar.SetStatusText(
@@ -927,6 +955,18 @@ class Deziderata(wx.Frame):
                 self.list.SetFocus()
 
     def on_export_json(self, event):
+        # Betöltési hiba után az items üres, a lemezen lévő adat nem: az
+        # exportált fájl félrevezető lenne, ezért ilyenkor nem exportálunk.
+        if not self._szerkesztes_engedelyezett():
+            return
+        if not self.items:
+            wx.MessageBox(
+                "A dezideráta-jegyzék üres, ezért nincs mit exportálni.",
+                "Üres jegyzék",
+                wx.OK | wx.ICON_INFORMATION,
+                self,
+            )
+            return
         config = load_settings()
         default_dir = config.get("last_json_dir", "")
 
@@ -974,34 +1014,111 @@ class Deziderata(wx.Frame):
             config["last_json_dir"] = os.path.dirname(pathname)
             save_settings(config)
 
-            def _hozzaad(item):
-                deziderata_regi_kulcsok_atalakitasa([item])
-                if not self.is_duplicate(item):
-                    # Az importált fájl id-je egy másik gépről/állományból
-                    # jöhet, és ütközhetne a meglévőkkel: mindig újat adunk.
-                    if isinstance(item, dict):
-                        item["id"] = uj_tetel_id()
-                    self.items.append(item)
-                    return True
-                return False
-
-            try:
-                with self.undo.muvelet("JSON importálás"):
-                    hozzaadva, kihagyva = additiv_lista_import(pathname, _hozzaad)
-            except ValueError as e:
-                wx.MessageBox(str(e), "Hiba", wx.OK | wx.ICON_ERROR)
-                return
-            except Exception as e:
-                wx.MessageBox(f"Hiba történt az importálás során: {e}", "Hiba", wx.OK | wx.ICON_ERROR)
-                return
-
-            self.save_data()
-            self.refresh_list()
+        # Fájl beolvasása és elemzése
+        try:
+            with open(pathname, "r", encoding="utf-8") as f:
+                importalt_adatok = json.load(f)
+        except Exception as e:
             wx.MessageBox(
-                f"Importálás befejeződött!\n\nHozzáadva: {hozzaadva} db\nKihagyva (már létező duplikátum): {kihagyva} db",
-                "Siker",
-                wx.OK | wx.ICON_INFORMATION
+                f"Hiba a JSON fájl beolvasásakor vagy értelmezésekor:\n{e}",
+                "Fájl olvasási hiba",
+                wx.OK | wx.ICON_ERROR,
+                self,
             )
+            return
+
+        if not isinstance(importalt_adatok, list):
+            wx.MessageBox(
+                "A kiválasztott JSON fájl formátuma nem megfelelő (listát várunk)!",
+                "Hiba",
+                wx.OK | wx.ICON_ERROR,
+                self,
+            )
+            return
+
+        deziderata_mezok = [k for k, _ in DEZIDERATA_MEZO_DEFINICIOK]
+        deziderata_cimkek = {k: felirat.rstrip(":") for k, felirat in DEZIDERATA_MEZO_DEFINICIOK}
+
+        uj_tetelek, kiegeszitheto_tetelek, kihagyott_duplum_db, ervenytelen_db = elemez_json_import(
+            importalt_adatok,
+            self.items,
+            mezok=deziderata_mezok,
+            mezocimkek=deziderata_cimkek,
+            regikulcsok_atalakitasa=True,
+        )
+
+        if not uj_tetelek and not kiegeszitheto_tetelek:
+            uzenet = "A kiválasztott fájl nem tartalmaz importálható új vagy kiegészíthető tételt."
+            if kihagyott_duplum_db > 0:
+                uzenet += f"\n\nKihagyva (már létező duplikátum): {kihagyott_duplum_db} db"
+            wx.MessageBox(uzenet, "Importálás", wx.OK | wx.ICON_INFORMATION, self)
+            return
+
+        dlg = JsonImportValasztoDialog(
+            self,
+            uj_tetelek=uj_tetelek,
+            kiegeszitheto_tetelek=kiegeszitheto_tetelek,
+            cim="Dezideráta-tételek kiválasztása JSON importáláshoz",
+            fejlec="Válassza ki az importálandó új tételeket és a kiegészítendő köteteket:",
+            muvelet_uj="Új tétel",
+        )
+        valasz = dlg.ShowModal()
+        if valasz != wx.ID_OK:
+            dlg.Destroy()
+            return
+
+        kivalasztott_ujak = dlg.get_kivalasztott_uj_konyvek()
+        kivalasztott_kiegeszitesek = dlg.get_kivalasztott_kiegeszitesek()
+        dlg.Destroy()
+
+        if not kivalasztott_ujak and not kivalasztott_kiegeszitesek:
+            return
+
+        hozzaadva = 0
+        kiegeszitve = 0
+        osszes_kihagyva = (
+            (len(uj_tetelek) - len(kivalasztott_ujak))
+            + (len(kiegeszitheto_tetelek) - len(kivalasztott_kiegeszitesek))
+            + kihagyott_duplum_db
+        )
+
+        try:
+            with self.undo.muvelet("JSON importálás"):
+                # 1. Új tételek hozzáadása
+                for ujtétel in kivalasztott_ujak:
+                    tetel = dict(ujtétel)
+                    tetel["id"] = uj_tetel_id()
+                    for alapkulcs, alapertek in DEZIDERATA_ALAPERTEKEK.items():
+                        if not tetel.get(alapkulcs):
+                            tetel[alapkulcs] = alapertek
+                    self.items.append(tetel)
+                    hozzaadva += 1
+
+                # 2. Meglévő tételek kiegészítése a hiányzó adatokkal
+                for elem in kivalasztott_kiegeszitesek:
+                    meglevo = elem["meglevo"]
+                    potolhato = elem["potolhato"]
+                    meglevo.update(potolhato)
+                    kiegeszitve += 1
+
+                if not self.save_data():
+                    raise Exception("Nem sikerült elmenteni a dezideráta adatait.")
+        except Exception as e:
+            logging.error(f"Hiba történt a dezideráta importálásakor: {e}", exc_info=True)
+            wx.MessageBox(f"Hiba történt az importálás során:\n{e}", "Hiba", wx.OK | wx.ICON_ERROR, self)
+            return
+
+        self.refresh_list()
+
+        uzenet_sorok = ["Importálás befejeződött!\n"]
+        if hozzaadva > 0:
+            uzenet_sorok.append(f"Új tétel hozzáadva: {hozzaadva} db")
+        if kiegeszitve > 0:
+            uzenet_sorok.append(f"Meglévő tétel hiányzó adatai pótolva: {kiegeszitve} db")
+        if osszes_kihagyva > 0:
+            uzenet_sorok.append(f"Kihagyva (duplikátum vagy nem kijelölt): {osszes_kihagyva} db")
+
+        wx.MessageBox("\n".join(uzenet_sorok), "Siker", wx.OK | wx.ICON_INFORMATION, self)
 
     def on_katalogus_export(self, event):
         """A teljes dezideráta-lista exportálása katalóguslapként (PDF).
@@ -1025,6 +1142,10 @@ class Deziderata(wx.Frame):
                 "Hiba",
                 wx.OK | wx.ICON_ERROR,
             )
+            return
+        # A főállomány betöltési hiba utáni védelme (lásd data_manager.
+        # allomany_szerkesztheto): ilyenkor nem emelhetünk át az állományba.
+        if not allomany_szerkesztheto(self.GetParent().db, self):
             return
 
         kijelolt_indexek = osszes_kijelolt_index(self.list)

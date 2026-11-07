@@ -22,7 +22,10 @@ DEFAULT_CONFIG = {
     "alapertelmezett_rendezes": "cim",
     "auto_update_check": True,
     "update_frequency": "startup",
-    "last_update_check_date": ""
+    "last_update_check_date": "",
+    # A KönyvTárnok-kereső által használt (felhasználó által megnyitott)
+    # JSON adatbázis teljes útvonala. Üres = még nincs megnyitva.
+    "kereso_json_utvonal": ""
 }
 
 def load_settings():

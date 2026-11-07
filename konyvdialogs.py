@@ -7,7 +7,11 @@ from theme_manager import apply_theme_from_settings
 # megjegyzését.
 # (A DEZIDERATA_MEZO_DEFINICIOK ugyaninnen jön; a korábban itt definiált
 # név ezért innen is változatlanul importálható.)
-from constants import MEZO_DEFINICIOK, DEZIDERATA_MEZO_DEFINICIOK
+from constants import (
+    MEZO_DEFINICIOK, DEZIDERATA_MEZO_DEFINICIOK,
+    DEZIDERATA_STATUS_KAPHATO, DEZIDERATA_STATUS_NEM_KAPHATO,
+    DEZIDERATA_STATUS_BESZERZES_ALATT,
+)
 # A kijelölés/fókusz szerkesztés utáni visszaállításához (lásd
 # DeziderataReszletekDialog.on_szerkesztes) ugyanazt az egyezés-vizsgálatot
 # használjuk, mint amit a Deziderata.on_edit már használ.
@@ -15,6 +19,8 @@ from constants import MEZO_DEFINICIOK, DEZIDERATA_MEZO_DEFINICIOK
 # (main_frame) szándékosan nem importálunk semmit: a dialogs.py közös
 # segédmodul, így nem alakul ki körkörös import.
 from dialogs import exportal_egy_konyv
+# Betöltési hiba után védett főállomány ellenőrzése a mentés előtt.
+from data_manager import allomany_szerkesztheto
 
 class KonyvReszletekDialog(wx.Dialog):
     """Könyv adatainak kizárólagos megjelenítése (Olvasó mód - NVDA kompatibilis)."""
@@ -220,6 +226,8 @@ class KonyvSzerkesztoDialog(wx.Dialog):
             return
 
         if self.db:
+            if not allomany_szerkesztheto(self.db, self):
+                return
             try:
                 if self.uj_konyv:
                     sikeres = self.db.uj_konyv_hozzaadasa(uj_adatok)
@@ -369,7 +377,7 @@ class DeziderataReszletekDialog(wx.Dialog):
 class BaseItemDialog(wx.Dialog):
     """Közös alaposztály a hozzáadó és szerkesztő ablakokhoz."""
     def __init__(self, parent, title, data=None):
-        super().__init__(parent, title=title, size=(850, 560))
+        super().__init__(parent, title=title, size=(850, 760))
 
         if data is None:
             data = {}
@@ -432,26 +440,44 @@ class BaseItemDialog(wx.Dialog):
         form.Add(wx.StaticText(panel, label=felirat["status"]), 0, wx.ALIGN_CENTER_VERTICAL)
 
         self.status_available = wx.RadioButton(
-            panel, label="Jelenleg kapható", style=wx.RB_GROUP, name="Jelenleg kapható státusz"
+            panel, label=DEZIDERATA_STATUS_KAPHATO, style=wx.RB_GROUP,
+            name=f"{DEZIDERATA_STATUS_KAPHATO} státusz"
         )
         self.status_unavailable = wx.RadioButton(
-            panel, label="Jelenleg nem kapható", name="Jelenleg nem kapható státusz"
+            panel, label=DEZIDERATA_STATUS_NEM_KAPHATO,
+            name=f"{DEZIDERATA_STATUS_NEM_KAPHATO} státusz"
+        )
+        self.status_acquiring = wx.RadioButton(
+            panel, label=DEZIDERATA_STATUS_BESZERZES_ALATT,
+            name=f"{DEZIDERATA_STATUS_BESZERZES_ALATT} státusz"
         )
 
-        if data.get("status") == "Jelenleg kapható":
+        if data.get("status") == DEZIDERATA_STATUS_KAPHATO:
             self.status_available.SetValue(True)
+        elif data.get("status") == DEZIDERATA_STATUS_BESZERZES_ALATT:
+            self.status_acquiring.SetValue(True)
         else:
             self.status_unavailable.SetValue(True)
 
         status_box = wx.BoxSizer(wx.HORIZONTAL)
         status_box.Add(self.status_available)
         status_box.Add(self.status_unavailable, 0, wx.LEFT, 10)
+        status_box.Add(self.status_acquiring, 0, wx.LEFT, 10)
         form.Add(status_box)
 
         # --- Lelőhely + ár ---
         self.txt_location = create_field(felirat["location"], data.get("location", ""))
         self.txt_price = create_field(felirat["price"], data.get("price", ""))
         self.txt_link = create_field(felirat["link"], data.get("link", ""))
+
+        # --- Csak "Beszerzés alatt" státusznál aktív mezők ---
+        # Kulcsaik megegyeznek az állományéval (átemeléskor átadódnak).
+        self.txt_oldalszam = create_field(felirat["oldalszam"], data.get("oldalszam", ""))
+        self.txt_meretek = create_field(felirat["meretek"], data.get("meretek", ""))
+        self.txt_kotes = create_field(felirat["kotes"], data.get("kotes", ""))
+        self.txt_rovid_leiras = create_field(
+            felirat["rovid_leiras"], data.get("rovid_leiras", ""), multiline=True
+        )
 
         vbox.Add(form, 1, wx.ALL | wx.EXPAND, 15)
 
@@ -471,6 +497,7 @@ class BaseItemDialog(wx.Dialog):
         # Eseménykezelés
         self.status_available.Bind(wx.EVT_RADIOBUTTON, self.on_status_change)
         self.status_unavailable.Bind(wx.EVT_RADIOBUTTON, self.on_status_change)
+        self.status_acquiring.Bind(wx.EVT_RADIOBUTTON, self.on_status_change)
         btn_ok.Bind(wx.EVT_BUTTON, self.on_ok)
         self.on_status_change(None)
 
@@ -486,14 +513,22 @@ class BaseItemDialog(wx.Dialog):
         apply_theme_from_settings(self)
 
     def on_status_change(self, event):
-        available = self.status_available.GetValue()
-        self.txt_location.Enable(available)
-        self.txt_price.Enable(available)
-        self.txt_link.Enable(available)
-        if event is not None and not available:
-            self.txt_location.Clear()
-            self.txt_price.Clear()
-            self.txt_link.Clear()
+        """A státusz szerint aktiválja/inaktiválja a mezőket:
+        - Jelenleg nem kapható: egyik sem;
+        - Jelenleg kapható: lelőhely, ár, link;
+        - Beszerzés alatt: a fentiek + oldalszám, méret, kötés, rövid leírás.
+        A mezők tartalma váltáskor NEM törlődik (így egy véletlen váltás
+        visszacsinálható); az inaktív mezők tartalmát csak a get_data üríti
+        mentéskor."""
+        acquiring = self.status_acquiring.GetValue()
+        basic_active = self.status_available.GetValue() or acquiring
+
+        for ctrl in (self.txt_location, self.txt_price, self.txt_link):
+            ctrl.Enable(basic_active)
+
+        for ctrl in (self.txt_oldalszam, self.txt_meretek,
+                     self.txt_kotes, self.txt_rovid_leiras):
+            ctrl.Enable(acquiring)
 
     def on_ok(self, event):
         new_data = self.get_data()
@@ -513,6 +548,15 @@ class BaseItemDialog(wx.Dialog):
         self.EndModal(wx.ID_OK)
 
     def get_data(self):
+        status = self._get_status()
+        # Az inaktív mezők tartalma csak mentéskor ürül (nem a váltáskor).
+        basic_active = status in (DEZIDERATA_STATUS_KAPHATO,
+                                  DEZIDERATA_STATUS_BESZERZES_ALATT)
+        acquiring = status == DEZIDERATA_STATUS_BESZERZES_ALATT
+
+        def ertek(ctrl, aktiv):
+            return ctrl.GetValue() if aktiv else ""
+
         return {
             "cim": self.txt_cim.GetValue(),
             "alcim": self.txt_alcim.GetValue(),
@@ -522,11 +566,22 @@ class BaseItemDialog(wx.Dialog):
             "hely": self.txt_hely.GetValue(),
             "ev": self.txt_ev.GetValue(),
             "priority": "Elsődleges" if self.priority_primary.GetValue() else "Másodlagos",
-            "status": "Jelenleg kapható" if self.status_available.GetValue() else "Jelenleg nem kapható",
-            "location": self.txt_location.GetValue(),
-            "price": self.txt_price.GetValue(),
-            "link": self.txt_link.GetValue()
+            "status": status,
+            "location": ertek(self.txt_location, basic_active),
+            "price": ertek(self.txt_price, basic_active),
+            "link": ertek(self.txt_link, basic_active),
+            "oldalszam": ertek(self.txt_oldalszam, acquiring),
+            "meretek": ertek(self.txt_meretek, acquiring),
+            "kotes": ertek(self.txt_kotes, acquiring),
+            "rovid_leiras": ertek(self.txt_rovid_leiras, acquiring),
         }
+
+    def _get_status(self):
+        if self.status_available.GetValue():
+            return DEZIDERATA_STATUS_KAPHATO
+        if self.status_acquiring.GetValue():
+            return DEZIDERATA_STATUS_BESZERZES_ALATT
+        return DEZIDERATA_STATUS_NEM_KAPHATO
 
 
 class AddItemDialog(BaseItemDialog):
