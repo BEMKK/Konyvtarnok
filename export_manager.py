@@ -104,7 +104,7 @@ def katalogus_pdf(utvonal, konyvek, oszlopok, defs=None, cim_szoveg="Katalógusl
 
 
 def katalogus_mentese(szulo, sorok, oszlopok, defs=None,
-                      cim_szoveg="Katalóguslap", alap_fajlnev="katalogus.pdf"):
+                      cim_szoveg="Katalóguslap", alap_fajlnev="kataloguslap.pdf"):
     """Fájlnevet kér, elkészíti a katalóguslapot, majd felajánlja a megnyitását.
 
     A főablak és a dezideráta-kezelő is ezt használja, hogy a mentési folyamat

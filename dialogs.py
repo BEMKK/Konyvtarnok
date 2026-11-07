@@ -2,7 +2,7 @@ import os
 import sys
 import logging
 import wx
-from constants import APP_NAME, APP_VERSION, APP_STAGE
+from constants import APP_NAME, APP_VERSION
 from theme_manager import apply_theme_from_settings
 from config_manager import load_settings, save_settings
 from export_manager import export_konyv_pdf, get_biztonsagos_pdf_fajlnev
@@ -39,7 +39,7 @@ class NevjegyDialog(wx.Dialog):
         cim_label.SetFont(font)
         sizer.Add(cim_label, 0, wx.ALIGN_CENTER | wx.TOP, 20)
         
-        verzio_label = wx.StaticText(self, label=f"v{APP_VERSION} {APP_STAGE}".strip())
+        verzio_label = wx.StaticText(self, label=f"{APP_VERSION}".strip())
         sizer.Add(verzio_label, 0, wx.ALIGN_CENTER | wx.TOP, 5)
         
         leiras_label = wx.StaticText(self, label="Akadálymentes könyvkatalógus-kezelő magángyűjtemények számára.")
@@ -61,7 +61,7 @@ class NevjegyDialog(wx.Dialog):
 
 class UjdonsagokDialog(wx.Dialog):
     def __init__(self, parent=None):
-        super().__init__(parent, title="Újdonságok", size=(460, 360), style=wx.DEFAULT_DIALOG_STYLE | wx.STAY_ON_TOP)
+        super().__init__(parent, title="Újdonságok", size=(480, 1), style=wx.DEFAULT_DIALOG_STYLE | wx.STAY_ON_TOP)
         
         main_sizer = wx.BoxSizer(wx.VERTICAL)
 
@@ -72,14 +72,20 @@ class UjdonsagokDialog(wx.Dialog):
         cim_label.SetFont(font_cim)
         main_sizer.Add(cim_label, 0, wx.ALIGN_CENTER | wx.TOP, 15)
         
-        verzio_label = wx.StaticText(self, label=F"v{APP_VERSION}".strip())
+        verzio_label = wx.StaticText(self, label=F"{APP_VERSION}".strip())
         main_sizer.Add(verzio_label, 0, wx.ALIGN_CENTER | wx.TOP | wx.BOTTOM, 5)        
 
         main_sizer.Add(wx.StaticLine(self), 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 15)
         
         ujdonsagok_lista = [
-            "Javítva a lista rendezése számokkal kezdődő könyvcímek esetén, valamint a római számok hibás kezelése.",
-            "Program függőségei frissítve."
+            "Könyvek kiválasztása és hiányzó adatok pótlási lehetősége JSON import esetén.",
+            "Eltávolítva az enekeskonyvek_adatai.json, a KönyvTárnok-kereső mostantól kizárólag a felhasználó által választott JSON fájlokban keres.",
+            "A Dezideráta-kezelőhöz hasonlóan a fő állományban is tiltva lett a JSON import, ha az állományjegyzék betöltése nem sikerül.",
+            "Tiltásra került a JSON export az állományban és a Deziderátában, ha a jegyzék üres.",
+            "Műveletek visszavonásának és ismételt végrehajtásának lehetősége a KönyvTárnok-keresőben.",
+            "Új státusz és hozzá kapcsolódó négy új mező a Dezideráta-kezelőben.",
+            "Státuszváltás esetén a dinamikusan megjelenő mezők tartalma csak mentéskor törlődik, elkerülve a véletlen adatvesztést.",
+            "Javítások és kiegészítések, valamint az új funkciók leírása a Súgóban."
         ]
 
         szoveg_box = wx.BoxSizer(wx.VERTICAL)
@@ -90,7 +96,7 @@ class UjdonsagokDialog(wx.Dialog):
             bullet_cimkek.append(bullet)
             
             txt = wx.StaticText(self, label=elem)
-            txt.Wrap(380)
+            txt.Wrap(400)
             
             pont_sizer.Add(bullet, 0, wx.TOP, 1)
             pont_sizer.Add(txt, 1, wx.EXPAND)
@@ -117,7 +123,7 @@ class UjdonsagokDialog(wx.Dialog):
         verzio_label.SetForegroundColour(wx.Colour(120, 120, 120))
         for bullet in bullet_cimkek:
             bullet.SetForegroundColour(wx.Colour(0, 120, 215))
-        
+        main_sizer.Fit(self)
         self.Centre()
 
 class FajlutkozesDialog(wx.Dialog):
@@ -190,3 +196,181 @@ def exportal_egy_konyv(szulo_ablak, konyv_adatok):
     wx.MessageBox("Exportálás sikeres!", "Exportálás",
                   wx.OK | wx.ICON_INFORMATION, szulo_ablak)
     return True
+
+
+class JsonImportValasztoDialog(wx.Dialog):
+    """Párbeszédablak a JSON fájlból importálandó könyvek/tételek kiválasztásához
+    és a hiányzó adatok összefésüléséhez."""
+
+    def __init__(
+        self,
+        parent,
+        uj_tetelek=None,
+        kiegeszitheto_tetelek=None,
+        cim="Importálandó könyvek kiválasztása",
+        fejlec="Válassza ki az új vagy kiegészítendő köteteket az importáláshoz:",
+        muvelet_uj="Új könyv",
+    ):
+        super().__init__(
+            parent,
+            title=cim,
+            size=(850, 520),
+            style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER | wx.STAY_ON_TOP,
+        )
+        self.SetMinSize((650, 380))
+
+        self.uj_tetelek = uj_tetelek or []
+        self.kiegeszitheto_tetelek = kiegeszitheto_tetelek or []
+        self.muvelet_uj = muvelet_uj
+
+        main_sizer = wx.BoxSizer(wx.VERTICAL)
+
+        # Magyarázó fejléc
+        info_label = wx.StaticText(
+            self,
+            label=fejlec,
+        )
+        main_sizer.Add(info_label, 0, wx.ALL, 12)
+
+        # Gyorsgombok
+        btn_box = wx.BoxSizer(wx.HORIZONTAL)
+        self.btn_mindent = wx.Button(self, label="Mindet kijelöl")
+        self.btn_semmit = wx.Button(self, label="Kijelölés törlése")
+        btn_box.Add(self.btn_mindent, 0, wx.RIGHT, 6)
+        btn_box.Add(self.btn_semmit, 0, wx.RIGHT, 10)
+
+        self.btn_csak_ujak = None
+        self.btn_csak_kieg = None
+        if self.uj_tetelek and self.kiegeszitheto_tetelek:
+            uj_felirat = f"Csak új tételek ({len(self.uj_tetelek)})" if muvelet_uj != "Új könyv" else f"Csak új könyvek ({len(self.uj_tetelek)})"
+            self.btn_csak_ujak = wx.Button(self, label=uj_felirat)
+            self.btn_csak_kieg = wx.Button(self, label=f"Csak adatpótlások ({len(self.kiegeszitheto_tetelek)})")
+            btn_box.Add(self.btn_csak_ujak, 0, wx.RIGHT, 6)
+            btn_box.Add(self.btn_csak_kieg, 0)
+
+        main_sizer.Add(btn_box, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 10)
+
+        # Lista vezérlő
+        self.lista = wx.ListCtrl(
+            self,
+            style=wx.LC_REPORT | wx.BORDER_SUNKEN | wx.LC_SINGLE_SEL | wx.LC_HRULES | wx.LC_VRULES
+        )
+        self.lista.EnableCheckBoxes()
+
+        self.lista.InsertColumn(0, "Cím", width=250)
+        self.lista.InsertColumn(1, "Szerző", width=170)
+        self.lista.InsertColumn(2, "Művelet", width=130)
+        self.lista.InsertColumn(3, "Részletek / Új adatok", width=260)
+
+        # Elemek feltöltése:
+        self.uj_sorok = {}  # list_row_idx -> uj_tetelek index
+        self.kiegeszitheto_sorok = {}  # list_row_idx -> kiegeszitheto_tetelek index
+
+        sor_idx = 0
+
+        # 1. Új könyvek / tételek
+        for idx, ujkonyv in enumerate(self.uj_tetelek):
+            cim_str = str(ujkonyv.get("cim", "") or "")
+            szerzo = str(ujkonyv.get("szerzo", "") or "")
+            kiado = str(ujkonyv.get("kiado", "") or "")
+            ev = str(ujkonyv.get("ev", "") or "")
+            reszlet = f"{kiado} ({ev})".strip(" ()") if (kiado or ev) else ""
+
+            row = self.lista.InsertItem(sor_idx, cim_str)
+            self.lista.SetItem(row, 1, szerzo)
+            self.lista.SetItem(row, 2, self.muvelet_uj)
+            self.lista.SetItem(row, 3, reszlet)
+            self.lista.CheckItem(row, True)
+
+            self.uj_sorok[row] = idx
+            sor_idx += 1
+
+        # 2. Kiegészíthető könyvek
+        for idx, kieg in enumerate(self.kiegeszitheto_tetelek):
+            meglevo = kieg["meglevo"]
+            cim = str(meglevo.get("cim", "") or "")
+            szerzo = str(meglevo.get("szerzo", "") or "")
+            leiras = kieg.get("leiras", "")
+
+            row = self.lista.InsertItem(sor_idx, cim)
+            self.lista.SetItem(row, 1, szerzo)
+            self.lista.SetItem(row, 2, "Adatpótlás")
+            self.lista.SetItem(row, 3, leiras)
+            self.lista.CheckItem(row, True)
+
+            self.kiegeszitheto_sorok[row] = idx
+            sor_idx += 1
+
+        main_sizer.Add(self.lista, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 10)
+
+        # Alsó gombok (Importálás, Mégse)
+        alsogombok_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.btn_import = wx.Button(self, wx.ID_OK, label="Importálás")
+        self.btn_import.SetDefault()
+        self.btn_megse = wx.Button(self, wx.ID_CANCEL, label="Mégse")
+
+        alsogombok_sizer.Add(self.btn_import, 0, wx.RIGHT, 10)
+        alsogombok_sizer.Add(self.btn_megse, 0)
+
+        main_sizer.Add(alsogombok_sizer, 0, wx.ALIGN_RIGHT | wx.ALL, 12)
+
+        self.SetSizer(main_sizer)
+
+        # Eseménykezelők
+        self.btn_mindent.Bind(wx.EVT_BUTTON, self.on_mindent_kijelol)
+        self.btn_semmit.Bind(wx.EVT_BUTTON, self.on_kijeloles_torlese)
+        if self.btn_csak_ujak:
+            self.btn_csak_ujak.Bind(wx.EVT_BUTTON, self.on_csak_ujak)
+        if self.btn_csak_kieg:
+            self.btn_csak_kieg.Bind(wx.EVT_BUTTON, self.on_csak_kieg)
+        self.btn_import.Bind(wx.EVT_BUTTON, self.on_import)
+
+        apply_theme_from_settings(self)
+        self.CentreOnParent()
+
+        # Fókusz azonnali áthelyezése a listára
+        self.lista.SetFocus()
+        wx.CallAfter(self.lista.SetFocus)
+
+    def on_mindent_kijelol(self, event):
+        for i in range(self.lista.GetItemCount()):
+            self.lista.CheckItem(i, True)
+
+    def on_kijeloles_torlese(self, event):
+        for i in range(self.lista.GetItemCount()):
+            self.lista.CheckItem(i, False)
+
+    def on_csak_ujak(self, event):
+        for i in range(self.lista.GetItemCount()):
+            self.lista.CheckItem(i, i in self.uj_sorok)
+
+    def on_csak_kieg(self, event):
+        for i in range(self.lista.GetItemCount()):
+            self.lista.CheckItem(i, i in self.kiegeszitheto_sorok)
+
+    def on_import(self, event):
+        ujak = self.get_kivalasztott_uj_konyvek()
+        kieg = self.get_kivalasztott_kiegeszitesek()
+        if not ujak and not kieg:
+            wx.MessageBox(
+                "Nincs kijelölve egyetlen tétel sem az importáláshoz vagy adatpótláshoz!",
+                "Figyelmeztetés",
+                wx.OK | wx.ICON_WARNING,
+                self,
+            )
+            return
+        self.EndModal(wx.ID_OK)
+
+    def get_kivalasztott_uj_konyvek(self):
+        valasztott = []
+        for row_idx, tetel_idx in self.uj_sorok.items():
+            if self.lista.IsItemChecked(row_idx):
+                valasztott.append(self.uj_tetelek[tetel_idx])
+        return valasztott
+
+    def get_kivalasztott_kiegeszitesek(self):
+        valasztott = []
+        for row_idx, tetel_idx in self.kiegeszitheto_sorok.items():
+            if self.lista.IsItemChecked(row_idx):
+                valasztott.append(self.kiegeszitheto_tetelek[tetel_idx])
+        return valasztott
