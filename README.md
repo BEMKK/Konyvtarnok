@@ -1,6 +1,8 @@
 # KönyvTárnok
 
-> **Verzió:** 3.21.0
+> **Verzió:** 4.0.0
+
+> **Támogatott operációs rendszer:** Windows 10 és 11 (64 bit)
 
 ## Leírás
 
@@ -11,9 +13,9 @@ A **KönyvTárnok** egy akadálymentes asztali alkalmazás könyvgyűjtemények 
 - **Könyvállomány kezelése** – könyvek felvétele, szerkesztése, megtekintése és törlése.
 - **Védett adatbázis** – az állományjegyzék (`allomanyjegyzek.json`) és a dezideráta-jegyzék (`deziderata.json`) Hmac adatintegritásvédelemmel van ellátva.
 - **PDF-export** – könyvadatlapok exportálása PDF formátumba (`reportlab`), egyedi és kötegelt módban.
-- **Állományjegyzék mentése / betöltése** – a teljes katalógus védelem nélküli JSON fájlba menthető és visszatölthető.
+- **Állományjegyzék mentése / betöltése** – a teljes katalógus védelem nélküli JSON fájlba menthető; visszatöltéskor a program elemzi a fájlt, és egy választó párbeszédablakban engedi kijelölni az importálandó új vagy a meglévő könyveket kiegészítő tételeket.
 - **Dezideráta‑kezelő** – beszerezni kívánt könyvek listájának kezelése, átemelési lehetőséggel a fő állományba.
-- **KönyvTárnok kereső** – egy külső referencia‑adatbázisban (`Enekeskonyvek_adatai.json`) keres, a találatok közvetlenül felvehetők az állományba vagy a dezideráta‑jegyzékbe.
+- **KönyvTárnok kereső** – felhasználó által megnyitott JSON adatbázisban keres (Fájl > Adatbázis megnyitása, Ctrl+O), a találatok közvetlenül felvehetők az állományba vagy a dezideráta‑jegyzékbe.
 - **Állománystatisztika** – részletes eloszlások, hiányzó adatok vizsgálata, kereszttáblás elemzés PDF exporttal.
 - **Keresés és szűrés** – valós idejű kereső, részletes szűrés pontos egyezéssel, gépeléses gyorskeresés a listában.
 - **Rendezés** – az állomány magyar ábécé szerinti rendezése többféle szempont szerint: cím, szerző, kiadó, év, oldalszám, méret, bekerülés dátuma.
@@ -40,7 +42,7 @@ python main.py
 ### Parancsfájlok
 
 - `Futtatas.bat` – egyszerű indító script a forráskód futtatásához.
-- `exe-port.bat` – PyInstaller build parancs, amely egyetlen hordozható `.exe` állományt épít az alkalmazás ikonjával és a referencia adatbázissal beágyazva.
+- `exe-build.bat` – PyInstaller build parancs, amely egyetlen hordozható `.exe` állományt épít az alkalmazás ikonjával és a referencia adatbázissal beágyazva.
 - `QuickInstallRequirements.bat` – A függőségek gyors telepítésére.
 
 ## Függőségek
@@ -70,7 +72,7 @@ python main.py
 ├─ statisztika.py                  # Állománystatisztika párbeszédablak.
 ├─ help.py              # Súgó és billentyűparancsok
 ├─ konyv_lista.py              # Virtuális könyvlista UI (rendezés, gyorskeresés)
-├─ konyvtarnok_kereso.py                # KönyvTárnok kereső – külső referencia‑adatbázis kereső és átemelő modul
+├─ konyvtarnok_kereso.py                # KönyvTárnok kereső – felhasználó által megnyitott JSON adatbázisban kereső és átemelő modul
 ├─ deziderata.py               # Dezideráta‑kezelő – beszerzési kívánságlista modul
 ├─ update.py                   # Új verzió ellenőrzése a GitHub-on.
 ├─ constants.py                # Alkalmazás‑állandók (név, verzió, állapot, alapértelmezett oszlopok, stb.)
@@ -78,9 +80,9 @@ python main.py
 ├─ utils.py                # Rendezési és állománystatisztikai segédfügvények
 ├─ undo_manager                # Visszavonás és ismétlés funkció kezelése
 ├─ ikon.ico                    # Alkalmazásikon
-├─ Enekeskonyvek_adatai.json   # KönyvTárnok kereső referencia‑adatbázisa
+├─ Enekeskonyvek_adatai.json   # Példa JSON adatbázis a KönyvTárnok keresőhöz (megnyitható a Fájl > Adatbázis megnyitása menüponttal)
 ├─ Futtatas.bat                # Indító script
-├─ exe-port.bat         # PyInstaller build script
+├─ exe-build.bat         # PyInstaller build script
 ├─ QuickInstallRequirements.bat         # A függőségek gyors telepítésére.
 ```
 

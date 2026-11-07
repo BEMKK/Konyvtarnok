@@ -1,7 +1,10 @@
 APP_NAME = "KönyvTárnok"
-APP_VERSION = "3.21.1"
+APP_VERSION = "4.0.0"
 APP_STAGE = ""
-APP_TITLE = APP_NAME
+APP_TITLE = f"{APP_NAME} – Állománykezelő"
+# A különálló ablakok (programrészek) címe. EZ AZ EGYETLEN HELY, ahol definiálva van.
+DEZIDERATA_APP_TITLE = f"{APP_NAME} – Dezideráta-kezelő"
+KERESO_APP_TITLE = f"{APP_NAME} – KönyvTárnok-kereső"
 
 # A könyvlistában alapértelmezetten megjelenő oszlopok.
 # EZ AZ EGYETLEN HELY, ahol ez a lista definiálva van (lásd a config_manager.py,
@@ -135,9 +138,28 @@ DEZIDERATA_SAJAT_MEZO_DEFINICIOK = [
     ("link", "Link:"),
 ]
 
+# A dezideráta-tétel "status" mezőjének lehetséges értékei (így tárolódnak a
+# deziderata.json-ban). EZ AZ EGYETLEN HELY, ahol a szövegük definiálva van.
+DEZIDERATA_STATUS_KAPHATO = "Jelenleg kapható"
+DEZIDERATA_STATUS_NEM_KAPHATO = "Jelenleg nem kapható"
+DEZIDERATA_STATUS_BESZERZES_ALATT = "Beszerzés alatt"
+
+# "Beszerzés alatt" státusznál aktiválódó további mezők. A kulcsaik MEGEGYEZNEK
+# az állomány (példány) megfelelő mezőinek kulcsával, ezért az állományba
+# átemeléskor szó szerint átadhatók (lásd data_manager.
+# allomany_rekord_dezideratabol). A feliratok a mezőregiszterből jönnek. Ezek a
+# mezők SZÁNDÉKOSAN nincsenek a dezideráta listájának oszlopai között
+# (DEZIDERATA_OSZLOP_ADATOK), csak a tétel részleteiben és a szerkesztőben
+# jelennek meg.
+DEZIDERATA_BESZERZES_MEZOKULCSOK = ("oldalszam", "meretek", "kotes", "rovid_leiras")
+DEZIDERATA_BESZERZES_MEZO_DEFINICIOK = [
+    (k, MEZOK[k].urlap) for k in DEZIDERATA_BESZERZES_MEZOKULCSOK
+]
+
 # A dezideráta űrlapjának/adatlapjának (kulcs, felirat) párjai, sorrendben.
 DEZIDERATA_MEZO_DEFINICIOK = (BIBLIOGRAFIAI_MEZO_DEFINICIOK
-                              + DEZIDERATA_SAJAT_MEZO_DEFINICIOK)
+                              + DEZIDERATA_SAJAT_MEZO_DEFINICIOK
+                              + DEZIDERATA_BESZERZES_MEZO_DEFINICIOK)
 
 # A dezideráta listájának (és a katalóguslapjának) oszlopai sorrendben:
 # kulcs: (alap szélesség pixelben, kitöltési súly átméretezéskor). A fejléc

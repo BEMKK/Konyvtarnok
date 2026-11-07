@@ -30,7 +30,7 @@ class HelpNotebookDialog(wx.Dialog):
                 "4. Dezideráta-kezelő:\n"
                 "  A Dezideráta-kezelőben a beszerezni kívánt könyvek listáját vezetheti. Az alapvető bibliográfiai adatok mellett megadhatja a tétel prioritását (elsődleges vagy másodlagos), valamint státuszát (jelenleg kapható/jelenleg nem kapható). Kapható státusz esetén lehetősége van megadni a tétel lelőhelyét, jelenlegi vagy becsült árát és esetleges linkjét is.\n\n"
                 "5. KönyvTárnok-kereső:\n"
-                "  A KönyvTárnok-keresővel egy, a programba csomagolt JSON adatbázisban kereshet, a találatokat pedig lehetősége van átemelni az állományba vagy a deziderátába, illetve vágólapra másolni.\n"
+                "  A KönyvTárnok-keresővel tetszőleges, felhasználó által megnyitott JSON adatbázisban kereshet, a találatokat pedig lehetősége van átemelni az állományba vagy a deziderátába, illetve vágólapra másolni.\n"
             ),
             (
                 "Állománykezelés",
@@ -72,7 +72,7 @@ class HelpNotebookDialog(wx.Dialog):
                 "2. Állományjegyzék mentése JSON-ba (Biztonsági mentés):\n"
                 "  A teljes állományjegyzék exportálható szerkeszthető, SHA integritásvédelem nélküli JSON fájlba a Fájl -> Állományjegyzék mentése JSON fájlba... menüpontban (Ctrl + Shift + M). Ez kiválóan alkalmas biztonsági mentésre. A JSON fájl alapértelmezetten az \"allomanyjegyzek.json\" nevet kapja.\n\n"
                 "3. Állományjegyzék betöltése JSON-ból:\n"
-                "  Egy korábban elmentett JSON állományjegyzék beolvasásához használja a Fájl -> Állományjegyzék betöltése JSON fájlból... menüpontot (Ctrl + Shift + B). A mentett JSON fájlból csak azok a könyvek kerülnek felvételre, amelyek még nem szerepelnek a listában.\n\nFONTOS: nyers, azaz SHA aláírás nélküli, exportált JSON-t soha ne helyezzen a program mappájába! A program ugyanis az ilyen fájlokat nem tölti be és nem kezeli! Amennyiben az állományjegyzék vagy a dezideráta csak nyers formátumban áll rendelkezésére, használja a megfelelő modul JSON importálás funkcióját a fenti módon.\n\n"
+                "  Egy korábban exportált (nyers, HMAC-védelem nélküli) JSON fájl importálásához használja a Fájl -> Állományjegyzék betöltése JSON fájlból... menüpontot (Ctrl + Shift + B). Az importálás előtt a program elemzi a fájlt: egy választó párbeszédablakban megjeleníti az új könyveket és a meglévő könyvek kiegészíthető adatait, amelyekből tetszőlegesen kiválaszthatja, mit szeretne importálni. A program mappájába, tehát a futtatható (exe) fájl mellé helyezett nyers JSON fájlok a program megnyitásakor nem kerülnek beolvasásra.\n\n"
                 "4. Katalóguslap mentése PDF fájlba:\n"
                 "  A program főablakában megjelenő listát a látható oszlopokkal PDF fájlba mentheti.\nEhhez kattintson az eszköztár Katalógus export gombjára, vagy a menüből válassza a Katalóguslap mentése pdf-be lehetőséget.\nHasználhatja a Ctrl + K billentyűparancsot is.\nHa nagyon sok oszlop van a listában, a program automatikusan csökkenti a PDF betűméretét.\n"
             ),
@@ -90,7 +90,7 @@ class HelpNotebookDialog(wx.Dialog):
                 "5. Tétel felvétele a fő könyvállományba:\n"
                 "  Ha egy beszerzendő könyvet sikerült megvásárolni/megszerezni, a kijelölt tételt a Ctrl + F billentyűkombinációval vagy a 'Felvétel az állományba' gombbal közvetlenül átemelheti a fő katalógusba. Átemeléskor a program megkérdezi, hogy biztosan át szeretné e emelni a tételt. Amennyiben ezt szeretné, kattintson az Igen gombra.\n\n"
                 "6. Dezideráta adatok mentése és betöltése:\n"
-                "  A dezideráta jegyzék exportálható szerkeszthető, azaz SHA integritásvédelem nélküli JSON fájlba (Ctrl + Shift + M) és bármikor visszatölthető (Ctrl + Shift + B) a Tételek menüből. JSON fájl betöltése esetén csak azok a kötetek kerülnek importálásra, amelyek még nem szerepelnek a jegyzékben. Mentéskor a fájl neve alapértelmezetten \"deziderata.json\"\n\n"
+                "  A dezideráta jegyzék exportálható szerkeszthető, azaz SHA integritásvédelem nélküli JSON fájlba (Ctrl + Shift + M) és bármikor visszatölthető (Ctrl + Shift + B) a Tételek menüből. JSON fájl betöltése esetén a program elemzi az importált fájlt: a választó párbeszédablakban megjeleníti az új tételeket és a meglévő tételek kiegészíthető adatait, amelyekből kiválaszthatja az importálandókat. Mentéskor a fájl neve alapértelmezetten \"deziderata.json\"\n\n"
                 "7. Katalóguslap mentése:\n"
                 "  Az állományhoz hasonlóan a Deziderátáról is készíthető PDF katalóguslap.\nEhhez a főablakban megszokott módon használhatja a Ctrl + K billentyűparancsot, az eszköztár Katalógus export gombját, vagy a megfelelő menüpontot.\n\n"
                 "8. Visszavonás és ismétlés:\n"
@@ -102,15 +102,17 @@ class HelpNotebookDialog(wx.Dialog):
                 "KönyvTárnok kereső",
                 "A KÖNYVTÁRNOK KERESŐ HASZNÁLATA\n\n"
                 "1. A KönyvTárnok-kereső megnyitása:\n"
-                "  A külső énekeskönyv adatbázisban való kereséshez válassza az Eszközök -> KönyvTárnok-kereső menüpontot, vagy nyomja meg a Ctrl + Shift + K billentyűkombinációt.\n\n"
-                "2. Keresés:\n"
-                "  Írja be a keresendő szót vagy kifejezést a keresőmezőbe, majd nyomja meg a keresés gombot vagy az Enter billentyűt a találatok megjelenítéséhez. Amint gépelni kezd, a Keresés törlése gomb aktívvá válik, ennek segítségével kiürítheti a keresőmezőt, valamint keresés után a találatok listáját is. A mező melletti jelölőnégyzetekkel kiválaszthatja, mely oszlopokban szeretne keresni (cím, összeállító, kiadó, kiadás helye, kiadás éve, megjegyzés). Az Összes oszlop jelölőnégyzettel az összes oszlopot egyszerre jelölheti ki, illetve szüntetheti meg.\n\n"
-                "3. Találatok kijelölése és másolása:\n"
+                "  A keresőablak megnyitásához válassza az Eszközök -> KönyvTárnok-kereső menüpontot, vagy nyomja meg a Ctrl + Shift + K billentyűkombinációt.\n\n"
+                "2. Adatbázis megnyitása:\n"
+                "  A kereső indításkor automatikusan betölti a legutoljára megnyitott adatbázist (ha volt). Új JSON adatbázis megnyitásához válassza a Fájl -> Adatbázis megnyitása menüpontot, vagy nyomja meg a Ctrl + O billentyűkombinációt. Az adatbázis egy tetszőleges JSON fájl lehet, amelynek minden eleme egy könyv adatait tartalmazó rekord (\"mező: érték\" szerkezetű dict). Sikeres megnyitás után az ablak címe és az állapotsor jelzi az aktív adatbázis nevét és a benne lévő kötetek számát.\n\n"
+                "3. Keresés:\n"
+                "  Írja be a keresendő szót vagy kifejezést a keresőmezőbe, majd nyomja meg a Keresés gombot vagy az Enter billentyűt a találatok megjelenítéséhez. Amint gépelni kezd, a Keresés törlése gomb aktívvá válik, ennek segítségével kiürítheti a keresőmezőt, valamint keresés után a találatok listáját is. A mező melletti Csak teljes szó jelölőnégyzettel megadhatja, hogy a keresett kifejezés csak egész szóként egyezzen (ne részszövegként). A lenti jelölőnégyzetekkel kiválaszthatja, mely oszlopokban szeretne keresni. Az Összes oszlop jelölőnégyzettel az összes oszlopot egyszerre jelölheti ki, illetve szüntetheti meg. A találatokban a Státusz oszlop jelzi, ha egy tétel már szerepel az állományban (zöld háttér) vagy a deziderátában (sárga háttér).\n\n"
+                "4. Találatok kijelölése és másolása:\n"
                 "  Az összes találatot kijelölheti a Ctrl + A billentyűparanccsal. A kijelölt sorok adatait a Ctrl + C gombokkal másolhatja a vágólapra.\n\n"
-                "4. Találat átemelése a Deziderátába vagy az Állományba:\n"
+                "5. Találat átemelése a Deziderátába vagy az Állományba:\n"
                 "  A kiválasztott találat(ok)at az erre szolgáló gombokkal, a jobbklikkre felugró helyi menüből és billentyűparancsokkal is átemelheti a deziderátába vagy az állományba.\nAdott találat átemeléséhez  használja a Ctrl + D billentyűkombinációt a Dezideráta-jegyzékbe, vagy a Ctrl + F billentyűkombinációt az állományba való átemeléshez. A másolást, valamint az átemeléseket a felugró menüből is elvégezheti. A menü előhívásához kattintson duplán a kívánt találatra, vagy nyomja meg rajta az Enter billentyűt.\n\n"
-                "5. Gyorsbillentyűk a keresőablakban:\n"
-                "  A keresőablak vezérlői Alt billentyűs gyorsbillentyűvel is elérhetők, a feliratokban az aláhúzott betű jelzi őket. Alt + K: keresendő kifejezés mezője, Alt + T: Keresés törlése, Alt + R: Keresés, Alt + O: Összes oszlop jelölőnégyzet, Alt + J: Összes kijelölése, Alt + M: Másolás vágólapra, Alt + L: Átemelés az állományba, Alt + D: Átemelés a Deziderátába.\n"
+                "6. Gyorsbillentyűk a keresőablakban:\n"
+                "  A keresőablak vezérlői Alt billentyűs gyorsbillentyűvel is elérhetők, a feliratokban az aláhúzott betű jelzi őket. Alt + K: keresendő kifejezés mezője, Alt + T: Keresés törlése, Alt + R: Keresés indítása, Alt + O: Összes oszlop jelölőnégyzet, Alt + S: Csak teljes szó jelölőnégyzet.\n"
             ),
             (
                 "Beállítások",
@@ -199,6 +201,7 @@ class HelpNotebookDialog(wx.Dialog):
                 "  Ctrl + Shift + F      - Keresés a gyűjteményekben párbeszédablak megnyitása\n"
                 "  Ctrl + W        - Ablak bezárása\n\n"
                 "   3. A KönyvTárnok kereső billentyűparancsai:\n"
+                "  Ctrl + O              - Adatbázis megnyitása\n"
                 "  Enter a keresőmezőben - Találatok keresése és megjelenítése\n"
                 "  Enter a találati listán - Helyi menü megnyitása\n"
                 "  Ctrl + A              - Összes találat kijelölése\n"

@@ -4,10 +4,23 @@ A projekten végrehajtott lényegi változtatások dokumentációja.
 
 
 
+## [4.0.0] - 2026-11-18
+
+- Könyvek kiválasztása és hiányzó adatok pótlási lehetősége JSON import esetén.
+- Eltávolítva az enekeskonyvek_adatai.json, a KönyvTárnok-kereső mostantól kizárólag a felhasználó által választott JSON fájlokban keres.
+- A Dezideráta-kezelőhöz hasonlóan a fő állományban is tiltva lett a JSON import, ha az állományjegyzék betöltése nem sikerül.
+- Tiltásra került a JSON export az állományban és a Deziderátában, ha a jegyzék üres.
+- Műveletek visszavonásának és ismételt végrehajtásának lehetősége a KönyvTárnok-keresőben.
+- Új státusz és hozzá kapcsolódó négy új mező a Dezideráta-kezelőben.
+- Státuszváltás esetén a dinamikusan megjelenő mezők tartalma csak mentéskor törlődik, elkerülve a véletlen adatvesztést.
+- Javítások és kiegészítések, valamint az új funkciók leírása a Súgóban.
+
+
+
 ## [3.21.1] - 2026-11-03
 
-* Javítva a lista rendezése számokkal kezdődő könyvcímek esetén, valamint a római számok hibás kezelése.",
-* Program függőségei frissítve.",
+* Javítva a lista rendezése számokkal kezdődő könyvcímek esetén, valamint a római számok hibás kezelése.
+* Program függőségei frissítve.
 
 
 
