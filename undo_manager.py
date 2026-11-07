@@ -19,6 +19,25 @@ FELÉPÍTÉS
   visszaáll, és a lépés mindkét veremből átkerül a mégis-verembe.
 * UndoRegiszter: a tárolók feloldója és a lépések rögzítője/végrehajtója.
 
+ABLAKONKÉNTI HATÓKÖR ÉS ÜTKÖZÉSVÉDELEM
+--------------------------------------
+* Egy lépés csak azokba a vermekbe kerül, amelyek tárolóját érinti, így
+  minden ablakban csak az ahhoz az ablakhoz tartozó lépések vonhatók vissza.
+* Az olyan kezelő, amelynek nincs saját tárolója (KönyvTárnok-kereső),
+  'sajat_lepesek=True'-val jön létre: a saját műveletei (muvelet()) kerülnek a
+  vermébe, a többi ablak lépései nem. Ilyenkor a lépés a tárolók szerinti
+  célpontok mellett ide is bekerül, és ha van ilyen tulajdonos, a
+  'elsodleges' tartalék (pl. a főablak) nem kapja meg a lépést.
+* Ütközésvédelem: a lépések rekord-különbségek, ezért egy lépés visszavonása
+  csak akkor biztonságos, ha később nem módosították ugyanazokat a
+  rekordokat (különben a teljes rekordot visszaírná, és a későbbi módosítás
+  észrevétlenül elveszne). A regiszter ezért sorszámozza a lépéseket, és
+  visszavonás előtt megvizsgálja, hogy van-e olyan, még érvényes, később
+  rögzített lépés, amely ugyanazokat a (tároló, id) rekordokat érinti; az
+  ismétlésnél a fordított szabály érvényes (korábbi, még visszavont lépés).
+  Ütközésnél a művelet nem hajtódik végre, a kezelő 'utkozes' értéke megadja
+  az okot (lásd utkozes_uzenet).
+
 A modul nem függ a wx-től.
 """
 import copy
@@ -70,6 +89,14 @@ class Valtozas:
             self.eltavolitott,
             [(utana, elotte) for elotte, utana in self.modositott],
         )
+
+    def idk(self):
+        """Az érintett (eltávolított, hozzáadott, módosított) rekordok id-i."""
+        idk = {r.get("id") for _, r in self.eltavolitott}
+        idk |= {r.get("id") for _, r in self.hozzaadott}
+        idk |= {elotte.get("id") for elotte, _ in self.modositott}
+        idk.discard(None)
+        return idk
 
     def erintett_idk(self):
         """A változás után látható (újonnan megjelent vagy átírt) rekordok
@@ -175,11 +202,17 @@ class ListaTarolo:
 # LÉPÉSEK, KEZELŐK, REGISZTER
 # ==============================================================================
 class Lepes:
-    __slots__ = ("leiras", "reszek")
+    __slots__ = ("leiras", "reszek", "sorszam", "kulcsok")
 
-    def __init__(self, leiras, reszek):
+    def __init__(self, leiras, reszek, sorszam=0):
         self.leiras = leiras
         self.reszek = reszek  # [(tarolo_nev, Valtozas), ...]
+        # A rögzítés sorrendje (az ütközésvédelemhez) és az érintett
+        # rekordok azonosítói: {(tarolo_nev, rekord_id), ...}.
+        self.sorszam = sorszam
+        self.kulcsok = frozenset(
+            (nev, rekord_id) for nev, valtozas in reszek for rekord_id in valtozas.idk()
+        )
 
 
 class UndoKezelo:
@@ -187,14 +220,21 @@ class UndoKezelo:
 
     tarolok: azoknak a tárolóknak a nevei, amelyekhez az ablak tartozik; a
     rögzített lépés azokba a vermekbe kerül, amelyek tárolóját érinti.
-    elsodleges: ha egy lépést egyetlen élő ablak sem birtokol (pl. a zárt
-    dezideráta módosítása a KönyvTárnok-keresőből), ide kerül.
+    elsodleges: ha egy lépést egyetlen élő ablak sem birtokol, ide kerül.
+    sajat_lepesek: a kezelő a saját muvelet()-eit akkor is megkapja, ha nincs
+    (vagy nem érinti) a lépés tárolóit (pl. KönyvTárnok-kereső, amely mindkét
+    tárolóba ír, de csak a saját átemeléseit akarja visszavonni). Ilyen
+    kezelőnek üres 'tarolok' ajánlott: így mások lépéseit sosem kapja meg.
     """
 
-    def __init__(self, regiszter, tarolok, elsodleges=False):
+    def __init__(self, regiszter, tarolok, elsodleges=False, sajat_lepesek=False):
         self.regiszter = regiszter
         self.tarolok = frozenset(tarolok)
         self.elsodleges = elsodleges
+        self.sajat_lepesek = sajat_lepesek
+        # Az utolsó visszavonás/ismétlés ütközése: (a végrehajtandó lépés,
+        # az ütköző lépés) vagy None (lásd utkozes_uzenet).
+        self.utkozes = None
         self._undo = []
         self._redo = []
         regiszter._kezelok.append(self)
@@ -215,7 +255,9 @@ class UndoKezelo:
         """Visszavonható lépés (csoport) a megadott (alapból a saját)
         tárolókra. Egymásba ágyazható, a legkülső érvényes."""
         nevek = list(tarolok) if tarolok else sorted(self.tarolok)
-        return self.regiszter.muvelet(leiras, nevek)
+        return self.regiszter.muvelet(
+            leiras, nevek, tulajdonos=self if self.sajat_lepesek else None
+        )
 
     def visszavonando_leiras(self):
         return self._undo[-1].leiras if self._undo else None
@@ -252,6 +294,8 @@ class UndoRegiszter:
         self._kezelok = []
         self._melyseg = 0
         self._csere_folyamatban = False
+        self._tulajdonos = None
+        self._sorszam = 0
 
     def tarolo_regisztral(self, nev, feloldo):
         """feloldo(): az éppen érvényes tároló (ListaTarolo) vagy None."""
@@ -279,10 +323,13 @@ class UndoRegiszter:
 
     # --- rögzítés ---
     @contextmanager
-    def muvelet(self, leiras, tarolo_nevek):
+    def muvelet(self, leiras, tarolo_nevek, tulajdonos=None):
         """Egy visszavonható lépést fog közre. A legkülső hívás készít
         pillanatképet az érintett tárolókról, és a végén (akkor is, ha
-        kivétel történt, de csak ha volt változás) rögzíti a különbséget."""
+        kivétel történt, de csak ha volt változás) rögzíti a különbséget.
+        tulajdonos: az a kezelő (ablak), amely a lépést kezdeményezte; a
+        lépés a tárolók szerinti célpontok mellett az ő vermébe is kerül.
+        Beágyazott hívásnál a legkülső tulajdonosa érvényes."""
         if self._csere_folyamatban or self._melyseg > 0:
             self._melyseg += 1
             try:
@@ -297,13 +344,15 @@ class UndoRegiszter:
             if masolat is not None:
                 elotte[nev] = masolat
         self._melyseg = 1
+        self._tulajdonos = tulajdonos
         try:
             yield
         finally:
             self._melyseg = 0
-            self._rogzit(leiras, elotte)
+            tulajdonos, self._tulajdonos = self._tulajdonos, None
+            self._rogzit(leiras, elotte, tulajdonos)
 
-    def _rogzit(self, leiras, elotte):
+    def _rogzit(self, leiras, elotte, tulajdonos=None):
         reszek = []
         for nev, regi in elotte.items():
             uj = self._masolat(nev)
@@ -315,9 +364,16 @@ class UndoRegiszter:
         if not reszek:
             return
 
-        lepes = Lepes(leiras, reszek)
+        self._sorszam += 1
+        lepes = Lepes(leiras, reszek, self._sorszam)
         nevek = {nev for nev, _ in reszek}
         celok = [k for k in self._kezelok if k.tarolok & nevek]
+        # A kezdeményező ablak a saját lépését akkor is megkapja, ha a
+        # tárolói nem érintettek. Ha van ilyen élő tulajdonos, az elsődleges
+        # tartalék nem kapja meg a lépést: más ablakban nem vonható vissza
+        # olyan művelet, amelyhez az ablaknak nincs köze.
+        if tulajdonos is not None and tulajdonos in self._kezelok and tulajdonos not in celok:
+            celok.append(tulajdonos)
         if not celok:
             celok = [k for k in self._kezelok if k.elsodleges][:1]
         for kezelo in celok:
@@ -334,14 +390,52 @@ class UndoRegiszter:
             logging.error(f"Az undo-lépés alkalmazása ({nev}) sikertelen.", exc_info=True)
             return False
 
+    def _utkozo_lepes(self, lepes, ismet):
+        """Az a másik lépés, amely miatt a végrehajtás nem biztonságos, vagy
+        None.
+
+        Visszavonásnál: egy KÉSŐBB rögzített, még érvényes (valamelyik
+        ablak visszavonó-vermében álló) lépés, amely ugyanazokat a
+        rekordokat érinti. Ha ilyen van, a rekordok visszaállítása a későbbi
+        módosítást is felülírná, az pedig a vermében érvényesként maradna.
+        Ismétlésnél: egy KORÁBBI, még visszavont (a mégis-vermekben álló)
+        lépés, amely ugyanazokat a rekordokat érinti, mert az ismétlendő
+        lépés annak a hatására épül.
+        Az olyan lépéseket, amelyek egyetlen élő ablak vermében sem
+        szerepelnek (bezárt ablak, kicsúszott a limitből), senki sem tudná
+        visszavonni, ezért nem blokkolnak."""
+        if not lepes.kulcsok:
+            return None
+        jeloltek = {}
+        for k in self._kezelok:
+            for masik in (k._redo if ismet else k._undo):
+                jeloltek[id(masik)] = masik
+        talalatok = [
+            m for m in jeloltek.values()
+            if m is not lepes
+            and (m.sorszam < lepes.sorszam if ismet else m.sorszam > lepes.sorszam)
+            and (m.kulcsok & lepes.kulcsok)
+        ]
+        if not talalatok:
+            return None
+        # Amit előbb kell elintézni: visszavonásnál a legutóbbit, ismétlésnél
+        # a legkorábbit.
+        return (min if ismet else max)(talalatok, key=lambda m: m.sorszam)
+
     def vegrehajt(self, kezelo, ismet):
         """A kezelő legfelső lépésének visszavonása/újbóli alkalmazása MINDEN
         érintett tárolón. Ha bármelyik tároló nem tudja (pl. mentési hiba),
         a már alkalmazott részek visszaállnak, és False a visszatérés."""
+        kezelo.utkozes = None
         honnan = kezelo._redo if ismet else kezelo._undo
         if not honnan:
             return False
         lepes = honnan[-1]
+
+        utkozo = self._utkozo_lepes(lepes, ismet)
+        if utkozo is not None:
+            kezelo.utkozes = (lepes, utkozo)
+            return False
 
         alkalmazott = []
         self._csere_folyamatban = True
@@ -390,6 +484,27 @@ def frissit_undo_menu(undo_item, redo_item, kezelo, fokuszalt_ctrl=None):
     leiras = kezelo.ismetlendo_leiras()
     redo_item.SetItemLabel(
         f"Mégis: {leiras}\tCtrl+Y" if leiras else "Mégis\tCtrl+Y"
+    )
+
+
+def utkozes_uzenet(kezelo, ismet=False):
+    """A felhasználónak szóló magyarázat, ha a kezelő utolsó visszavonása/
+    ismétlése ütközés miatt maradt el; egyébként None (pl. mentési hiba)."""
+    utkozes = getattr(kezelo, "utkozes", None)
+    if not utkozes:
+        return None
+    lepes, utkozo = utkozes
+    if ismet:
+        return (
+            f"A(z) „{lepes.leiras}” lépés most nem ismételhető meg, mert előbb "
+            f"a korábbi „{utkozo.leiras}” lépést kell újra alkalmazni, amely "
+            "ugyanezeket az adatokat érinti."
+        )
+    return (
+        f"A(z) „{lepes.leiras}” lépés nem vonható vissza, mert utána egy "
+        f"későbbi lépés („{utkozo.leiras}”) ugyanezeket az adatokat "
+        "módosította, és a visszavonás azt a módosítást is elveszítené. "
+        "Előbb a későbbi lépést kell visszavonni."
     )
 
 

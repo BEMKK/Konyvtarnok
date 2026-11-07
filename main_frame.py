@@ -2,10 +2,11 @@ import wx
 import os
 import sys
 import re
+import json
 import logging
 from contextlib import contextmanager
 from constants import APP_TITLE, MEZO_DEFINICIOK
-from dialogs import NevjegyDialog, UjdonsagokDialog, FajlutkozesDialog, exportal_egy_konyv
+from dialogs import NevjegyDialog, UjdonsagokDialog, FajlutkozesDialog, exportal_egy_konyv, JsonImportValasztoDialog
 from kereso import KeresoDialog
 from settings import BeallitasokDialog
 from konyvdialogs import KonyvReszletekDialog, KonyvSzerkesztoDialog
@@ -18,10 +19,13 @@ from konyvtarnok_kereso import KonyvtarnokKeresoApp
 from menu_bar import MenuBar
 from konyv_lista import KonyvListaCtrl
 from deziderata import Deziderata, DeziderataFajlTarolo
-from data_manager import additiv_lista_import, szoveg_szuro_egyezik, szuresi_talalatok, MentesiHiba
+from data_manager import (
+    additiv_lista_import, szoveg_szuro_egyezik, szuresi_talalatok, MentesiHiba,
+    elemez_json_import, allomany_szerkesztheto,
+)
 from utils import statisztikai_szures, masolas_vagolapra_szoveg
 from update import check_for_updates_async
-from undo_manager import frissit_undo_menu, szovegmezo_visszavonas
+from undo_manager import frissit_undo_menu, szovegmezo_visszavonas, utkozes_uzenet
 
 
 class Konyvtarnok(wx.Frame):
@@ -191,8 +195,6 @@ class Konyvtarnok(wx.Frame):
 
         # FÓKUSZ (kijelölés nélkül): indításkor az első tétel nincs kijelölve.
         self.lista.SetFocus()
-        # if self.lista.GetItemCount() > 0:
-        #     self.lista.Select(0)
             
         # Visszavonás/mégis: a könyvlista újrarajzolása akkor is, ha a
         # lépést a Dezideráta-ablakból vonták vissza; a dezideráta tárolója
@@ -269,6 +271,8 @@ class Konyvtarnok(wx.Frame):
                 self.konyvtarnok_kereso_frame = None
 
     def MegnyitReszletek(self, szerkesztesre=False):
+        if szerkesztesre and not allomany_szerkesztheto(self.db, self):
+            return
         indexek = self.lista.GetKijeloltIndexek()
         if not indexek:
             wx.MessageBox("Kérjük, válasszon ki egy könyvet a listából!", "Nincs kijelölés", wx.OK | wx.ICON_WARNING)
@@ -351,6 +355,8 @@ class Konyvtarnok(wx.Frame):
             self.lista.EnsureVisible(uj_idx)
 
     def OnKonyvTorles(self, event):
+        if not allomany_szerkesztheto(self.db, self):
+            return
         indexek = self.lista.GetKijeloltIndexek()
         if not indexek:
             wx.MessageBox("Kérjük, válasszon ki legalább egy könyvet a törléshez!", "Nincs kijelölés", wx.OK | wx.ICON_WARNING)
@@ -523,6 +529,13 @@ class Konyvtarnok(wx.Frame):
         # A lépés minden érintett oldalát (állomány, adott esetben a
         # dezideráta is) a regiszter alkalmazza, és a nézeteket is frissíti.
         if not (kezelo.ismet() if ismet else kezelo.visszavon()):
+            uzenet = utkozes_uzenet(kezelo, ismet)
+            if uzenet:
+                wx.MessageBox(
+                    uzenet, "A művelet most nem hajtható végre",
+                    wx.OK | wx.ICON_INFORMATION, self,
+                )
+                return
             wx.MessageBox(
                 "A művelet nem hajtható végre (a változás nem menthető), ezért "
                 "az adatok a korábbi állapotukban maradtak.",
@@ -756,6 +769,8 @@ class Konyvtarnok(wx.Frame):
         lista.EnsureVisible(indexek[0])
 
     def OnUjKonyv(self, event):
+        if not allomany_szerkesztheto(self.db, self):
+            return
         # Az új könyv űrlapjának üres adatai: a mezőregiszter (constants.MEZO_DEFINICIOK)
         # kulcsai, a korábbi viselkedésnek megfelelően a "bekerult" nélkül.
         ures_adatok = {k: "" for k, _ in MEZO_DEFINICIOK if k != "bekerult"}
@@ -894,6 +909,8 @@ class Konyvtarnok(wx.Frame):
             )
 
     def OnJsonImport(self, event):
+        if not allomany_szerkesztheto(self.db, self):
+            return
         config = load_settings()
         default_dir = config.get("last_json_dir", "")
 
@@ -913,58 +930,149 @@ class Konyvtarnok(wx.Frame):
         config["last_json_dir"] = os.path.dirname(kivalasztott_utvonal)
         save_settings(config)
 
-        # Additív import: minden tételt a meglévő állományhoz adunk hozzá, a
-        # duplikátumellenőrzést a KonyvAdatbazis végzi el (uj_konyv_hozzaadasa).
-        # A fájl beolvasását és a tételenkénti hozzáadás ciklusát a
-        # data_manager.additiv_lista_import közös segédfüggvénye végzi (ezt a
-        # mintát korábban itt és a Dezideráta-kezelő JSON importjában is
-        # egymástól függetlenül, kézzel írtuk meg).
-        uj_konyv_objektumok = []
+        # Fájl beolvasása és elemzése
+        try:
+            with open(kivalasztott_utvonal, "r", encoding="utf-8") as f:
+                importalt_adatok = json.load(f)
+        except Exception as e:
+            wx.MessageBox(
+                f"Hiba a JSON fájl beolvasásakor vagy értelmezésekor:\n{e}",
+                "Fájl olvasási hiba",
+                wx.OK | wx.ICON_ERROR,
+                self,
+            )
+            return
 
-        def _hozzaad(konyv):
-            if hasattr(self.db, 'uj_konyv_hozzaadasa') and self.db.uj_konyv_hozzaadasa(konyv):
-                uj_konyv_objektumok.append(self.db.konyvek[-1])
-                return True
-            return False
+        if not isinstance(importalt_adatok, list):
+            wx.MessageBox(
+                "A kiválasztott JSON fájl formátuma nem megfelelő (listát várunk)!",
+                "Hiba",
+                wx.OK | wx.ICON_ERROR,
+                self,
+            )
+            return
+
+        # Elemzés: új tételek, kiegészíthető duplikátumok és változatlan duplikátumok szétválogatása
+        uj_tetelek, kiegeszitheto_tetelek, kihagyott_duplum_db, ervenytelen_db = elemez_json_import(
+            importalt_adatok, self.db.konyvek
+        )
+
+        if not uj_tetelek and not kiegeszitheto_tetelek:
+            uzenet = "A kiválasztott fájl nem tartalmaz importálható új könyvet vagy kiegészíthető adatot."
+            if kihagyott_duplum_db > 0:
+                uzenet += f"\n\nKihagyva (már létező duplikátum): {kihagyott_duplum_db} db"
+            wx.MessageBox(uzenet, "Importálás", wx.OK | wx.ICON_INFORMATION, self)
+            return
+
+        # Megjelenítjük a választó párbeszédablakot (csak az új és kiegészíthető könyvekkel)
+        dlg = JsonImportValasztoDialog(
+            self,
+            uj_tetelek=uj_tetelek,
+            kiegeszitheto_tetelek=kiegeszitheto_tetelek,
+        )
+        valasz = dlg.ShowModal()
+        if valasz != wx.ID_OK:
+            dlg.Destroy()
+            return
+
+        kivalasztott_ujak = dlg.get_kivalasztott_uj_konyvek()
+        kivalasztott_kiegeszitesek = dlg.get_kivalasztott_kiegeszitesek()
+        dlg.Destroy()
+
+        if not kivalasztott_ujak and not kivalasztott_kiegeszitesek:
+            return
+
+        uj_konyv_objektumok = []
+        hozzaadva = 0
+        kiegeszitve = 0
+        osszes_kihagyva = (
+            (len(uj_tetelek) - len(kivalasztott_ujak))
+            + (len(kiegeszitheto_tetelek) - len(kivalasztott_kiegeszitesek))
+            + kihagyott_duplum_db
+        )
 
         try:
             with self.db.undo.muvelet("JSON importálás"):
-                hozzaadva, kihagyva = additiv_lista_import(kivalasztott_utvonal, _hozzaad)
-        except ValueError as e:
-            wx.MessageBox(str(e), "Hiba", wx.OK | wx.ICON_ERROR)
-            return
+                with self.db.kotegelt_mentes():
+                    # 1. Új könyvek hozzáadása
+                    for ujkonyv in kivalasztott_ujak:
+                        rekord = dict(ujkonyv)
+                        # Új könyv esetén belső UUID generálódjon, ha külső ID volt
+                        if "id" in rekord:
+                            del rekord["id"]
+                        if self.db.uj_konyv_hozzaadasa(rekord):
+                            hozzaadva += 1
+                            uj_konyv_objektumok.append(self.db.konyvek[-1])
+                        else:
+                            osszes_kihagyva += 1
+
+                    # 2. Meglévő könyvek kiegészítése a hiányzó adatokkal
+                    for elem in kivalasztott_kiegeszitesek:
+                        meglevo = elem["meglevo"]
+                        potolhato = elem["potolhato"]
+                        konyv_id = meglevo.get("id")
+                        if not konyv_id:
+                            continue
+                        modositott = dict(meglevo)
+                        modositott.update(potolhato)
+                        if self.db.konyv_mentese_by_id(konyv_id, modositott, engedelyez_duplikaciot=True):
+                            kiegeszitve += 1
         except MentesiHiba as e:
-            # Külön ág a data_manager.MentesiHiba-nak: ez azt jelenti, hogy
-            # egy tétel importálása közben a lemezre mentés hiúsult meg (nem
-            # duplikátum volt), ezért ezt nem szabad az általános "hiba
-            # történt az importálás során" üzenettel összemosni, illetve a
-            # már addig sikeresen importált (és elmentett) tételek
-            # megmaradnak.
             wx.MessageBox(
                 f"Hiba történt az állományjegyzék mentése közben:\n{e}\n\n"
                 "Az addig sikeresen importált tételek megmaradnak, de az "
-                "importálás emiatt megszakadt.",
+                "importálás megszakadt.",
                 "Mentési hiba",
                 wx.OK | wx.ICON_ERROR,
+                self,
             )
             self._uj_konyvek_utani_frissites(uj_konyv_objektumok)
             return
         except Exception as e:
-            logging.error(f"Hiba történt az importálás közben: {e}")
-            wx.MessageBox(f"Hiba történt az importálás során:\n{e}", "Hiba", wx.OK | wx.ICON_ERROR)
+            logging.error(f"Hiba történt az importálás közben: {e}", exc_info=True)
+            wx.MessageBox(f"Hiba történt az importálás során:\n{e}", "Hiba", wx.OK | wx.ICON_ERROR, self)
             return
 
         lathato_uj_konyvek = self._uj_konyvek_utani_frissites(uj_konyv_objektumok)
 
-        uzenet = f"Importálás befejeződött!\n\nHozzáadva: {hozzaadva} db\nKihagyva (már létező duplikátum): {kihagyva} db"
+        # Ha csak módosítás történt (nem volt új könyv), a nézetet akkor is frissíteni kell
+        if kiegeszitve > 0 and not uj_konyv_objektumok:
+            if self.aktiv_szurt_lista is None:
+                self.lista.FeltoltLista()
+            else:
+                self.lista.FeltoltLista(self.aktiv_szurt_lista)
+            self.FrissitStatusBar()
+
+        uzenet_sorok = ["Importálás befejeződött!\n"]
+        if hozzaadva > 0:
+            uzenet_sorok.append(f"Hozzáadva: {hozzaadva} db")
+        if kiegeszitve > 0:
+            uzenet_sorok.append(f"Kiegészítve: {kiegeszitve} db")
+        if osszes_kihagyva > 0:
+            uzenet_sorok.append(f"Kihagyva: {osszes_kihagyva} db")
+
+        uzenet = "\n".join(uzenet_sorok)
+
         if self.aktiv_szurt_lista is not None and uj_konyv_objektumok and not lathato_uj_konyvek:
             uzenet += "\n\nAz aktív szűrés miatt egyik újonnan felvett könyv sem látható jelenleg a listában."
         elif self.aktiv_szurt_lista is not None and len(lathato_uj_konyvek) < len(uj_konyv_objektumok):
             uzenet += f"\n\nAz aktív szűrés miatt csak {len(lathato_uj_konyvek)}/{len(uj_konyv_objektumok)} új könyv látható jelenleg a listában."
 
-        wx.MessageBox(uzenet, "Siker", wx.OK | wx.ICON_INFORMATION)
+        wx.MessageBox(uzenet, "Siker", wx.OK | wx.ICON_INFORMATION, self)
 
     def OnJsonExport(self, event):
+        # Betöltési hiba után a lista üres (a lemezen lévő adat nem), ezért
+        # az exportált fájl félrevezető lenne: ilyenkor a tiltás üzenete jön.
+        if not allomany_szerkesztheto(self.db, self):
+            return
+        if not self.db.konyvek:
+            wx.MessageBox(
+                "Az állományjegyzék üres, ezért nincs mit exportálni.",
+                "Üres állományjegyzék",
+                wx.OK | wx.ICON_INFORMATION,
+                self,
+            )
+            return
         config = load_settings()
         default_dir = config.get("last_json_dir", "")
 

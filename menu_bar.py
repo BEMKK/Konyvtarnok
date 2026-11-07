@@ -93,7 +93,7 @@ class DeziderataMenuBar(wx.MenuBar):
         self.select_none = select_menu.Append(wx.ID_ANY, "Egyik sem\tCtrl+Shift+A")
         edit_menu.AppendSubMenu(select_menu, '&Kijelölés')
         edit_menu.AppendSeparator()
-        self.find = edit_menu.Append(wx.ID_ANY, "Keresés a gyűjteményekben\tCtrl+Shift+F", "Közös keresés az állományban és a deziderátában")
+        self.find = edit_menu.Append(wx.ID_ANY, "&Keresés a gyűjteményekben\tCtrl+Shift+F", "Közös keresés az állományban és a deziderátában")
 
         self.Append(edit_menu, "S&zerkesztés")
 
@@ -102,6 +102,8 @@ class KeresoMenuBar(wx.MenuBar):
         super().__init__()
         
         fajl_menu = wx.Menu()
+        self.megnyitas = fajl_menu.Append(wx.ID_ANY, "Adatbázis megnyitása...\tCtrl+O", "Keresési adatbázis (JSON) megnyitása")
+        fajl_menu.AppendSeparator()
         self.deziderata = fajl_menu.Append(wx.ID_ANY, "Átemelés a Deziderátába\tCtrl+D")
         self.allomany = fajl_menu.Append(wx.ID_ANY, "Átemelés az állományba\tCtrl+F")
         self.kilepes = fajl_menu.Append(wx.ID_EXIT, "Kilépés\tCtrl+W")
@@ -109,6 +111,8 @@ class KeresoMenuBar(wx.MenuBar):
         self.Append(fajl_menu, "Fájl")
 
         edit_menu = wx.Menu()
+        self.undo = edit_menu.Append(wx.ID_ANY, "Visszavonás\tCtrl+Z", "A kereső utolsó átemelésének visszavonása")
+        self.redo = edit_menu.Append(wx.ID_ANY, "Mégis\tCtrl+Y", "Visszavont átemelés ismételt alkalmazása")
         self.copy = edit_menu.Append(wx.ID_ANY, "Másolás\tCtrl+C")
         select_menu = wx.Menu()
         self.select_all = select_menu.Append(wx.ID_ANY, "Összes elem\tCtrl+A", "Összes elem kijelölése a listában")

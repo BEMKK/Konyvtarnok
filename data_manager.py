@@ -13,12 +13,12 @@ import wx
 # Az alkalmazás alapmappájának (exe melletti, ill. szkript-mappa)
 # meghatározása az utils.py-ba került, mert ezt korábban a
 # config_manager.py, a data_manager.py, a deziderata.py és a main.py
-# egymástól függetlenül, szó szerint megegyező formában tartalmazta. (A
-# load_kereso_json lentebbi, _MEIPASS-t is figyelembe vevő logikája ettől
-# eltér, mert az egy csomagolt, olvasásra szánt erőforrásfájlt keres, nem
-# az írható adatfájlok mappáját - ezért az szándékosan külön maradt.)
+# egymástól függetlenül, szó szerint megegyező formában tartalmazta.
 from utils import alkalmazas_alapmappa
-from constants import BIBLIOGRAFIAI_KULCSOK, KERESO_MEZO_ALIASOK
+from constants import (
+    BIBLIOGRAFIAI_KULCSOK, KERESO_MEZO_ALIASOK, MEZOK,
+    DEZIDERATA_STATUS_NEM_KAPHATO, DEZIDERATA_BESZERZES_MEZOKULCSOK,
+)
 from undo_manager import UndoRegiszter, UndoKezelo, ListaTarolo
 
 _BASE_DIR = alkalmazas_alapmappa()
@@ -41,6 +41,19 @@ class MentesiHiba(Exception):
     A KonyvAdatbazis metódusai emiatt a mentés sikertelensége esetén
     visszavonják a memóriabeli módosítást is, hogy a memória és a lemezen
     lévő állapot ne csússzon szét, majd ezt a kivételt dobják.
+    """
+    pass
+
+
+class SzerkesztesTiltvaHiba(MentesiHiba):
+    """Az állományjegyzék betöltése nem sikerült (olvasási hiba, ismeretlen
+    formátum vagy érvénytelen HMAC-aláírás), ezért a módosítás le van tiltva,
+    hogy a program ne írja felül a meglévő (esetleg megmenthető) fájlt.
+
+    A MentesiHiba leszármazottja, így azok a hívók is elkapják és megjelenítik,
+    amelyek még nem ellenőrzik előre a db.mentes_tiltva jelzőt (védőháló);
+    a felület a módosító műveletek elején az allomany_szerkesztheto()
+    függvénnyel előre, barátságos üzenettel is megállítja a műveletet.
     """
     pass
 
@@ -270,7 +283,7 @@ ALLOMANY_MEZOK = BIBLIOGRAFIAI_KULCSOK + (
 DEZIDERATA_BIBLIO_MEZOK = BIBLIOGRAFIAI_KULCSOK
 DEZIDERATA_ALAPERTEKEK = {
     "priority": "Másodlagos",
-    "status": "Jelenleg nem kapható",
+    "status": DEZIDERATA_STATUS_NEM_KAPHATO,
     "location": "",
     "price": "",
 }
@@ -340,46 +353,102 @@ def deziderata_regi_kulcsok_atalakitasa(tetelek):
 
 def allomany_rekord_dezideratabol(tetel):
     """Egy dezideráta-tételből felépíti az állományba felvehető rekordot. A dezideráta "location"
-    mezője az állomány "forras" mezőjébe kerül."""
+    mezője az állomány "forras" mezőjébe kerül; az oldalszám, méret, kötés és
+    rövid leírás azonos kulccsal kerül át."""
     rekord = {mezo: "" for mezo in ALLOMANY_MEZOK}
     for mezo in BIBLIOGRAFIAI_KULCSOK:
         rekord[mezo] = _tiszta_szoveg(tetel.get(mezo, ""))
     rekord["forras"] = _tiszta_szoveg(tetel.get("location", ""))
+    # A "Beszerzés alatt" státusznál felvehető további adatok (oldalszám, méret,
+    # kötés, rövid leírás): kulcsaik megegyeznek az állomány kulcsaival, ezért
+    # közvetlenül átadódnak. Ami nincs kitöltve, az üres marad.
+    for mezo in DEZIDERATA_BESZERZES_MEZOKULCSOK:
+        rekord[mezo] = _tiszta_szoveg(tetel.get(mezo, ""))
     return rekord
 
 
-def load_kereso_json(json_fajlnev="enekeskonyvek_adatai.json"):
-    """Beolvassa a kereső JSON fájlt a megfelelő mappából."""
-    fajl_utvonal = None
+class KeresoJsonHiba(Exception):
+    """A kereső JSON fájl nem használható. Az üzenet (str(e)) közvetlenül a
+    felhasználónak szól, ezért érthető, magyar szöveg."""
 
-    if getattr(sys, "frozen", False):
-        exe_mappa = os.path.dirname(sys.executable)
-        fajl_utvonal = os.path.join(exe_mappa, json_fajlnev)
-        if not os.path.exists(fajl_utvonal):
-            temp_mappa = getattr(sys, "_MEIPASS", exe_mappa)
-            fajl_utvonal = os.path.join(temp_mappa, json_fajlnev)
-    else:
-        sajat_mappa = os.path.dirname(os.path.abspath(__file__))
-        fajl_utvonal = os.path.join(sajat_mappa, json_fajlnev)
 
-    if fajl_utvonal and os.path.exists(fajl_utvonal):
-        try:
-            with open(fajl_utvonal, "r", encoding="utf-8") as f:
-                adatok = json.load(f)
+# Ennél nagyobb fájl megnyitása előtt a felület megerősítést kér.
+KERESO_JSON_FIGYELMEZTETO_MERET = 50 * 1024 * 1024  # 50 MB
 
-            if isinstance(adatok, list) and len(adatok) > 0:
-                oszlopok = list(adatok[0].keys())
-                adat_lista = []
-                for sor in adatok:
-                    szurt_sor = {k: str(v).strip() if v is not None else "" for k, v in sor.items()}
-                    adat_lista.append(szurt_sor)
-                return oszlopok, adat_lista, fajl_utvonal
-            return [], [], fajl_utvonal
-        except Exception as e:
-            logging.error(f"Hiba a JSON fájl ({fajl_utvonal}) beolvasásakor: {e}", exc_info=True)
-            raise
-    else:
-        return None, None, fajl_utvonal
+
+def kereso_cim_oszlop(oszlopok):
+    """Megkeresi a Cím oszlop nevét a betöltött oszlopnevek között, UGYANAZOKKAL
+    az aliasokkal, amelyeket a sor_alap_adatta_alakitasa is használ (így ami
+    itt Cím oszlopnak számít, az átemelésnél is Cím lesz). None, ha nincs."""
+    for alias in KERESO_MEZO_ALIASOK["cim"]:
+        if alias in oszlopok:
+            return alias
+    return None
+
+
+def load_kereso_json(fajl_utvonal):
+    """Beolvassa és ELLENŐRZI a felhasználó által megnyitott kereső JSON fájlt.
+
+    Visszatérés: (oszlopok, adat_lista). Az oszlopok az ÖSSZES rekord
+    kulcsainak egyesítése az első előfordulás sorrendjében; az adat_lista
+    sorai szöveggé alakított, levágott értékű dictek.
+
+    Hibánál KeresoJsonHiba-t dob, felhasználónak szóló üzenettel; ilyenkor
+    semmilyen állapotot nem módosít, a hívó a korábbi adatot megtarthatja."""
+    if not fajl_utvonal or not os.path.isfile(fajl_utvonal):
+        raise KeresoJsonHiba(f"A fájl nem található:\n{fajl_utvonal}")
+
+    try:
+        with open(fajl_utvonal, "r", encoding="utf-8-sig") as f:
+            adatok = json.load(f)
+    except UnicodeDecodeError:
+        raise KeresoJsonHiba("A fájl nem UTF-8 kódolású szöveg, ezért nem olvasható.")
+    except json.JSONDecodeError as e:
+        raise KeresoJsonHiba(
+            f"A fájl nem érvényes JSON ({e.lineno}. sor, {e.colno}. oszlop): {e.msg}"
+        )
+    except OSError as e:
+        raise KeresoJsonHiba(f"A fájl nem olvasható:\n{e}")
+
+    if not isinstance(adatok, list):
+        raise KeresoJsonHiba(
+            "A fájl nem könyvek listáját tartalmazza. A kereső olyan JSON-t vár, "
+            "amelynek minden eleme egy könyv adatait tartalmazó rekord.\n\n"
+            "(Az állományjegyzék és a dezideráta saját mentési fájljai itt nem használhatók.)"
+        )
+    if not adatok:
+        raise KeresoJsonHiba("A fájl üres listát tartalmaz, nincs benne egyetlen könyv sem.")
+
+    for index, sor in enumerate(adatok, start=1):
+        if not isinstance(sor, dict):
+            raise KeresoJsonHiba(
+                f"A(z) {index}. elem nem könyvrekord (a kereső minden elemtől "
+                "\"mező: érték\" szerkezetet vár)."
+            )
+
+    oszlopok = []
+    lathato = set()
+    for sor in adatok:
+        for kulcs in sor:
+            if kulcs not in lathato:
+                lathato.add(kulcs)
+                oszlopok.append(kulcs)
+
+    if kereso_cim_oszlop(oszlopok) is None:
+        elvart = " vagy ".join(f"\"{a}\"" for a in KERESO_MEZO_ALIASOK["cim"])
+        talalt = ", ".join(str(o) for o in oszlopok[:12])
+        if len(oszlopok) > 12:
+            talalt += ", ..."
+        raise KeresoJsonHiba(
+            f"A fájlban nincs Cím oszlop (elvárt oszlopnév: {elvart}).\n\n"
+            f"A fájl oszlopai: {talalt}"
+        )
+
+    adat_lista = [
+        {k: str(v).strip() if v is not None else "" for k, v in sor.items()}
+        for sor in adatok
+    ]
+    return oszlopok, adat_lista
 
 
 
@@ -414,6 +483,139 @@ def tetelek_egyeznek(tetel1, tetel2, mezok=EGYEZES_MEZOK):
             return False
 
     return True
+
+
+def keres_egyezo_konyv(tetel, meglevo_konyvek):
+    """
+    Megkeresi a tetel-hez legjobban illeszkedő meglévő könyvet.
+    Ha több illeszkedő könyv is van (tetelek_egyeznek alapján),
+    azt választja, amelyikkel a legtöbb nem-üres mező egyezik meg.
+    Visszatérés: a meglévő könyv dict-je, vagy None.
+    """
+    jeloltek = []
+    for konyv in meglevo_konyvek:
+        if tetelek_egyeznek(tetel, konyv):
+            pont = 0
+            for mezo in EGYEZES_MEZOK:
+                v1 = _norm_ertek(tetel.get(mezo))
+                v2 = _norm_ertek(konyv.get(mezo))
+                if v1 and v2 and v1 == v2:
+                    pont += 1
+            jeloltek.append((pont, konyv))
+    if not jeloltek:
+        return None
+    jeloltek.sort(key=lambda x: x[0], reverse=True)
+    return jeloltek[0][1]
+
+
+def hataroz_meg_potolhato_mezok(meglevo_konyv, uj_tetel, mezok=None):
+    """
+    Megvizsgálja, hogy a meglévő könyv mely kitöltetlen mezőit tudja pótolni
+    az importált tétel. Csak olyan mezőket vesz figyelembe, amelyek a meglévő
+    könyvben üresek, az új tételben viszont szerepelnek kitöltve.
+    
+    Visszatérés: {kulcs: uj_ertek} szótár, vagy üres szótár.
+    """
+    potolhato = {}
+    vizsgalando = mezok if mezok is not None else MEZOK
+    for kulcs in vizsgalando:
+        if kulcs in ("id", "cim"):
+            continue
+        regi_ertek = str(meglevo_konyv.get(kulcs, "") or "").strip()
+        uj_ertek = str(uj_tetel.get(kulcs, "") or "").strip()
+        if not regi_ertek and uj_ertek:
+            potolhato[kulcs] = uj_ertek
+    return potolhato
+
+
+def normalizal_import_elem(nyers_elem):
+    """Egy nyers importált dict kanonikus alakba hozása az aliasok feloldásával."""
+    alap = sor_alap_adatta_alakitasa(nyers_elem)
+    for k, v in nyers_elem.items():
+        if k not in alap and v is not None:
+            alap[k] = str(v).strip()
+    return alap
+
+
+def elemez_json_import(
+    importalt_lista,
+    meglevo_konyvek,
+    mezok=None,
+    mezocimkek=None,
+    regikulcsok_atalakitasa=False,
+):
+    """
+    Elemzi a JSON-ból betöltött listát a meglévő állományhoz vagy deziderátához viszonyítva.
+    
+    Különválogatja:
+      - uj_tetelek: teljesen új könyvek/tételek, amik még nincsenek az állományban/listában.
+      - kiegeszitheto_tetelek: olyan könyvek/tételek, amelyek megegyeznek egy meglévővel,
+        de tartalmaznak kitöltetlen mezőkhöz új adatokat.
+      - kihagyott_duplum_db: olyan duplikátumok száma, amelyek semmilyen új adatot
+        nem adnak a meglévőhöz.
+      - ervenytelen_db: nem megfelelő formátumú vagy cím nélküli tételek.
+    
+    Visszatérés: (uj_tetelek, kiegeszitheto_tetelek, kihagyott_duplum_db, ervenytelen_db)
+    """
+    uj_tetelek = []
+    kiegeszitheto_tetelek = []
+    kihagyott_duplum_db = 0
+    ervenytelen_db = 0
+
+    latott_ujak = []
+
+    for nyers_elem in importalt_lista:
+        if not isinstance(nyers_elem, dict):
+            ervenytelen_db += 1
+            continue
+
+        if regikulcsok_atalakitasa:
+            deziderata_regi_kulcsok_atalakitasa([nyers_elem])
+
+        elem = normalizal_import_elem(nyers_elem)
+        cim = str(elem.get("cim", "") or "").strip()
+        if not cim:
+            ervenytelen_db += 1
+            continue
+
+        meglevo = keres_egyezo_konyv(elem, meglevo_konyvek)
+        if meglevo is not None:
+            potolhato = hataroz_meg_potolhato_mezok(meglevo, elem, mezok=mezok)
+            if potolhato:
+                leiras_reszek = []
+                for k, v in potolhato.items():
+                    if mezocimkek and k in mezocimkek:
+                        felirat = mezocimkek[k]
+                    elif k in MEZOK:
+                        felirat = MEZOK[k].lista
+                    else:
+                        felirat = k
+                    leiras_reszek.append(f"{felirat}: {v}")
+                leiras = ", ".join(leiras_reszek)
+
+                mar_benne = False
+                for mar_van in kiegeszitheto_tetelek:
+                    if mar_van["meglevo"].get("id") == meglevo.get("id"):
+                        mar_van["potolhato"].update(potolhato)
+                        mar_benne = True
+                        break
+                if not mar_benne:
+                    kiegeszitheto_tetelek.append({
+                        "meglevo": meglevo,
+                        "uj": elem,
+                        "potolhato": potolhato,
+                        "leiras": leiras,
+                    })
+            else:
+                kihagyott_duplum_db += 1
+        else:
+            if any(tetelek_egyeznek(elem, korabbi) for korabbi in latott_ujak):
+                kihagyott_duplum_db += 1
+            else:
+                latott_ujak.append(elem)
+                uj_tetelek.append(elem)
+
+    return uj_tetelek, kiegeszitheto_tetelek, kihagyott_duplum_db, ervenytelen_db
 
 
 def _undo_lepes(leiras):
@@ -465,6 +667,12 @@ class KonyvAdatbazis:
         # AdatokMentese csak jelzi, hogy van mentetlen változás.
         self._mentes_melyseg = 0
         self._mentes_fuggoben = False
+        # True, ha az állományjegyzék betöltése nem sikerült (lásd
+        # AdatokBetoltese). Ilyenkor a konyvek üres, a lemezen viszont lehet
+        # (sérült, de megmenthető) adat, ezért minden módosítás és mentés
+        # le van tiltva: különben az első új könyv felvétele a fájl teljes
+        # tartalmát az egyetlen új könyvvel írná felül.
+        self.mentes_tiltva = False
         self.AdatokBetoltese()
 
     def is_duplikalat(self, uj_adatok, exclude_id=None):
@@ -484,16 +692,22 @@ class KonyvAdatbazis:
 
     def AdatokBetoltese(self):
         self.undo.torol()
+        self.mentes_tiltva = False
+        tiltas_szoveg = (
+            "\n\nA fájl védelme érdekében az állományjegyzék szerkesztése, "
+            "importálása és exportálása le van tiltva."
+        )
         try:
             adat, ervenyes = load_hmac_json(self.fajlnev)
         except Exception as e:
             logging.error(f"Hiba az állományjegyzék betöltésekor: {e}", exc_info=True)
+            self.AlapertelmezettAdatok()
+            self.mentes_tiltva = True
             wx.MessageBox(
-                f"Hiba az adatok betöltésekor: {e}",
+                f"Hiba az adatok betöltésekor: {e}" + tiltas_szoveg,
                 "Hiba",
                 wx.OK | wx.ICON_ERROR,
             )
-            self.AlapertelmezettAdatok()
             return
 
         if not ervenyes:
@@ -501,17 +715,31 @@ class KonyvAdatbazis:
                 f"Az állományjegyzék ({self.fajlnev}) HMAC-aláírása érvénytelen: "
                 "a fájl megsérült vagy jogosulatlanul módosították."
             )
+            self.AlapertelmezettAdatok()
+            self.mentes_tiltva = True
             wx.MessageBox(
                 "Az állományjegyzék integritás-ellenőrzése sikertelen: a fájl "
                 "megsérülhetett, vagy valaki módosította a programon kívül.\n\n"
-                "Az adatok betöltése biztonsági okból megszakadt.",
+                "Az adatok betöltése biztonsági okból megszakadt." + tiltas_szoveg,
                 "Integritási hiba",
                 wx.OK | wx.ICON_ERROR,
             )
-            self.AlapertelmezettAdatok()
             return
 
-        self.konyvek = adat if isinstance(adat, list) else []
+        if not isinstance(adat, list):
+            # Érvényes aláírás, de nem könyvlista: a tartalom ismeretlen, ezért
+            # nem szabad "üres listaként" továbbvinni és később felülírni.
+            logging.error(f"Az állományjegyzék ({self.fajlnev}) tartalma nem lista.")
+            self.AlapertelmezettAdatok()
+            self.mentes_tiltva = True
+            wx.MessageBox(
+                "Az állományjegyzék fájl tartalma nem könyvek listája." + tiltas_szoveg,
+                "Hiba",
+                wx.OK | wx.ICON_ERROR,
+            )
+            return
+
+        self.konyvek = adat
 
         # Hiányzó ID-k pótlása
         modositva = False
@@ -525,12 +753,32 @@ class KonyvAdatbazis:
     def AlapertelmezettAdatok(self):
         self.konyvek = []
 
+    def _ellenoriz_irhato(self):
+        """SzerkesztesTiltvaHiba-t dob, ha az állomány betöltése sikertelen
+        volt (lásd mentes_tiltva). A módosító metódusok az elején hívják, még
+        a memóriabeli változtatás előtt."""
+        if self.mentes_tiltva:
+            raise SzerkesztesTiltvaHiba(
+                "Az állományjegyzék betöltése nem sikerült, ezért a módosítás "
+                f"le van tiltva ({self.fajlnev})."
+            )
+
+    def _lemezre_ir(self):
+        # Utolsó védőháló: betöltési hiba után semmiképp sem írjuk felül a fájlt.
+        if self.mentes_tiltva:
+            logging.error("Az állományjegyzék mentése letiltva (sikertelen betöltés után).")
+            return False
+        return save_hmac_json(self.fajlnev, self.konyvek)
+
     def AdatokMentese(self):
+        if self.mentes_tiltva:
+            logging.error("Az állományjegyzék mentése letiltva (sikertelen betöltés után).")
+            return False
         if self._mentes_melyseg:
             # Kötegelt mód: a tényleges lemezre írás a köteg végén történik.
             self._mentes_fuggoben = True
             return True
-        return save_hmac_json(self.fajlnev, self.konyvek)
+        return self._lemezre_ir()
 
     @contextmanager
     def kotegelt_mentes(self):
@@ -553,7 +801,7 @@ class KonyvAdatbazis:
             self._mentes_melyseg -= 1
             if self._mentes_melyseg == 0 and self._mentes_fuggoben:
                 self._mentes_fuggoben = False
-                if not save_hmac_json(self.fajlnev, self.konyvek):
+                if not self._lemezre_ir():
                     hiba = f"Nem sikerült elmenteni az állományjegyzéket ({self.fajlnev})."
                     if kivetel_van:
                         logging.error(hiba)
@@ -578,6 +826,7 @@ class KonyvAdatbazis:
         megegyező False értékként kapta meg, ami félrevezető volt egy
         ténylegesen sikeres keresés + sikertelen lemezre írás esetén.
         """
+        self._ellenoriz_irhato()
         if not engedelyez_duplikaciot and self.is_duplikalat(uj_adatok, exclude_id=konyv_id):
             return False
 
@@ -610,6 +859,7 @@ class KonyvAdatbazis:
         szerepel duplikátumként" hibaüzenetet eredményezett egy valójában
         lemezre írási hiba esetén.
         """
+        self._ellenoriz_irhato()
         if not engedelyez_duplikaciót and self.is_duplikalat(uj_adatok):
             return False
         
@@ -642,6 +892,7 @@ class KonyvAdatbazis:
         felületen, miközben a lemezen (és újraindítás után) még mindig
         szerepelt volna.
         """
+        self._ellenoriz_irhato()
         for i, konyv in enumerate(self.konyvek):
             if konyv.get("id") == konyv_id:
                 del self.konyvek[i]
@@ -661,6 +912,31 @@ class KonyvAdatbazis:
         except Exception as e:
             logging.error(f"Hiba az állományjegyzék mentésekor ({target_filepath}): {e}", exc_info=True)
             return False
+
+
+def allomany_szerkesztheto(db, parent=None):
+    """True, ha az állományjegyzék módosítható. Ha a betöltés sikertelen volt
+    (lásd KonyvAdatbazis.mentes_tiltva), tájékoztatja a felhasználót és False-t
+    ad: a hívó ilyenkor azonnal álljon le, hogy a meglévő (esetleg sérült)
+    fájl ne íródjon felül. A Dezideráta-kezelő _szerkesztes_engedelyezett
+    metódusának megfelelője a főállományra."""
+    if not getattr(db, "mentes_tiltva", False):
+        return True
+    wx.MessageBox(
+        "Az állományjegyzék betöltése nem sikerült, ezért a módosítása, "
+        "importálása és exportálása le van tiltva: a program nem írja "
+        "felül a meglévő (esetleg sérült) fájlt.\n"
+        "Kérjük, távolítsa el a meglévő JSON fájlt a program mappájából, és "
+        "indítsa újra a programot!\n\n"
+        f"Fájl: {db.fajlnev}\n\n"
+        "Ha a fájl sérült, állítsa vissza egy biztonsági másolatból, vagy "
+        "nevezze át (pl. allomanyjegyzek_serult.json), majd indítsa újra a "
+        "programot.",
+        "Szerkesztés letiltva",
+        wx.OK | wx.ICON_WARNING,
+        parent,
+    )
+    return False
 
 
 # ==============================================================================

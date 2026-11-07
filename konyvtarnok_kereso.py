@@ -1,9 +1,12 @@
+import os
 import re
 import wx
 import logging
 from contextlib import nullcontext
 from types import SimpleNamespace
+from constants import KERESO_APP_TITLE
 from theme_manager import apply_theme_from_settings
+from config_manager import load_settings, save_settings
 from deziderata import (
     DATA_FILE as DEZIDERATA_DATA_FILE,
     deziderata_tetelek_hozzaadasa,
@@ -21,12 +24,19 @@ from data_manager import (
     deziderata_tetel_forras_dictbol,
     deziderata_regi_kulcsok_atalakitasa,
     load_kereso_json,
+    kereso_cim_oszlop,
+    KeresoJsonHiba,
+    KERESO_JSON_FIGYELMEZTETO_MERET,
     is_same_book,
     MentesiHiba,
+    allomany_szerkesztheto,
 )
 from gyors_kereses import GyorsListaKereso, osszes_kijelolt_index
 from utils import masolas_vagolapra_szoveg
 from menu_bar import KeresoMenuBar
+from undo_manager import (
+    UndoKezelo, frissit_undo_menu, szovegmezo_visszavonas, utkozes_uzenet,
+)
 
 # A Státusz oszlop sorainak háttérszíne (RGB). Ha egy tétel mindkét helyen
 # szerepel, az "Állományban" szín az erősebb jelzés.
@@ -36,25 +46,38 @@ SZIN_DEZIDERATABAN = (255, 243, 205)
 
 class KonyvtarnokKeresoApp(wx.Frame):
     def __init__(self, parent=None):
-        super().__init__(
-            parent=parent, title="KönyvTárnok kereső", size=(1000, 600)
-        )
+        # Az ablakcímet a _allapot_frissitese állítja be (még a Show() előtt).
+        super().__init__(parent=parent, size=(1000, 600))
 
         self.parent = parent
-        self.SetName("KönyvTárnok kereső")
+        self.SetName(KERESO_APP_TITLE)
+
+        # Visszavonás/mégis: a kereső csak a SAJÁT átemeléseit (állományba,
+        # deziderátába) vonja vissza és ismétli meg. A kezelőnek nincs saját
+        # tárolója (üres lista), így mások lépései nem kerülnek a vermébe; a
+        # saját lépések viszont a főablak / a Dezideráta-ablak vermébe is
+        # bekerülnek (kapcsolt lépések), ezért onnan is visszavonhatók.
+        # Önálló futásnál (parent=None) nincs regiszter: nincs undo.
+        regiszter = getattr(getattr(parent, "db", None), "undo_regiszter", None)
+        self.undo = (
+            UndoKezelo(regiszter, [], sajat_lepesek=True) if regiszter is not None else None
+        )
+        self.Bind(wx.EVT_CLOSE, self.on_close)
 
         self.panel = wx.Panel(self)
         self.panel.SetName("Főpanel")
 
-        # 1. JSON fájl betöltése a háttérben
-        self.json_fajlnev = "enekeskonyvek_adatai.json"
+        # 1. Az adatbázis (a felhasználó által megnyitott JSON) még üres; a
+        # betöltés az ablak felépítése után történik (lásd lentebb), mert a
+        # jelölőnégyzetek és a táblázat oszlopai a fájl oszlopaiból épülnek.
         self.oszlopok = []
+        self.adatok = None
+        self.json_utvonal = ""
         # A táblázat soraihoz tartozó EREDETI (forrás) sor-dictek. A
         # táblázat sorainak ListCtrl-adata (SetItemData) erre a listára
         # mutató index. Az átemelés és a státuszfrissítés ebből dolgozik, nem
         # a megjelenített cellaszövegekből (lásd _sor_eredeti_dict).
         self._talalat_sorok = []
-        self.adatok = self.adatok_betoltese()
 
         # Gyorskeresés (gépeléssel ugrás a listában)
         self.gyors_kereses = GyorsListaKereso()
@@ -63,13 +86,16 @@ class KonyvtarnokKeresoApp(wx.Frame):
         self.init_ui()
 
         menusor = KeresoMenuBar()
+        self.menusor = menusor
         self.SetMenuBar(menusor)
         self.menu_esemenyek_bekotese(menusor)
 
         # Status bar létrehozása az ablak alján
         self.CreateStatusBar()
-        osszesen = len(self.adatok) if self.adatok else 0
-        self.SetStatusText(f"Keresés {osszesen} kötet adataiban, forrás: {self.json_fajlnev}")
+
+        # A korábban megnyitott adatbázis betöltése (ha van); a téma
+        # alkalmazása ELŐTT, hogy a most épített elemek is megkapják.
+        self._betoltes_indulaskor()
 
         # Téma alkalmazása - a Show()-t csak EZUTÁN hívjuk (lásd az init_ui
         # végén lévő kommentet).
@@ -77,27 +103,157 @@ class KonyvtarnokKeresoApp(wx.Frame):
         self.current_theme = config.get("tema", "vilagos")
         self.Show()
 
-    def adatok_betoltese(self):
-        """Beolvassa a JSON fájlt a data_manager segédfüggvényével."""
-        try:
-            oszlopok, adatok, fajl_utvonal = load_kereso_json(self.json_fajlnev)
-            if oszlopok is not None:
-                self.oszlopok = oszlopok
-                return adatok
-            else:
-                wx.MessageBox(
-                    f"A(z) '{self.json_fajlnev}' nem található a program mappájában!\n\nKeresett útvonal:\n{fajl_utvonal}",
-                    "Fájl hiányzik",
-                    wx.OK | wx.ICON_WARNING,
-                )
-                return None
-        except Exception as e:
-            wx.MessageBox(
-                f"Hiba a fájl beolvasásakor:\n{e}",
-                "Hiba",
-                wx.OK | wx.ICON_ERROR,
+    # ==========================================================================
+    # ADATBÁZIS (A FELHASZNÁLÓ ÁLTAL MEGNYITOTT JSON) KEZELÉSE
+    # ==========================================================================
+    def _allapot_frissitese(self):
+        """Az ablakcím és az állapotsor beállítása a betöltött adatbázis szerint."""
+        if self.adatok is None:
+            self.SetTitle(KERESO_APP_TITLE)
+            self.SetStatusText(
+                "Nincs megnyitott adatbázis, használja a Fájl > Adatbázis megnyitása menüpontot)."
             )
-            return None
+        else:
+            nev = os.path.basename(self.json_utvonal)
+            self.SetTitle(f"{KERESO_APP_TITLE} – {nev}")
+            self.SetStatusText(
+                f"Keresés {len(self.adatok)} kötet adataiban, forrás: {nev}"
+            )
+
+    def _betoltes_indulaskor(self):
+        """Megpróbálja betölteni a beállításokban tárolt adatbázist. Ha nincs
+        beállított útvonal, vagy a fájl hiányzik, NEM dob fel ablakot, csak az
+        állapotsor jelez; sérült fájlnál viszont hibaüzenet jelenik meg."""
+        utvonal = load_settings().get("kereso_json_utvonal", "")
+        self._allapot_frissitese()
+        if not utvonal:
+            return
+        if not os.path.isfile(utvonal):
+            self.SetStatusText(
+                f"A korábban megnyitott adatbázis nem található: {utvonal} "
+                "(új megnyitása: Ctrl+O)."
+            )
+            return
+        self._adatbazis_betoltese(utvonal, indulaskor=True)
+
+    def adatbazis_megnyitasa(self):
+        """Fájlválasztó + betöltés. True, ha sikerült új adatbázist megnyitni."""
+        utvonal = load_settings().get("kereso_json_utvonal", "")
+        kezdo_mappa = os.path.dirname(utvonal) if utvonal else ""
+        if kezdo_mappa and not os.path.isdir(kezdo_mappa):
+            kezdo_mappa = ""
+        with wx.FileDialog(
+            self,
+            "Keresési adatbázis megnyitása",
+            defaultDir=kezdo_mappa,
+            wildcard="JSON fájlok (*.json)|*.json|Minden fájl (*.*)|*.*",
+            style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST,
+        ) as dlg:
+            if dlg.ShowModal() != wx.ID_OK:
+                return False
+            kivalasztott = dlg.GetPath()
+        return self._adatbazis_betoltese(kivalasztott)
+
+    def _adatbazis_betoltese(self, utvonal, indulaskor=False):
+        """Betölti és érvényesíti a megadott JSON-t. Hiba esetén a korábbi
+        adatbázis és a mentett útvonal VÁLTOZATLAN marad. True, ha sikerült."""
+        if not indulaskor:
+            try:
+                meret = os.path.getsize(utvonal)
+            except OSError:
+                meret = 0
+            if meret > KERESO_JSON_FIGYELMEZTETO_MERET:
+                valasz = wx.MessageBox(
+                    f"A fájl nagy ({meret // (1024 * 1024)} MB), a megnyitás eltarthat "
+                    "egy ideig. Folytatja?",
+                    "Nagy fájl",
+                    wx.YES_NO | wx.ICON_QUESTION,
+                    self,
+                )
+                if valasz != wx.YES:
+                    return False
+
+        try:
+            oszlopok, adatok = load_kereso_json(utvonal)
+        except KeresoJsonHiba as e:
+            wx.MessageBox(str(e), "Az adatbázis nem nyitható meg",
+                          wx.OK | wx.ICON_ERROR, self)
+            return False
+        except Exception as e:
+            logging.error("Váratlan hiba a kereső JSON betöltésekor", exc_info=True)
+            wx.MessageBox(f"Váratlan hiba a fájl beolvasásakor:\n{e}",
+                          "Hiba", wx.OK | wx.ICON_ERROR, self)
+            return False
+
+        # Innentől a betöltés sikeres: az állapot módosítása.
+        self.oszlopok = oszlopok
+        self.adatok = adatok
+        self.json_utvonal = os.path.abspath(utvonal)
+
+        self._tablazat_uritese()
+        self._checkboxok_epitese()
+        self._tablazat_oszlopai_epitese()
+        self.frissit_akadalymentesites(0)
+        self.frissit_torles_gomb_allapot()
+        self.panel.Layout()
+        self._allapot_frissitese()
+
+        if not indulaskor:
+            config = load_settings()
+            config["kereso_json_utvonal"] = self.json_utvonal
+            save_settings(config)
+            # A most létrehozott jelölőnégyzetek is kapják meg az aktuális témát.
+            apply_theme_from_settings(self)
+            self.kereso_mezo.SetFocus()
+        return True
+
+    def _checkboxok_epitese(self):
+        """(Újra)építi a keresési oszlopokat választó jelölőnégyzeteket a
+        betöltött oszlopok alapján."""
+        self.checkbox_sizer.Clear(delete_windows=True)
+        self.checkboxok = {}
+        self.cb_osszes_oszlop = None
+        if self.oszlopok:
+            # "Összes oszlop" jelölőnégyzet az oszlop-jelölőnégyzetek előtt:
+            # bejelölése minden oszlopot kijelöl, a pipa kivétele pedig
+            # mindegyikből kiveszi a pipát.
+            self.cb_osszes_oszlop = wx.CheckBox(self.panel, label="Összes &oszlop")
+            self.cb_osszes_oszlop.SetValue(True)
+            self.cb_osszes_oszlop.Bind(wx.EVT_CHECKBOX, self.on_osszes_oszlop)
+            self.checkbox_sizer.Add(self.cb_osszes_oszlop, flag=wx.RIGHT, border=10)
+
+            for oszlop in self.oszlopok:
+                cb = wx.CheckBox(self.panel, label=str(oszlop))
+                cb.SetValue(True)
+                cb.Bind(wx.EVT_CHECKBOX, self.on_oszlop_checkbox)
+                self.checkbox_sizer.Add(cb, flag=wx.RIGHT, border=10)
+                self.checkboxok[oszlop] = cb
+
+            # Tabulátorsorrend: a jelölőnégyzetek a keresőmező és a két gomb
+            # UTÁN jönnek (vizuálisan változatlanul a helyükön maradnak). Új
+            # adatbázis betöltésekor a jelölőnégyzetek újraépülnek, és
+            # létrehozási sorrendjük szerint a táblázat és a gombsor mögé
+            # kerülnének, ezért itt kifejezetten visszahelyezzük őket.
+            elozo = self.btn_kereses
+            for cb in [self.cb_osszes_oszlop, *self.checkboxok.values()]:
+                cb.MoveAfterInTabOrder(elozo)
+                elozo = cb
+        else:
+            nincs_adat = wx.StaticText(
+                self.panel,
+                label="Nincs megnyitott adatbázis (Fájl > Adatbázis megnyitása, Ctrl+O).",
+            )
+            self.checkbox_sizer.Add(nincs_adat)
+
+    def _tablazat_oszlopai_epitese(self):
+        """(Újra)építi a találati táblázat oszlopait a betöltött oszlopok alapján."""
+        self.tablazat.DeleteAllColumns()
+        if self.oszlopok:
+            for i, oszlop in enumerate(self.oszlopok):
+                self.tablazat.InsertColumn(i, str(oszlop), width=130)
+            self.tablazat.InsertColumn(len(self.oszlopok), "Státusz", width=200)
+        else:
+            self.tablazat.InsertColumn(0, "Üzenet", width=400)
 
     def _sor_alap_adatta_alakitasa(self, forras_dict):
         """Egy nyers sor (a keresési JSON-ból vagy a táblázatból kiolvasott
@@ -154,13 +310,10 @@ class KonyvtarnokKeresoApp(wx.Frame):
         return konyvek_cim_szerint
 
     def _cim_oszlop_neve(self):
-        """Megkeresi a Cím oszlop nevét a betöltött (kereső JSON-beli)
-        oszlopnevek között, vagy - ha nem egyértelmű a fejléc - az első
-        oszlopot adja vissza tartalékként."""
-        for col in self.oszlopok:
-            if str(col).strip().lower() in ["cím", "cim"]:
-                return col
-        return self.oszlopok[0] if self.oszlopok else None
+        """Megkeresi a Cím oszlop nevét a betöltött oszlopnevek között (ugyanazon
+        aliasok szerint, mint az átemelés; a megnyitáskor ellenőrzött, hogy
+        van ilyen). None, ha nincs betöltött adatbázis."""
+        return kereso_cim_oszlop(self.oszlopok)
 
     def _van_egyezes(self, sor_adat, cim_oszlop_neve, cim_szerint, egyezes_fv):
         """Közös egyezés-vizsgálat: a cím szerint előszűrt csoportban
@@ -282,6 +435,17 @@ class KonyvtarnokKeresoApp(wx.Frame):
         fő_sizer = wx.BoxSizer(wx.VERTICAL)
 
         # --- Kereső sáv ---
+        # A vezérlők LÉTREHOZÁSI sorrendje egyben a tabulátorsorrend is (a
+        # vizuális elrendezést a sizerek adják, az nem függ tőle), a
+        # KeresoDialog (kereso.py) sorrendjével egyezően: Csak teljes szó ->
+        # keresőmező -> Keresés törlése -> Keresés -> oszlopok jelölőnégyzetei
+        # (lásd _checkboxok_epitese). A "Csak teljes szó" a címke ELŐTT jön
+        # létre, mert a címke Alt-gyorsbillentyűje a nála közvetlenül
+        # következő vezérlőre visz, ennek a keresőmezőnek kell lennie.
+        # "Csak teljes szó": a keresett szavak egész szóként egyezzenek (ne
+        # részszövegként).
+        self.cb_teljes_szo = wx.CheckBox(self.panel, label="Csak teljes &szó")
+
         kereso_szoveg = wx.StaticText(
             self.panel, label="Keresendő &kifejezés:"
         )
@@ -289,16 +453,12 @@ class KonyvtarnokKeresoApp(wx.Frame):
         self.kereso_mezo.Bind(wx.EVT_TEXT_ENTER, self.on_kereses)
         self.kereso_mezo.Bind(wx.EVT_TEXT, self.on_szoveg_valtozas)
 
-        # "Csak teljes szó": a keresett szavak egész szóként egyezzenek (ne
-        # részszövegként). A tabulátorsorrendben a kereső mező után jön.
-        self.cb_teljes_szo = wx.CheckBox(self.panel, label="Csak teljes &szó")
-
         self.btn_kereses_torlese = wx.Button(self.panel, label="Keresés &törlése")
         self.btn_kereses_torlese.Enable(False)
         self.btn_kereses_torlese.Bind(wx.EVT_BUTTON, self.on_kereses_torlese)
 
-        kereso_gomb = wx.Button(self.panel, label="Ke&resés")
-        kereso_gomb.Bind(wx.EVT_BUTTON, self.on_kereses)
+        self.btn_kereses = wx.Button(self.panel, label="Ke&resés")
+        self.btn_kereses.Bind(wx.EVT_BUTTON, self.on_kereses)
 
         kereso_sizer = wx.BoxSizer(wx.HORIZONTAL)
         kereso_sizer.Add(
@@ -313,7 +473,7 @@ class KonyvtarnokKeresoApp(wx.Frame):
             border=10,
         )
         kereso_sizer.Add(self.btn_kereses_torlese, flag=wx.LEFT, border=5)
-        kereso_sizer.Add(kereso_gomb, flag=wx.LEFT, border=5)
+        kereso_sizer.Add(self.btn_kereses, flag=wx.LEFT, border=5)
 
         fő_sizer.Add(kereso_sizer, flag=wx.EXPAND | wx.ALL, border=10)
 
@@ -324,31 +484,10 @@ class KonyvtarnokKeresoApp(wx.Frame):
         fő_sizer.Add(opciok_szoveg, flag=wx.LEFT | wx.RIGHT, border=10)
 
         self.checkboxok = {}
-        checkbox_sizer = wx.BoxSizer(wx.HORIZONTAL)
-
         self.cb_osszes_oszlop = None
-        if self.oszlopok:
-            # "Összes oszlop" jelölőnégyzet az oszlop-jelölőnégyzetek előtt:
-            # bejelölése minden oszlopot kijelöl, a pipa kivétele pedig
-            # mindegyikből kiveszi a pipát.
-            self.cb_osszes_oszlop = wx.CheckBox(self.panel, label="Összes &oszlop")
-            self.cb_osszes_oszlop.SetValue(True)
-            self.cb_osszes_oszlop.Bind(wx.EVT_CHECKBOX, self.on_osszes_oszlop)
-            checkbox_sizer.Add(self.cb_osszes_oszlop, flag=wx.RIGHT, border=10)
-
-            for oszlop in self.oszlopok:
-                cb = wx.CheckBox(self.panel, label=str(oszlop))
-                cb.SetValue(True)
-                cb.Bind(wx.EVT_CHECKBOX, self.on_oszlop_checkbox)
-                checkbox_sizer.Add(cb, flag=wx.RIGHT, border=10)
-                self.checkboxok[oszlop] = cb
-        else:
-            nincs_adat = wx.StaticText(
-                self.panel, label="Nincsenek elérhető oszlopok."
-            )
-            checkbox_sizer.Add(nincs_adat)
-
-        fő_sizer.Add(checkbox_sizer, flag=wx.ALL, border=10)
+        self.checkbox_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        self._checkboxok_epitese()
+        fő_sizer.Add(self.checkbox_sizer, flag=wx.ALL, border=10)
 
         # --- Eredmény lista (wx.ListCtrl táblázat) ---
         self.eredmeny_szoveg = wx.StaticText(self.panel, label="Találatok:")
@@ -366,15 +505,7 @@ class KonyvtarnokKeresoApp(wx.Frame):
 
         self.frissit_akadalymentesites(0)
 
-        if self.oszlopok:
-            for i, oszlop in enumerate(self.oszlopok):
-                self.tablazat.InsertColumn(i, str(oszlop), width=130)
-            statusz_col_idx = len(self.oszlopok)
-            self.tablazat.InsertColumn(
-                statusz_col_idx, "Státusz", width=200
-            )
-        else:
-            self.tablazat.InsertColumn(0, "Üzenet", width=400)
+        self._tablazat_oszlopai_epitese()
 
         fő_sizer.Add(
             self.tablazat, proportion=1, flag=wx.EXPAND | wx.ALL, border=10
@@ -446,12 +577,84 @@ class KonyvtarnokKeresoApp(wx.Frame):
         """A menüsor elemeinek bekötése. A gyorsbillentyűket (Ctrl+C,
         Ctrl+A, Ctrl+D, Ctrl+F, Ctrl+W) maguk a menüelemek hordozzák, ezért külön
         gyorsítótábla nem szükséges."""
+        self.Bind(wx.EVT_MENU, self.on_menu_megnyitas, menusor.megnyitas)
+        self.Bind(wx.EVT_MENU, self.on_menu_visszavonas, menusor.undo)
+        self.Bind(wx.EVT_MENU, self.on_menu_megis, menusor.redo)
+        self.Bind(wx.EVT_MENU_OPEN, self.on_menu_nyitas)
         self.Bind(wx.EVT_MENU, self.on_menu_masolas, menusor.copy)
         self.Bind(wx.EVT_MENU, self.on_menu_osszes_kijelolese, menusor.select_all)
         self.Bind(wx.EVT_MENU, self.on_menu_egyik_sem_kijelolese, menusor.select_none)
         self.Bind(wx.EVT_MENU, self.on_menu_deziderata, menusor.deziderata)
         self.Bind(wx.EVT_MENU, self.on_menu_allomany, menusor.allomany)
         self.Bind(wx.EVT_MENU, self.on_kilepes, menusor.kilepes)
+
+    # --- VISSZAVONÁS / MÉGIS ---
+
+    def on_close(self, event):
+        # A saját vermek elvesznek; a kereső átemelései a főablak / a
+        # Dezideráta-ablak vermében megmaradnak (kivéve a zárt dezideráta
+        # módosítását, amelynek más verme nincs).
+        if self.undo is not None:
+            self.undo.bezar()
+        event.Skip()
+
+    def on_menu_nyitas(self, event):
+        """Menü megnyitásakor a Visszavonás/Mégis tételek feliratába beírja a
+        soron következő lépés leírását."""
+        if self.undo is not None:
+            frissit_undo_menu(self.menusor.undo, self.menusor.redo,
+                              self.undo, self.FindFocus())
+        event.Skip()
+
+    def on_menu_visszavonas(self, event):
+        self._visszavonas_vagy_megis(ismet=False)
+
+    def on_menu_megis(self, event):
+        self._visszavonas_vagy_megis(ismet=True)
+
+    def _visszavonas_vagy_megis(self, ismet):
+        # A menü Ctrl+Z / Ctrl+Y gyorsbillentyűje a keresőmezőtől is elveszi a
+        # billentyűt: ott a mező saját szövegét vonjuk vissza (lásd
+        # on_menu_masolas is).
+        if szovegmezo_visszavonas(self.FindFocus(), ismet):
+            return
+        if self.undo is None:
+            self.SetStatusText(
+                "A visszavonás csak a főablakból indított keresőben érhető el."
+            )
+            return
+        leiras = self.undo.ismetlendo_leiras() if ismet else self.undo.visszavonando_leiras()
+        if leiras is None:
+            self.SetStatusText(
+                "Nincs mit újra alkalmazni." if ismet
+                else "Nincs visszavonható átemelés."
+            )
+            return
+
+        # A lépés minden érintett oldalát (állomány, deziderata) a regiszter
+        # alkalmazza; a főablak és a Dezideráta-ablak nézetét, valamint e
+        # táblázat Státusz oszlopát a tárolók frissítői újraszámolják.
+        if not (self.undo.ismet() if ismet else self.undo.visszavon()):
+            uzenet = utkozes_uzenet(self.undo, ismet)
+            if uzenet:
+                wx.MessageBox(
+                    uzenet, "A művelet most nem hajtható végre",
+                    wx.OK | wx.ICON_INFORMATION, self,
+                )
+            else:
+                wx.MessageBox(
+                    "A művelet nem hajtható végre (a változás nem menthető), ezért "
+                    "az adatok a korábbi állapotukban maradtak.",
+                    "Mentési hiba", wx.OK | wx.ICON_ERROR, self,
+                )
+            return
+        self.SetStatusText(
+            f"Újra alkalmazva: {leiras}." if ismet else f"Visszavonva: {leiras}."
+        )
+
+    def on_menu_megnyitas(self, event):
+        """Fájl > Adatbázis megnyitása (Ctrl+O)."""
+        self.adatbazis_megnyitasa()
 
     def on_menu_masolas(self, event):
         """Fájl > Másolás. Ha a keresőmezőben áll a fókusz, annak saját
@@ -553,10 +756,16 @@ class KonyvtarnokKeresoApp(wx.Frame):
         self._tablazat_uritese()
 
         if self.adatok is None:
-            wx.MessageBox(
-                "Nincs betöltött adat!", "Hiba", wx.OK | wx.ICON_ERROR
+            # Nincs adatbázis: felkínáljuk a megnyitást, és ha sikerül, a
+            # keresés a beírt kifejezéssel folytatódik.
+            valasz = wx.MessageBox(
+                "Nincs megnyitott adatbázis. Megnyitja most?",
+                "Nincs adatbázis",
+                wx.YES_NO | wx.ICON_QUESTION,
+                self,
             )
-            return
+            if valasz != wx.YES or not self.adatbazis_megnyitasa():
+                return
 
         keresett_szo = self.kereso_mezo.GetValue().strip().lower()
         if not keresett_szo:
@@ -775,12 +984,15 @@ class KonyvtarnokKeresoApp(wx.Frame):
                 wx.OK | wx.ICON_ERROR,
             )
 
-    def _undo_csoport(self, leiras):
-        """Visszavonható lépés a dezideráta módosítására ZÁRT ablaknál (a
-        nyitott ablak a tetelek_felvetele-ben maga rögzíti). Zárt ablaknál a
-        lépés a főablak verembe kerül."""
-        undo = getattr(getattr(self.parent, "db", None), "undo", None)
-        return undo.muvelet(leiras, ["deziderata"]) if undo is not None else nullcontext()
+    def _undo_csoport(self, leiras, tarolok):
+        """A kereső egy átemelése EGY visszavonható lépés a megadott
+        tárolókra. A lépés a kereső vermébe kerül, és a tárolók szerinti
+        ablakéba is (állomány: főablak; dezideráta: a nyitott
+        Dezideráta-ablak). Zárt Dezideráta-ablaknál a lépés csak a kereső
+        vermében él, a főablak nem kapja meg. Önálló futásnál nincs undo."""
+        if self.undo is None:
+            return nullcontext()
+        return self.undo.muvelet(leiras, tarolok)
 
     def atemeles_allomanyba(self):
         if not self.parent or not hasattr(self.parent, "db"):
@@ -789,6 +1001,9 @@ class KonyvtarnokKeresoApp(wx.Frame):
                 "Hiba",
                 wx.OK | wx.ICON_ERROR,
             )
+            return
+        # Betöltési hiba után a főállomány védett: nem emelhetünk át bele.
+        if not allomany_szerkesztheto(self.parent.db, self):
             return
 
         kijelolt_indexek = osszes_kijelolt_index(self.tablazat)
@@ -837,9 +1052,10 @@ class KonyvtarnokKeresoApp(wx.Frame):
         # szándékosan külön kezeljük, hogy ne keveredjen össze a
         # duplikátum miatti elutasítással (lásd data_manager.MentesiHiba).
         try:
-            sikeres, visszautasitott, _ = konyvek_tomeges_felvetele(
-                self.parent.db, konyv_adatok, utani_frissites_fv=_frissites
-            )
+            with self._undo_csoport("átemelés az állományba", ["allomany"]):
+                sikeres, visszautasitott, _, _ = konyvek_tomeges_felvetele(
+                    self.parent.db, konyv_adatok, utani_frissites_fv=_frissites
+                )
         except MentesiHiba as e:
             wx.MessageBox(
                 f"Hiba történt az állományjegyzék mentése közben:\n{e}\n\n"
@@ -905,7 +1121,8 @@ class KonyvtarnokKeresoApp(wx.Frame):
             # (a mentést és a lista frissítését is ő végzi), nem a lemezről
             # olvasott másolatot írjuk felül - így nem veszhet el egy még
             # el nem mentett/épp szerkesztett állapot, és az id-k egyeznek.
-            eredmeny = frame.tetelek_felvetele(uj_tetelek)
+            with self._undo_csoport("átemelés a deziderátába", ["deziderata"]):
+                eredmeny = frame.tetelek_felvetele(uj_tetelek)
             if eredmeny is None:
                 return  # a hibát (letiltás / mentési hiba) az ablak már jelezte
             sikeres, visszautasitott = eredmeny
@@ -928,8 +1145,17 @@ class KonyvtarnokKeresoApp(wx.Frame):
                 )
                 return
 
-            with self._undo_csoport("átemelés a deziderátába"):
-                deziderata_lista = [x for x in adat if isinstance(x, dict)] if isinstance(adat, list) else []
+            if not isinstance(adat, list):
+                # Érvényes aláírás, de nem tétellista: nem írhatjuk felül.
+                wx.MessageBox(
+                    "A dezideráta-jegyzék tartalma nem tételek listája, ezért az "
+                    "átemelés megszakadt.",
+                    "Hiba", wx.OK | wx.ICON_ERROR
+                )
+                return
+
+            with self._undo_csoport("átemelés a deziderátába", ["deziderata"]):
+                deziderata_lista = [x for x in adat if isinstance(x, dict)]
                 # A régi (angol kulcsú) tételek átalakítása, és a meglévő, még
                 # id nélküli tételek is megkapják az id-t.
                 deziderata_regi_kulcsok_atalakitasa(deziderata_lista)
