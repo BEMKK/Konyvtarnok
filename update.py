@@ -135,7 +135,25 @@ class FrissitesFolyamatDialog(wx.Dialog):
         self._timer.Start(80)
 
     def set_status(self, szoveg):
-        wx.CallAfter(self.label.SetLabel, szoveg)
+        """Szöveg módosítása; a jelző újra pörgő (határozatlan) módba áll."""
+        def _do():
+            if not self:  # az ablak már megszűnt
+                return
+            if not self._timer.IsRunning():
+                self._timer.Start(80)
+            self.label.SetLabel(szoveg)
+        wx.CallAfter(_do)
+
+    def set_progress(self, szazalek, szoveg=None):
+        """Valódi százalékos állapot: leállítja a pörgetést."""
+        def _do():
+            if not self:  # az ablak már megszűnt
+                return
+            self._timer.Stop()
+            self.gauge.SetValue(max(0, min(100, int(szazalek))))
+            if szoveg is not None:
+                self.label.SetLabel(szoveg)
+        wx.CallAfter(_do)
 
     def zar(self):
         self._timer.Stop()
@@ -174,7 +192,23 @@ def perform_self_update(parent, letoltes_url, uj_verzio):
                 letoltes_url, headers={"User-Agent": f"KonyvTarnokApp/{APP_VERSION}"}
             )
             with urllib.request.urlopen(req, timeout=30) as resp, open(tmp_path, "wb") as out:
-                shutil.copyfileobj(resp, out)
+                total = int(resp.headers.get("Content-Length", 0) or 0)
+                kesz = 0
+                utolso = 0.0
+                while True:
+                    chunk = resp.read(65536)
+                    if not chunk:
+                        break
+                    out.write(chunk)
+                    kesz += len(chunk)
+                    most = time.monotonic()
+                    if total and (most - utolso >= 0.1 or kesz >= total):
+                        utolso = most
+                        dlg.set_progress(
+                            kesz * 100 / total,
+                            f"Új verzió letöltése (v{uj_verzio}): "
+                            f"{kesz * 100 // total}%",
+                        )
 
             if os.path.getsize(tmp_path) < 1024:
                 raise RuntimeError("A letöltött fájl gyanúsan kicsi/sérült.")
