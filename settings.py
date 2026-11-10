@@ -187,7 +187,7 @@ class BeallitasokDialog(wx.Dialog):
 
         # --- Gombok ---
         gomb_sizer = wx.StdDialogButtonSizer()
-        ok_gomb = wx.Button(self, wx.ID_OK, label="Mentés")
+        ok_gomb = wx.Button(self, wx.ID_OK, label="OK")
         megse_gomb = wx.Button(self, wx.ID_CANCEL, label="Mégse")
 
         gomb_sizer.AddButton(ok_gomb)

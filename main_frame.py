@@ -1234,11 +1234,11 @@ class Konyvtarnok(wx.Frame):
                     self.konyvtarnok_kereso_frame.current_theme = uj_tema
 
             if mentve:
-                wx.MessageBox("A beállítások sikeresen mentésre kerültek!", "Beállítások", wx.OK | wx.ICON_INFORMATION)
+                wx.MessageBox("Beállítások sikeresen elmentve.", "Sikeres mentés", wx.OK | wx.ICON_INFORMATION)
             else:
                 wx.MessageBox(
                     "A beállításokat nem sikerült elmenteni a settings.json fájlba "
-                    "(például nincs írási jogosultság a program mappájában, vagy tele van a lemez).\n\n"
+                    "Lehetséges, hogy a programnak nincs írási jogosultsága a mappában, vagy a lemez megtelt.\n\n"
                     "A módosítások csak a program bezárásáig érvényesek.",
                     "Mentési hiba", wx.OK | wx.ICON_ERROR, self,
                 )
