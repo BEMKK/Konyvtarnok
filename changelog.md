@@ -17,6 +17,12 @@ A projekten végrehajtott lényegi változtatások dokumentációja.
 
 
 
+## [3.21.2] - 2026-11-10
+
+* Javítva a folyamatjelző hibás működése frissítés letöltése alatt.
+
+
+
 ## [3.21.1] - 2026-11-03
 
 * Javítva a lista rendezése számokkal kezdődő könyvcímek esetén, valamint a római számok hibás kezelése.
