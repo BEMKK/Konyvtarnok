@@ -49,8 +49,9 @@ python main.py
 
 | Csomag | Verzió | Funkció |
 |--------|--------|---------|
-| `wxpython` | 4.3.2 | Grafikus felület (GUI keretrendszer) |
 | `reportlab` | 5.1.0 | PDF adatlapok és statisztikai jelentések generálása |
+| `requests` | 2.34.2 | A program új verzióinak ellenőrzése |
+| `wxpython` | 4.3.2 | Grafikus felület (GUI keretrendszer) |
 
 ## Projektstruktúra
 

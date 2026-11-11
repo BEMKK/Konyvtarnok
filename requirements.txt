@@ -1,2 +1,3 @@
 reportlab==5.1.0
+requests==2.34.2
 wxpython==4.3.2
