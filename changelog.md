@@ -15,6 +15,12 @@ A projekten végrehajtott lényegi változtatások dokumentációja.
 - Státuszváltás esetén a dinamikusan megjelenő mezők tartalma csak mentéskor törlődik, elkerülve a véletlen adatvesztést.
 - A lista alapértelmezett rendezése a beállításokból már nem lehetséges, ezt a nézet menüben választhatjuk ki.
 - Törölve a beállítások sikeres mentésekor felugró üzenet, így csak a sikertelen mentésről kapunk visszajelzést.
+- Névjegy ablak optimalizálva: verziószám a leírás alatt, megnövelt térközök.
+- Az újdonságok ablak magassága mostantól a sorok számához igazodik.
+- A főablakhoz hasonlóan a gyermekmodulok ablakcíme is a constants.py-be lett kiszervezve.
+- A főablak címsorába bekerült az "állománykezelő" kifejezés.
+- Az Újdonságok és Névjegy ablakban a verziószám előtti "v" betűt töröltük.
+- Az újdonságok ablakban mostantól "A verzió főbb újdonságai" felirat szerepel, utalva arra, hogy a kódszintű változtatásokat nem sorolja fel.
 - Javítások és kiegészítések, valamint az új funkciók leírása a Súgóban.
 
 
