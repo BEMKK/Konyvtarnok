@@ -65,7 +65,7 @@ class UjdonsagokDialog(wx.Dialog):
         
         main_sizer = wx.BoxSizer(wx.VERTICAL)
 
-        cim_label = wx.StaticText(self, label="A verzió újdonságai:")
+        cim_label = wx.StaticText(self, label="A verzió főbb újdonságai:")
         font_cim = cim_label.GetFont()
         font_cim.SetWeight(wx.FONTWEIGHT_BOLD)
         font_cim.SetPointSize(12)
