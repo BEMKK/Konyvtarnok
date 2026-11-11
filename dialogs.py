@@ -39,21 +39,21 @@ class NevjegyDialog(wx.Dialog):
         cim_label.SetFont(font)
         sizer.Add(cim_label, 0, wx.ALIGN_CENTER | wx.TOP, 20)
         
-        verzio_label = wx.StaticText(self, label=f"{APP_VERSION}".strip())
-        sizer.Add(verzio_label, 0, wx.ALIGN_CENTER | wx.TOP, 5)
-        
         leiras_label = wx.StaticText(self, label="Akadálymentes könyvkatalógus-kezelő magángyűjtemények számára.")
         sizer.Add(leiras_label, 0, wx.ALIGN_CENTER | wx.ALL, 15)
-        
+
+        verzio_label = wx.StaticText(self, label=f"Verzió: {APP_VERSION}".strip())
+        sizer.Add(verzio_label, 0, wx.ALIGN_CENTER | wx.TOP, 15)
+                
         fejleszto_label = wx.StaticText(self, label="© 2026 KönyvTárnok")
-        sizer.Add(fejleszto_label, 0, wx.ALIGN_CENTER | wx.BOTTOM, 15)
+        sizer.Add(fejleszto_label, 0, wx.ALIGN_CENTER | wx.BOTTOM, 4)
         
         ok_gomb = wx.Button(self, id=wx.ID_OK, label="OK")
         
         # Téma alkalmazása Realize/Hozzáadás után, de megjelenítés előtt
         apply_theme_from_settings(self)
 
-        sizer.Add(ok_gomb, 0, wx.ALIGN_CENTER | wx.BOTTOM, 15)
+        sizer.Add(ok_gomb, 0, wx.ALIGN_CENTER | wx.BOTTOM, 20)
         
         self.SetSizer(sizer)
         
