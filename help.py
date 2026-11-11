@@ -128,7 +128,7 @@ class HelpNotebookDialog(wx.Dialog):
                 "5. Frissítések keresése:\n"
                 "  A frissítések fülön megadhatja, hogy a program keressen-e automatikusan frissítéseket. Ehhez jelölje be a frissítések automatikus ellenőrzése jelölőnégyzetet.\n  Ha a négyzet be van jelölve, megjelenik egy kombinált listamező, ahol kiválaszthatja a frissítések ellenőrzésének gyakoriságát (minden indításkor, naponta, hetente, havonta).\n\n"
                 "6. Beállítások mentése:\n"
-                "  Ha végzett a beállítások módosításával, a mentéshez kattintson az ok gombra, vagy nyomja meg a CTRL + S billentyűket.\n  A program felugró üzenetben tájékoztat a mentés sikerességéről, illetve arról is, ha az valami miatt meghiúsul.\n  Ekkor a módosított beállítások érvénybe lépnek, de a program bezárásakor visszaállnak a legutóbb mentett állapotra.\n"
+                "  Ha végzett a beállítások módosításával, a mentéshez kattintson az ok gombra, vagy nyomja meg a CTRL + S billentyűket.\n  Amennyiben a mentés meghiúsul, a program felugró üzenetben tájékoztat erről.\n  Ekkor a módosítások csak a program bezárásáig maradnak érvényben.\n"
             ),
             (
                 "Frissítés",
