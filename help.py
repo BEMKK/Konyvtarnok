@@ -26,7 +26,7 @@ class HelpNotebookDialog(wx.Dialog):
                 "2. Eszköztár és státuszsor:\n"
                 "  A főablakban és a dezideráta-kezelőben egyaránt megtalálható a lista feletti eszköztár, melynek gombjai a könyvekkel való műveletek (hozzáadás, szerkesztés, törlés) gyors elvégzésére szolgálnak. A jobb oldalon látható Szűrés törlése gomb alapértelmezetten le van tiltva mindaddig, amíg kereséssel vagy statisztikából nem szűri a listát. Az ablak alsó részén lévő státuszsor az állományban, illetve dezideráta-jegyzékben lévő kötetek számát mutatja.\n\n"
                 "3. Menüsor:\n"
-                "  A főablakban és a Dezideráta-kezelőben is található egy felső menüsor. A főablakban a fájl menüből indíthatók a könyv- és fájlműveletek (új könyv hozzáadása, könyv szerkesztése, törlése, pdf adatlap exportálása, JSON mentése/betöltése). A rendezés menüből ideiglenesen rendezheti a listát cím, szerző, kiadó, kiadás helye és éve, méret, valamint bekerülés dátuma és oldalszám szerint, ám ez a rendezés csak a program bezárásáig érvényes. Az eszközök menüben találja a Dezideráta-kezelő, a KönyvTárnok-kereső és a Keresés a gyűjteményekben dialog menüpontokat, valamint az állománystatisztikát és a beállításokat. A súgó menüből az alkalmazás súgóját, névjegyét, a frissítések ellenőrzését, valamint a használt verzió újdonságainak listáját érheti el.\n\n"
+                "  A főablakban és a Dezideráta-kezelőben is található egy felső menüsor. A főablakban a fájl menüből indíthatók a könyv- és fájlműveletek (új könyv hozzáadása, könyv szerkesztése, törlése, pdf adatlap exportálása, JSON mentése/betöltése). A rendezés menüből rendezheti a listát cím, szerző, kiadó, kiadás helye és éve, méret, valamint bekerülés dátuma és oldalszám szerint. Az eszközök menüben találja a Dezideráta-kezelő, a KönyvTárnok-kereső és a Keresés a gyűjteményekben dialog menüpontokat, valamint az állománystatisztikát és a beállításokat. A súgó menüből az alkalmazás súgóját, névjegyét, a frissítések ellenőrzését, valamint a használt verzió újdonságainak listáját érheti el.\n\n"
                 "4. Dezideráta-kezelő:\n"
                 "  A Dezideráta-kezelőben a beszerezni kívánt könyvek listáját vezetheti. Az alapvető bibliográfiai adatok mellett megadhatja a tétel prioritását (elsődleges vagy másodlagos), valamint státuszát (jelenleg kapható/jelenleg nem kapható). Kapható státusz esetén lehetősége van megadni a tétel lelőhelyét, jelenlegi vagy becsült árát és esetleges linkjét is.\n\n"
                 "5. KönyvTárnok-kereső:\n"
@@ -62,7 +62,7 @@ class HelpNotebookDialog(wx.Dialog):
                 "4. Állománystatisztika készítése:\n"
                 "  Az Eszközök -> Állománystatisztika menüpontban (Ctrl + T) részletes kimutatásokat készíthet az állományról. Kiválaszthatja a statisztika alapját (pl. Kiadó, Kiadás éve, Kiadás évszázada, Kiadás évtizede, Kötés típusa, Példány forrása, Státusz stb.), majd szűrhet egy adott értékre vagy a hiányzó adatokra (\"Nincs kitöltve\"). A találatokat lehetősége van cím, szűrési szempont vagy az állomány aktuális rendezési szempontja szerint rendezni, valamint azokra fő listát leszűrni.\n\n"
                 "5. Állomány rendezése:\n"
-                "  A Rendezés menüpontban vagy az Alt billentyűparancsokkal (lásd a billentyűparancsok listáját) tetszőlegesen sorba rendezheti a könyveket. Fontos, hogy ez csak ideiglenes rendezés, mely a program bezárásakor törlődik. A lista alapértelmezett rendezését a beállítások Téma és rendezés fülén választhatja ki.\n"
+                "  A Nézet menü Rendezés menüpontjában vagy az Alt billentyűparancsokkal (lásd a billentyűparancsok listáját) tetszőlegesen sorba rendezheti a könyveket.\n"
             ),
                 (
                 "Adatmentés",
@@ -94,7 +94,7 @@ class HelpNotebookDialog(wx.Dialog):
                 "7. Katalóguslap mentése:\n"
                 "  Az állományhoz hasonlóan a Deziderátáról is készíthető PDF katalóguslap.\nEhhez a főablakban megszokott módon használhatja a Ctrl + K billentyűparancsot, az eszköztár Katalógus export gombját, vagy a megfelelő menüpontot.\n\n"
                 "8. Visszavonás és ismétlés:\n"
-                "  A legutóbbi művelet visszavonásához használja a Szerkesztés menü Visszavonás parancsát, vagy a Ctrl+Z billentyűparancsot.\nA művelet ismételt végrehajtásához válassza a menü Mégis menüpontját, vagy használja a Ctrl+Y billentyűket.\n"
+                "  A legutóbbi művelet visszavonásához használja a Szerkesztés menü Visszavonás parancsát, vagy a Ctrl+Z billentyűparancsot.\nA művelet ismételt végrehajtásához válassza a menü Mégis menüpontját, vagy használja a Ctrl+Y billentyűket.\n\n"
                 "9. Másolás a vágólapra:\n"
                 "  A lista kijelölt elemeit vágólapra másolhatja tabulátorral elválasztott szövegként, hasonlóan a KönyvTárnok-keresőhöz.\nA kijelölt elemek másolásához használja a Szerkesztés menü Másolás menüpontját, vagy nyomja meg a Ctrl + C billentyűparancsot.\n"
             ),
@@ -120,32 +120,23 @@ class HelpNotebookDialog(wx.Dialog):
                 "1. A Beállítások ablak megnyitása:\n"
                 "  Az alkalmazás testreszabásához válassza az Eszközök -> Beállítások menüpontot vagy nyomja meg a Ctrl + B billentyűkombinációt.\n\n"
                 "2. Vizuális téma váltása:\n"
-                "  Beállíthatja az alkalmazás megjelenési témáját (pl. Világos vagy Sötét téma), amely mentés után azonnal érvényesül a főablakon, a párbeszédablakokon és a segédmodulokon is. Ehhez válassza ki a kívánt témát, majd kattintson a mentés gombra. A témaválasztó görgetésekor a kijelölt téma előnézete megjelenik a beállítások ablakon, így mentés nélkül is láthatja annak kinézetét.\n\n"
-                "3. Alapértelmezett rendezés:\n"
-                "  Kiválaszthatja, hogy a program indításakor a könyvlista milyen mező szerint legyen automatikusan sorba rendezve. A Rendezés-menüben kiválasztott szempont csupán ideiglenesen, a program bezárásáig érvényes.\n\n"
-                "4. Látható oszlopok beállítása:\n"
-                "  A beállítások ablakban kiválaszthatja, hogy a főablak könyvlistájában mely oszlopok (alcím, összeállító, kiadó, kiadás éve, méret, kötés, forrás, státusz stb.) jelenjenek meg. A Cím oszlop mindig aktív, és a jelölőnégyzete le van tiltva.\n\n"
-                "5. Mappák automatikus megjegyzése:\n"
-                "  A program automatikusan megjegyzi a legutóbb használt PDF export és JSON mentési/betöltési könyvtárakat, így nem kell minden alkalommal kikeresni azokat. Az alkalmazás első használatakor ezeket manuálisan is megadhatja a beállítások ablak ezen fülén.\n"
-                "6. Frissítések keresése:\n"
-                "  A Beállítások ablak frissítések fülén megadhatja, hogy a program keressen-e automatikusan frissítéseket. Ehhez jelölje be a frissítések automatikus ellenőrzése jelölőnégyzetet.\n"
-                "  Ha a négyzet be van jelölve, megjelenik egy kombinált listamező, ahol kiválaszthatja a frissítések ellenőrzésének gyakoriságát (minden indításkor, naponta, hetente, havonta).\n"
-                "7. Beállítások mentése:\n"
+                "  A Megjelenés fülön beállíthatja az alkalmazás megjelenési témáját (pl. Világos vagy Sötét téma), amely mentés után azonnal érvényesül a főablakon, a párbeszédablakokon és a segédmodulokon is. Ehhez válassza ki a kívánt témát, majd kattintson a mentés gombra. A témaválasztó görgetésekor a kijelölt téma előnézete megjelenik a beállítások ablakon, így mentés nélkül is láthatja annak kinézetét.\n\n"
+                "3. Látható oszlopok beállítása:\n"
+                "  Az oszlopok a listában fülön kiválaszthatja, hogy a főablak könyvlistájában mely oszlopok (alcím, összeállító, kiadó, kiadás éve, méret, kötés, forrás, státusz stb.) jelenjenek meg. A Cím oszlop mindig aktív, és a jelölőnégyzete le van tiltva.\n\n"
+                "4. Mappák automatikus megjegyzése:\n"
+                "  A program automatikusan megjegyzi a legutóbb használt PDF export és JSON mentési/betöltési könyvtárakat, így nem kell minden alkalommal kikeresni azokat. Az alkalmazás első használatakor ezeket manuálisan is megadhatja a beállítások ablak Mappák és elérési utak fülén.\n\n"
+                "5. Frissítések keresése:\n"
+                "  A frissítések fülön megadhatja, hogy a program keressen-e automatikusan frissítéseket. Ehhez jelölje be a frissítések automatikus ellenőrzése jelölőnégyzetet.\n  Ha a négyzet be van jelölve, megjelenik egy kombinált listamező, ahol kiválaszthatja a frissítések ellenőrzésének gyakoriságát (minden indításkor, naponta, hetente, havonta).\n\n"
+                "6. Beállítások mentése:\n"
                 "  Ha végzett a beállítások módosításával, a mentéshez kattintson az ok gombra, vagy nyomja meg a CTRL + S billentyűket.\n  A program felugró üzenetben tájékoztat a mentés sikerességéről, illetve arról is, ha az valami miatt meghiúsul.\n  Ekkor a módosított beállítások érvénybe lépnek, de a program bezárásakor visszaállnak a legutóbb mentett állapotra.\n"
             ),
             (
                 "Frissítés",
                 "FRISSÍTÉSEK KERESÉSE\n\n"
                 "1. Új verzió ellenőrzése:\n"
-                "  Új verzió ellenőrzéséhez használja a Súgó menü Frissítések keresése menüpontját, vagy nyomja meg a Ctrl+U billentyűkombinációt.\n"
-                "  A program alapértelmezés szerint minden indításkor ellenőrzi a frissítéseket, ezt a beállítások ablakban módosíthatja.\n"
-                "  Ha van elérhető új verzió, a felugró ablakban megjelenik annak leírása, valamint a letöltésre, a GitHub kiadási oldal megnyitására, és a frissítés elhalasztására szolgáló gombok.\n"
-                "  Ha nem érhető el frissítés, manuális ellenőrzés esetén a program felugró ablakban tájékoztat erről.\n\n"
+                "  Új verzió ellenőrzéséhez használja a Súgó menü Frissítések keresése menüpontját, vagy nyomja meg a Ctrl+U billentyűkombinációt.\n  A program alapértelmezés szerint minden indításkor ellenőrzi a frissítéseket, ezt a beállítások ablakban módosíthatja.\n  Ha van elérhető új verzió, a felugró ablakban megjelenik annak leírása, valamint a letöltésre, a GitHub kiadási oldal megnyitására, és a frissítés elhalasztására szolgáló gombok.\n  Ha nincs elérhető frissítés, manuális ellenőrzés esetén a program felugró ablakban tájékoztat erről.\n\n"
                 "2. Frissítés letöltése vagy elhalasztása:\n"
-                "  Az új verzió letöltéséhez kattintson a frissítés most gombra.\n"
-                "  Ekkor a program automatikusan letölti és megnyitja az új verziót.\n"
-                "  Amennyiben később szeretné letölteni a frissítést, kattintson a frissítés elhalasztása gombra.\n"
-                "  Az Önnek megfelelő időpontban futtassa újra a frissítés keresését a fenti módon, és válassza a frissítés most opciót.\n"
+                "  Az új verzió letöltéséhez kattintson a frissítés most gombra.\n  Ekkor a program automatikusan letölti és megnyitja az új verziót.\n  Amennyiben később szeretné letölteni a frissítést, kattintson a frissítés elhalasztása gombra.\n  Az Önnek megfelelő időpontban futtassa újra a frissítés keresését a fenti módon, és válassza a frissítés most opciót.\n"
             ),
             (
                 "Billentyűparancsok",

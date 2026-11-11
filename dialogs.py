@@ -85,6 +85,8 @@ class UjdonsagokDialog(wx.Dialog):
             "Műveletek visszavonásának és ismételt végrehajtásának lehetősége a KönyvTárnok-keresőben.",
             "Új státusz és hozzá kapcsolódó négy új mező a Dezideráta-kezelőben.",
             "Státuszváltás esetén a dinamikusan megjelenő mezők tartalma csak mentéskor törlődik, elkerülve a véletlen adatvesztést.",
+            "A lista alapértelmezett rendezése a beállításokból már nem lehetséges, ezt a nézet menüben választhatjuk ki.",
+            "Törölve a beállítások sikeres mentésekor felugró üzenet, így csak a sikertelen mentésről kapunk visszajelzést.",
             "Javítások és kiegészítések, valamint az új funkciók leírása a Súgóban."
         ]
 

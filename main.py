@@ -22,7 +22,7 @@ from utils import fajl_megnyitasa
 # indításánál és megjelenésénél - lásd update.py a részletes leírásért.
 from update import cleanup_old_exe, kezel_update_ready_jelzes
 
-# Segédfüggvény az EXE MELLET lévő mappához (hibanapló, adatbázisok)
+# Segédfüggvény az EXE MELLETT lévő mappához (hibanapló, adatbázisok)
 def get_exe_dir():
     return Path(alkalmazas_alapmappa())
 
