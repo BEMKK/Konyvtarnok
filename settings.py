@@ -5,16 +5,6 @@ from theme_manager import get_theme_names, apply_theme
 class BeallitasokDialog(wx.Dialog):
     """Beállítások ablak az alkalmazás testreszabásához."""
 
-    RENDEZESI_OPOK = [
-        ("cim", "Cím"),
-        ("szerzo", "Összeállító"),
-        ("kiado", "Kiadó"),
-        ("ev", "Kiadás éve"),
-        ("oldalszam", "Oldalszám"),
-        ("meretek", "Méret"),
-        ("bekerult", "Bekerülés dátuma")
-    ]
-
     FREKVENCIA_OPCIOK = [
         ("startup", "Minden indításkor"),
         ("daily", "Naponta"),
@@ -60,17 +50,8 @@ class BeallitasokDialog(wx.Dialog):
         # A Bind csak azután jöhet, hogy a választó létrejött
         self.tema_valaszto.Bind(wx.EVT_CHOICE, self.on_tema_valtas_elo_nezet)
 
-        lbl_rendezes = wx.StaticText(panel_tema, label="Alapértelmezett rendezés")
-        self.rendezes_valaszto = wx.Choice(panel_tema, choices=[nev for _, nev in self.RENDEZESI_OPOK])
-
-        akt_rend = config.get("alapertelmezett_rendezes", "cim")
-        rend_kulcsok = [k for k, _ in self.RENDEZESI_OPOK]
-        self.rendezes_valaszto.SetSelection(rend_kulcsok.index(akt_rend) if akt_rend in rend_kulcsok else 0)
-
         tema_sizer.Add(lbl_tema, 0, wx.ALL, 10)
         tema_sizer.Add(self.tema_valaszto, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 10)
-        tema_sizer.Add(lbl_rendezes, 0, wx.ALL, 10)
-        tema_sizer.Add(self.rendezes_valaszto, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 10)
         panel_tema.SetSizer(tema_sizer)
 
         # --- 2. FÜL: Oszlopok beállítása ---
@@ -231,10 +212,6 @@ class BeallitasokDialog(wx.Dialog):
     def GetKivalasztottOszlopok(self):
         """Visszaadja a kiválasztott oszlopok kulcsainak listáját."""
         return [kulcs for kulcs, cb in self.jelolo_negyzetek.items() if cb.IsChecked()]
-
-    def GetKivalasztottRendezes(self):
-        idx = self.rendezes_valaszto.GetSelection()
-        return self.RENDEZESI_OPOK[idx][0] if idx != wx.NOT_FOUND else "cim"
 
     def GetKivalasztottStatPdfDir(self):
         return self.txt_stat_pdf.GetValue().strip()
