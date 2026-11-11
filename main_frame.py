@@ -116,9 +116,15 @@ class Konyvtarnok(wx.Frame):
         if "lathato_oszlopok" in config and hasattr(self.lista, 'SetAktivOszlopok'):
             self.lista.SetAktivOszlopok(config["lathato_oszlopok"])
             
+        # Az utoljára, a Nézet > Rendezés menüből választott rendezés
+        # megmarad a következő indításra is (alapértelmezés: cím). Ismeretlen
+        # vagy sérült érték esetén a cím szerinti rendezésre esünk vissza.
         alap_rendezes = config.get("alapertelmezett_rendezes", "cim")
+        if alap_rendezes not in menusor.rendezes_elemek:
+            alap_rendezes = "cim"
         if hasattr(self.lista, 'Rendezes'):
             self.lista.Rendezes(alap_rendezes)
+        menusor.RendezesJelolese(alap_rendezes)
 
         sizer.Add(self.lista, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 15)
         panel.SetSizer(sizer)
@@ -503,6 +509,9 @@ class Konyvtarnok(wx.Frame):
         soron következő lépés leírását."""
         frissit_undo_menu(self.menusor.undo, self.menusor.redo,
                           self.db.undo, self.FindFocus())
+        # A Nézet > Rendezés rádióelemei mindig az aktuális rendezést mutassák
+        # (pl. statisztikai szűrés után is).
+        self.menusor.RendezesJelolese(self.lista.rendezes_kulcs)
         event.Skip()
 
     def OnVisszavonas(self, event):
@@ -1196,26 +1205,21 @@ class Konyvtarnok(wx.Frame):
         if dlg.ShowModal() == wx.ID_OK:
             uj_oszlopok = dlg.GetKivalasztottOszlopok()
             uj_tema = dlg.GetKivalasztottTema()
-            uj_rendezes = dlg.GetKivalasztottRendezes()
 
             # Csak azt alkalmazzuk, ami ténylegesen változott: a téma
-            # átváltása nem igényel listaújraépítést, és a rendezést sem
-            # kell újra végrehajtani (az eddigi aktuális sorrendet is
-            # elvesztette volna minden mentéskor).
+            # átváltása nem igényel listaújraépítést. A rendezést nem itt,
+            # hanem a Nézet > Rendezés menü állítja és menti (lásd OnRendezes),
+            # ezért a config["alapertelmezett_rendezes"] értékét érintetlenül
+            # hagyjuk.
             oszlop_valtozott = set(uj_oszlopok) != set(config.get("lathato_oszlopok", []))
-            rendezes_valtozott = uj_rendezes != config.get("alapertelmezett_rendezes", "cim")
             tema_valtozott = uj_tema != self._aktualis_tema
 
-            if oszlop_valtozott or rendezes_valtozott:
+            if oszlop_valtozott:
                 with self._lista_helyzet_megtartasa():
-                    if oszlop_valtozott:
-                        self.lista.SetAktivOszlopok(uj_oszlopok)
-                    if rendezes_valtozott and hasattr(self.lista, 'Rendezes'):
-                        self.lista.Rendezes(uj_rendezes)
+                    self.lista.SetAktivOszlopok(uj_oszlopok)
 
             config["lathato_oszlopok"] = uj_oszlopok
             config["tema"] = uj_tema
-            config["alapertelmezett_rendezes"] = uj_rendezes
             config["last_pdf_dir"] = dlg.GetKivalasztottPdfDir()
             config["last_stat_pdf_dir"] = dlg.GetKivalasztottStatPdfDir()
             config["last_json_dir"] = dlg.GetKivalasztottJsonDir()
@@ -1233,9 +1237,7 @@ class Konyvtarnok(wx.Frame):
                     apply_theme(self.konyvtarnok_kereso_frame, uj_tema)
                     self.konyvtarnok_kereso_frame.current_theme = uj_tema
 
-            if mentve:
-                wx.MessageBox("Beállítások sikeresen elmentve.", "Sikeres mentés", wx.OK | wx.ICON_INFORMATION)
-            else:
+            if not mentve:
                 wx.MessageBox(
                     "A beállításokat nem sikerült elmenteni a settings.json fájlba "
                     "Lehetséges, hogy a programnak nincs írási jogosultsága a mappában, vagy a lemez megtelt.\n\n"
@@ -1256,6 +1258,21 @@ class Konyvtarnok(wx.Frame):
         elif hasattr(self.lista, 'FeltoltLista'):
             self.lista.FeltoltLista()
         self.FrissitStatusBar()
+
+        # A választott rendezés megmarad a következő indításra is. Csak a
+        # menüből történő rendezést mentjük: a statisztikai szűrés rendezése
+        # (OnStatisztika) szándékosan ideiglenes marad.
+        config = load_settings()
+        if config.get("alapertelmezett_rendezes") != mezo_kulcs:
+            config["alapertelmezett_rendezes"] = mezo_kulcs
+            if not save_settings(config):
+                if not getattr(self, "_rendezes_mentes_hiba_jelezve", False):
+                    self._rendezes_mentes_hiba_jelezve = True
+                    wx.MessageBox(
+                        "A rendezés mentése nem sikerült, ezért a program újraindítás után "
+                        "az előző rendezéssel nyílik meg.",
+                        "Mentési hiba", wx.OK | wx.ICON_WARNING, self,
+                    )
 
     def on_deziderata(self, event):
         if self.deziderata_frame is None:
