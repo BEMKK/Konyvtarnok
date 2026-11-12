@@ -434,7 +434,8 @@ A projekten végrehajtott lényegi változtatások dokumentációja.
 
 ## \[0.21.0] - 2026-09-03
 
-* Az alkalmazás és moduljai új nevet kaptak.
+* Az alkalmazás neve KönyvTárnok lett, a BEM-kereső pedig KönyvTárnok kereső.
+* Első publikus verzió.
 
 
 
@@ -444,66 +445,82 @@ A projekten végrehajtott lényegi változtatások dokumentációja.
 
 
 
-## \[0.19.0] - 2026-08-26
+## \[0.19.0] - 2026-08-28
 
 * Hozzáadva az állománystatisztika kereszttáblás szűrése, valamint a beállításokhoz a statisztikai jelentés exportálási célmappájának megadása.
 * A főmenüből végzett listarendezés mostantól csak ideiglenes, alapértelmezett rendezés a beállításokban választható.
 
 
 
-## \[0.18.0] - 2026-08-24
+## \[0.18.0] - 2026-08-27
 
 * Hozzáadva az állománystatisztika és elérési utak manuális megadása.
 * Módosítva a rendezés menü szempontjai, a lista cím, összeállító, kiadó, kiadás éve, oldalszám, méret és bekerülés dátuma szerint rendezhető.
 
 
 
-## \[0.17.0] - 2026-08-21
+## \[0.17.0] - 2026-08-25
 
 * Új az élő keresősáv a könyvlista azonnali szűrésére.
 
 
 
-## \[0.16.0] - 2026-08-18
+## \[0.16.0] - 2026-08-23
 
 * Új funkció a felület témájának testreszabása, a világos mellett sötét, kék és rózsaszín téma választható.
 
 
 
-## \[0.15.0] - 2026-08-15
+## \[0.15.0] - 2026-08-21
 
 * Hozzáadva a kereső dialog az állomány köteteinek keresésére és szűrésére.
 
 
 
-## \[0.14.0] - 2026-08-14
+## \[0.14.0] - 2026-08-19
 
 * Hozzáadva a beállítások dialog a fő lista megjelenítendő oszlopainak testreszabására.
 
 
 
-## \[0.13.0] - 2026-08-11
+## \[0.13.0] - 2026-08-17
 
 * Hozzáadva a lista rendezésének lehetősége a főmenüből cím, szerző, kiadó, kiadás helye, kiadás éve és státusz szerint.
 
 
 
-## \[0.12.0] - 2026-08-09
+## \[0.12.0] - 2026-08-15
 
-* Hozzáadva az "Egyéb személyek" oszlop a Könyvtárnok keresőhöz.
+* Hozzáadva az "Egyéb személyek" oszlop a BEM-keresőhöz.
 
 
 
-## \[0.11.0] - 2026-08-06
+## \[0.11.0] - 2026-08-13
 
 * Eltávolítva az rtf fájlok importálásának lehetősége.
 * A főprogram és a dezideráta kezelő mostantól titkosítva tárolja az adatokat a json-ban a külső módosítás elkerülése érdekében.
+- Az alkalmazás neve BEM Állomány- és Katalóguskezelő lett.
 
 
 
-## \[0.10.0] - 2026-08-05
+## \[0.10.0] - 2026-08-10
 
-* Hozzáadva a KönyvTárnok kereső a könyvek külső adatbázisból való felvételére és adataik keresésére.
+* Hozzáadva a BEM-kereső a könyvek külső adatbázisból való felvételére és adataik keresésére.
+
+
+
+## [0.9.6] - 2026-08-08
+
+* Javítva a lista rendezésének hibái.
+- Javítva a json fájlok betöltési hibája.
+- A program működése stabilizálva.
+
+
+
+## [0.9.5] - 2026-08-04
+
+* Első, tesztelésre lefordított verzió.
+- Az alkalmazás neve BEM Állománykezelő lett.
 
 
 
@@ -521,19 +538,19 @@ A projekten végrehajtott lényegi változtatások dokumentációja.
 
 ## \[0.7.0] - 2026-07-29
 
-* Hozzáadva az Újdonságok dialog az aktuális verzió változtatásainak megjelenítésére.
+* Hozzáadva az Újdonságok és névjegy dialog.
 
 
 
 ## \[0.6.0] - 2026-07-28
 
-* Hozzáadva a könyvadatlapok exportálásának lehetősége pdf formátumba.
+* Eltávolítva az rtf export a karakterkódolás hibái miatt.
 
 
 
 ## \[0.5.0] - 2026-07-26
 
-* Megjelent a pdf és rtf fájlok importálási lehetősége.
+* Pdf és rtf könyvadatlapok importálási és exportálási lehetősége.
 
 
 
@@ -545,7 +562,7 @@ A projekten végrehajtott lényegi változtatások dokumentációja.
 
 ## \[0.3.0] - 2026-07-22
 
-* Kijelölt könyv adatlapjának megtekintésének lehetősége enterrel, annak szerkesztése nélkül.
+* Kijelölt könyv adatlapjának megtekintése enterrel, annak szerkesztése nélkül.
 
 
 
@@ -558,10 +575,11 @@ A projekten végrehajtott lényegi változtatások dokumentációja.
 ## \[0.1.0] - 2026-07-19
 
 * Új, egypaneles nézet. A teljes ablakot a könyvek listája foglalja el.
+- Az alkalmazás neve BEM Katalóguskezelő.
 
 
 
 ## \[0.0.1] - 2026-07-18
 
-* Alapverzió.
-
+* Kétpaneles nézet, bal oldalon a könyvek listája, jobb oldalon a kijelölt könyv adatlapja.
+- Az alkalmazás neve KönyvtárApp.
