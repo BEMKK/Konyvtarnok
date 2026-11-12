@@ -21,6 +21,7 @@ A projekten végrehajtott lényegi változtatások dokumentációja.
 - A főablak címsorába bekerült az "állománykezelő" kifejezés.
 - Az Újdonságok és Névjegy ablakban a verziószám előtti "v" betűt töröltük.
 - Az újdonságok ablakban mostantól "A verzió főbb újdonságai" felirat szerepel, utalva arra, hogy a kódszintű változtatásokat nem sorolja fel.
+- Frissítés után az Újdonságok ablak automatikusan megnyílik.
 - Javítások és kiegészítések, valamint az új funkciók leírása a Súgóban.
 
 

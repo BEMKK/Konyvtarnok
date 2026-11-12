@@ -211,6 +211,21 @@ class Konyvtarnok(wx.Frame):
         self.FrissitStatusBar()
         self.Show()
         wx.CallAfter(check_for_updates_async, parent=self, is_manual=False)
+        # Ha az önfrissítő indította ezt a példányt (--update-ready argumentum
+        # jelen van a parancssorban), frissítés után egyszer automatikusan
+        # megnyitjuk az Újdonságok ablakot. A wx.CallAfter garantálja, hogy
+        # a főablak már teljesen megjelent, mielőtt a dialog felugrik.
+        from update import UPDATE_READY_ARG
+        if UPDATE_READY_ARG in sys.argv:
+            wx.CallAfter(self._megnyit_ujdonsagok_frissites_utan)
+
+    def _megnyit_ujdonsagok_frissites_utan(self):
+        """Frissítés utáni automatikus Újdonságok-megjelenítő.
+        Csak az önfrissítő által indított példányban hívódik meg
+        (--update-ready parancssori argumentum jelenléte esetén)."""
+        dlg = UjdonsagokDialog(self)
+        dlg.ShowModal()
+        dlg.Destroy()
 
     # --- ESEMÉNYKEZELŐK ---
 
