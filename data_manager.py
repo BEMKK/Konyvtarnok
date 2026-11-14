@@ -274,7 +274,7 @@ def sor_alap_adatta_alakitasa(forras_dict):
 # KonyvAdatbazis.uj_konyv_hozzaadasa ugyanis a kapott dictbe beleírja az
 # "id"-t, és a dictet szó szerint menti).
 ALLOMANY_MEZOK = BIBLIOGRAFIAI_KULCSOK + (
-    "oldalszam", "meretek", "kotes", "rovid_cim", "forras", "status",
+    "oldalszam", "meretek", "kotes", "bekerult", "forras", "status",
     "rovid_leiras",
 )
 
@@ -537,6 +537,20 @@ def normalizal_import_elem(nyers_elem):
     return alap
 
 
+def _potolhato_leiras(potolhato, mezocimkek=None):
+    """A pótolható mezők ember által olvasható leírása ("Felirat: érték, ...")."""
+    reszek = []
+    for k, v in potolhato.items():
+        if mezocimkek and k in mezocimkek:
+            felirat = mezocimkek[k]
+        elif k in MEZOK:
+            felirat = MEZOK[k].lista
+        else:
+            felirat = k
+        reszek.append(f"{felirat}: {v}")
+    return ", ".join(reszek)
+
+
 def elemez_json_import(
     importalt_lista,
     meglevo_konyvek,
@@ -582,21 +596,14 @@ def elemez_json_import(
         if meglevo is not None:
             potolhato = hataroz_meg_potolhato_mezok(meglevo, elem, mezok=mezok)
             if potolhato:
-                leiras_reszek = []
-                for k, v in potolhato.items():
-                    if mezocimkek and k in mezocimkek:
-                        felirat = mezocimkek[k]
-                    elif k in MEZOK:
-                        felirat = MEZOK[k].lista
-                    else:
-                        felirat = k
-                    leiras_reszek.append(f"{felirat}: {v}")
-                leiras = ", ".join(leiras_reszek)
-
                 mar_benne = False
                 for mar_van in kiegeszitheto_tetelek:
                     if mar_van["meglevo"].get("id") == meglevo.get("id"):
                         mar_van["potolhato"].update(potolhato)
+                        # A leírást az összevont mezőkből újraépítjük, hogy a
+                        # további rekordok pótlásai is látsszanak benne.
+                        mar_van["leiras"] = _potolhato_leiras(
+                            mar_van["potolhato"], mezocimkek)
                         mar_benne = True
                         break
                 if not mar_benne:
@@ -604,7 +611,7 @@ def elemez_json_import(
                         "meglevo": meglevo,
                         "uj": elem,
                         "potolhato": potolhato,
-                        "leiras": leiras,
+                        "leiras": _potolhato_leiras(potolhato, mezocimkek),
                     })
             else:
                 kihagyott_duplum_db += 1
@@ -845,7 +852,7 @@ class KonyvAdatbazis:
         return False
 
     @_undo_lepes("könyv felvétele")
-    def uj_konyv_hozzaadasa(self, uj_adatok, engedelyez_duplikaciót=False):
+    def uj_konyv_hozzaadasa(self, uj_adatok, engedelyez_duplikaciot=False):
         """Felveszi az uj_adatok könyvet az állományba.
 
         Visszatérési érték: True, ha sikeresen felvette és el is mentette;
@@ -860,7 +867,7 @@ class KonyvAdatbazis:
         lemezre írási hiba esetén.
         """
         self._ellenoriz_irhato()
-        if not engedelyez_duplikaciót and self.is_duplikalat(uj_adatok):
+        if not engedelyez_duplikaciot and self.is_duplikalat(uj_adatok):
             return False
         
         # Generálunk egyedi azonosítót az új könyvnek
