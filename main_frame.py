@@ -1044,8 +1044,11 @@ class Konyvtarnok(wx.Frame):
         except MentesiHiba as e:
             wx.MessageBox(
                 f"Hiba történt az állományjegyzék mentése közben:\n{e}\n\n"
-                "Az addig sikeresen importált tételek megmaradnak, de az "
-                "importálás megszakadt.",
+                "Az importált tételek jelenleg csak a program memóriájában "
+                "szerepelnek, a lemezre NEM kerültek ki, ezért a program "
+                "bezárásakor elvesznek. Hárítsa el a hiba okát (pl. "
+                "írásvédelem, megtelt lemez), és ismételje meg az importálást "
+                "vagy a mentést.",
                 "Mentési hiba",
                 wx.OK | wx.ICON_ERROR,
                 self,
