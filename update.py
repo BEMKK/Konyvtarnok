@@ -210,6 +210,14 @@ def perform_self_update(parent, letoltes_url, uj_verzio):
                             f"{kesz * 100 // total}%",
                         )
 
+            # A megszakadt kapcsolat a read() ciklusban csendben is véget érhet,
+            # ezért a letöltött méretet összevetjük a szerver által jelzettel.
+            # Hiányos fájl esetén a telepítés el sem kezdődik.
+            if total and kesz != total:
+                raise RuntimeError(
+                    f"A letöltés megszakadt vagy hiányos ({kesz} / {total} bájt)."
+                )
+
             if os.path.getsize(tmp_path) < 1024:
                 raise RuntimeError("A letöltött fájl gyanúsan kicsi/sérült.")
 
