@@ -23,6 +23,7 @@ import os
 import sys
 import datetime
 import logging
+import unicodedata
 import platform
 import subprocess
 from collections import defaultdict
@@ -67,19 +68,60 @@ HONAPOK = {
 }
 
 
+def _ekezet_nelkul(szoveg):
+    """Kisbetűs, ékezet nélküli alak (pl. 'Július' -> 'julius')."""
+    lebontott = unicodedata.normalize("NFD", szoveg.lower())
+    return "".join(c for c in lebontott if not unicodedata.combining(c))
+
+
+# A hónapnevek ékezet nélküli alakja is felismerhető legyen (pl. 'Julius').
+_HONAPOK_EKEZET_NELKUL = {_ekezet_nelkul(nev): szam for nev, szam in HONAPOK.items()}
+
+# 2024-07-28 / 2024.07.28. / 2024/07/28 (a nap elhagyható)
+_DATUM_SZAMOS = re.compile(
+    r"(\d{4})\s*[-./]\s*(\d{1,2})(?:\s*[-./]\s*(\d{1,2}))?\s*\.?")
+# 2024 Július 28 / 2024. július 28. (a nap elhagyható)
+_DATUM_SZOVEGES = re.compile(
+    r"(\d{4})\.?\s+([^\W\d_]+)\.?(?:\s+(\d{1,2}))?\s*\.?")
+# 2024 / 2024.
+_DATUM_CSAK_EV = re.compile(r"(\d{4})\.?")
+
+
 def bekerult_datum_kulcs(datum_str):
+    """A bekerülés dátumának rendezési kulcsa (datetime.date).
+
+    Elfogadott alakok: 'ÉÉÉÉ Hónap NN' (a program saját formátuma, pl.
+    '2026 Július 28'), 'ÉÉÉÉ. hónap NN.', 'ÉÉÉÉ-HH-NN', 'ÉÉÉÉ.HH.NN.',
+    'ÉÉÉÉ/HH/NN'. Ha a nap hiányzik, az 1. napot vesszük ('2026 Július'),
+    ha csak az év van meg, január 1-jét. Ami nem értelmezhető (üres mező,
+    ismeretlen hónapnév, érvénytelen nap), az 1900-01-01 marad, vagyis a
+    rendezésben a nem datált tételek együtt, a lista szélén jelennek meg."""
+    ervenytelen = datetime.date(1900, 1, 1)
+    szoveg = str(datum_str if datum_str is not None else "").strip()
+    if not szoveg:
+        return ervenytelen
     try:
-        reszek = str(datum_str).strip().split()
-        if len(reszek) >= 3:
-            ev = int(reszek[0])
-            honap = HONAPOK.get(reszek[1].lower(), 1)
-            nap = int(reszek[2])
-            return datetime.date(ev, honap, nap)
-    except (ValueError, IndexError, AttributeError):
+        m = _DATUM_SZAMOS.fullmatch(szoveg)
+        if m:
+            ev, honap, nap = m.group(1), m.group(2), m.group(3)
+            return datetime.date(int(ev), int(honap), int(nap) if nap else 1)
+
+        m = _DATUM_SZOVEGES.fullmatch(szoveg)
+        if m:
+            honap = _HONAPOK_EKEZET_NELKUL.get(_ekezet_nelkul(m.group(2)))
+            if honap is None:
+                return ervenytelen
+            nap = m.group(3)
+            return datetime.date(int(m.group(1)), honap, int(nap) if nap else 1)
+
+        m = _DATUM_CSAK_EV.fullmatch(szoveg)
+        if m:
+            return datetime.date(int(m.group(1)), 1, 1)
+    except ValueError:
         pass
     except Exception as e:
         logging.debug(f"Dátum értelmezési hiba '{datum_str}': {e}")
-    return datetime.date(1900, 1, 1)
+    return ervenytelen
 
 
 def _egesz_romaira(n):
