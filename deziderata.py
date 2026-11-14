@@ -1204,6 +1204,8 @@ class Deziderata(wx.Frame):
         # Az átemelés EGY, kapcsolt visszavonási lépés: a könyvek felvétele
         # az állományban ÉS a tételek törlése innen. Bármelyik ablakból
         # visszavonva mindkét oldal visszaáll (lásd undo_manager.py).
+        # A felvételi ciklus eredménye; None, amíg a ciklus le nem futott.
+        sikeres = None
         with self.undo.muvelet("átemelés az állományba", ["allomany", "deziderata"]):
             try:
                 # Kötegelt mentés: az állományjegyzék a teljes átemelés után
@@ -1214,34 +1216,35 @@ class Deziderata(wx.Frame):
                         parent_frame.db, konyv_adatok, utani_frissites_fv=_frissites
                     )
             except MentesiHiba as e:
-                # A megszakadásig már felvett tételek az állományban maradnak, ezért
-                # a dezideráta-jegyzékből is el kell távolítani őket (különben
-                # duplikátumként ott maradnának). A felvett rekordok id-t kaptak.
-                felvett_allomany_idk = {k.get("id") for k in parent_frame.db.konyvek}
-                mar_felvett_idk = [
-                    tetel_id for tetel_id, rekord in zip(kijelolt_idk, konyv_adatok)
-                    if rekord.get("id") and rekord.get("id") in felvett_allomany_idk
-                ]
-                if mar_felvett_idk:
-                    self._torles_idk_alapjan(mar_felvett_idk)
-                    self.save_data()
-                    self.refresh_list()
-                wx.MessageBox(
-                    f"Hiba történt az állományjegyzék mentése közben:\n{e}\n\n"
-                    "A már sikeresen felvett tételek megmaradnak az állományban "
-                    "(és kikerültek a dezideráta-jegyzékből), de a további "
-                    "kijelölt tételek felvétele emiatt megszakadt.",
-                    "Mentési hiba",
-                    wx.OK | wx.ICON_ERROR,
-                    self,
-                )
-                # A lista ilyenkor is újraépült (a már felvett tételek kikerültek),
-                # ezért a fókuszt vissza kell adni.
-                if mar_felvett_idk:
-                    self._fokusz_atemeles_utan(elso_kijelolt_index)
-                else:
+                # A felvételi ciklus a kötegelt mentés alatt lefutott, de a záró
+                # lemezre írás nem sikerült. Egyszer újrapróbáljuk. Ha ez sem
+                # megy (vagy a hiba a ciklusban keletkezett), a dezideráta-
+                # tételekhez NEM nyúlunk: különben a tételek az állományból
+                # (ami nem került lemezre) és a deziderátából is eltűnnének
+                # újraindítás után. A főlista a _frissites miatt már mutatja
+                # az új könyveket, ezért erről a felhasználót is tájékoztatjuk.
+                ujra_sikerult = False
+                if sikeres is not None:
+                    try:
+                        ujra_sikerult = bool(parent_frame.db.AdatokMentese())
+                    except Exception:
+                        ujra_sikerult = False
+                if not ujra_sikerult:
+                    wx.MessageBox(
+                        f"Hiba történt az állományjegyzék mentése közben:\n{e}\n\n"
+                        "Az átemelés NEM fejeződött be: a kijelölt tételek a "
+                        "dezideráta-jegyzékben megmaradtak. A könyvek az állomány "
+                        "listájában még látszhatnak, de a lemezre nem kerültek "
+                        "ki. Hárítsa el a hiba okát (pl. írásvédelem, megtelt "
+                        "lemez), indítsa újra a programot, és ismételje meg az "
+                        "átemelést.",
+                        "Mentési hiba",
+                        wx.OK | wx.ICON_ERROR,
+                        self,
+                    )
                     self.list.SetFocus()
-                return
+                    return
+                # Az újrapróbált mentés sikerült: a folyamat a szokásos úton megy tovább.
 
             if sikeres > 0:
                 sikeres_idk = [kijelolt_idk[i] for i in sikeres_relativ_indexek]

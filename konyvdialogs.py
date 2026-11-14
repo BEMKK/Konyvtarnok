@@ -532,6 +532,15 @@ class BaseItemDialog(wx.Dialog):
 
     def on_ok(self, event):
         new_data = self.get_data()
+        if not str(new_data.get("cim", "")).strip():
+            wx.MessageBox(
+                "A 'Cím' mező kitöltése kötelező!",
+                "Figyelmeztetés",
+                wx.OK | wx.ICON_WARNING,
+                parent=self
+            )
+            self.txt_cim.SetFocus()
+            return
         if hasattr(self.GetParent(), "is_duplicate"):
             current_idx = getattr(self, "current_index", None)
             current_id = getattr(self, "current_id", None)
