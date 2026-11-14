@@ -1,6 +1,7 @@
 import sys
 import traceback
 import logging
+from logging.handlers import RotatingFileHandler
 import wx
 from pathlib import Path
 from data_manager import KonyvAdatbazis
@@ -124,32 +125,36 @@ class HibaAblak(wx.Dialog):
 # =========================================================
 # HIBAKEZELŐ BEÁLLÍTÁSA
 # =========================================================
-# Alapértelmezett beállítás fájlnév nélkül (nem hoz létre fájlt indításkor)
+# A naplófájl az exe mellett van. A delay=True miatt a fájl csak az első
+# bejegyzésnél jön létre (indításkor nem hoz létre üres fájlt). Így nemcsak az
+# el nem kapott összeomlások, hanem a modulokban elkapott és naplózott hibák
+# (logging.error / logging.warning) is bekerülnek: grafikus (--noconsole)
+# módban a stderr nem létezik, ott korábban ezek elvesztek.
+LOG_FILE = get_exe_dir() / 'hibanaplo.log'
+_naplo_formatum = '%(asctime)s - %(levelname)s - %(message)s'
+_fajl_handler = RotatingFileHandler(
+    str(LOG_FILE), maxBytes=1024 * 1024, backupCount=2,
+    encoding='utf-8', delay=True
+)
+_naplo_handlerek = [_fajl_handler]
+if sys.stderr is not None:
+    # Konzolos futtatásnál (fejlesztés közben) a kimenet a konzolon is látszik.
+    _naplo_handlerek.insert(0, logging.StreamHandler())
 logging.basicConfig(
     level=logging.WARNING,
-    format='%(asctime)s - %(levelname)s - %(message)s'
+    format=_naplo_formatum,
+    handlers=_naplo_handlerek
 )
 
 def custom_excepthook(exctype, value, tb):
-    # 1. Csak most, a hiba pillanatában adjuk hozzá a fájlba író handlert!
-    log_file = get_exe_dir() / 'hibanaplo.log'
-    file_handler = logging.FileHandler(str(log_file), encoding='utf-8')
-    file_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
-    logging.getLogger().addHandler(file_handler)
-
-    # 2. A teljes hibaleírást stringgé alakítjuk
+    # A teljes hibaleírás stringgé alakítása, majd naplózása (a fájlba író
+    # handler már be van állítva, így itt nem kell külön handlert kezelni).
     error_msg = "".join(traceback.format_exception(exctype, value, tb))
-    
-    # 3. Beírjuk a log fájlba (ekkor jön létre a fájl, ha még nem létezett)
     logging.error("Váratlan hiba történt.\n" + error_msg)
-    
-    # 4. Eltávolítjuk a handlert, hogy esetleges későbbi hibáknál ne duplázódjon
-    logging.getLogger().removeHandler(file_handler)
-    file_handler.close()
-    
+
     # Ha a wx felület már fut, felugró ablak a felhasználónak
     if wx.GetApp():
-        dlg = HibaAblak(None, error_msg, log_file)
+        dlg = HibaAblak(None, error_msg, LOG_FILE)
         dlg.ShowModal()
         dlg.Destroy()
 
@@ -188,4 +193,5 @@ if __name__ == '__main__':
     # a frame.Show() UTÁN van: a régi példány addig fut/mutat folyamatjelzőt,
     # amíg ez a sor le nem fut.
     kezel_update_ready_jelzes(sys.argv)
+
     app.MainLoop()
