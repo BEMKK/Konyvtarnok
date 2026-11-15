@@ -87,6 +87,9 @@ class UjdonsagokDialog(wx.Dialog):
             "Státuszváltás esetén a dinamikusan megjelenő mezők tartalma csak mentéskor törlődik, elkerülve a véletlen adatvesztést.",
             "A lista alapértelmezett rendezése a beállításokból már nem lehetséges, ezt a nézet menüben választhatjuk ki.",
             "Törölve a beállítások sikeres mentésekor felugró üzenet, így csak a sikertelen mentésről kapunk visszajelzést.",
+            "A bekerülés dátuma többféle formátumban is megadható.",
+            "A Deziderátából az állományba átemelt tételek nem vesznek el, ha a mentés sikertelen.",
+        "A deziderátában az állományhoz hasonlóan kötelező a cím megadása.",
             "Javítások és kiegészítések, valamint az új funkciók leírása a Súgóban."
         ]
 

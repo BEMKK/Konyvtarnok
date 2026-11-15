@@ -23,6 +23,14 @@ A projekten végrehajtott lényegi változtatások dokumentációja.
 - Az újdonságok ablakban mostantól "A verzió főbb újdonságai" felirat szerepel, utalva arra, hogy a kódszintű változtatásokat nem sorolja fel.
 - Frissítés után az Újdonságok ablak automatikusan megnyílik.
 - Javítások és kiegészítések, valamint az új funkciók leírása a Súgóban.
+- A bekerülés dátuma mostantól többféle formátumban is megadható (pl. 2026 Július 28, 2026-07-28, 2026.07.28., 2026 Július), a lista rendezése ezeket is helyesen kezeli.
+- A Dezideráta-kezelőben az állományhoz hasonlóan kötelező a cím megadása.
+- Javítva a Dezideráta tételeinek állományba emelése sikertelen mentés esetén: a tételek ilyenkor nem törlődnek a deziderátából, így nem vesznek el.
+- Javítva az állományba átemelt tételek adatszerkezete (hiányzó bekerülési dátum mező, felesleges rövid cím mező).
+- A frissítés letöltése után a program ellenőrzi, hogy a teljes fájl megérkezett-e, hiányos letöltés esetén nem kezdi el a telepítést.
+- A hibanaplo.log mostantól az elkapott hibákat is rögzíti, nem csak az összeomlásokat; a napló mérete korlátozott.
+- Pontosított hibaüzenet a JSON import sikertelen mentésekor.
+- Kisebb kódjavítások.
 
 
 
