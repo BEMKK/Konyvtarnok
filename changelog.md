@@ -21,7 +21,6 @@ A projekten végrehajtott lényegi változtatások dokumentációja.
 - A főablak címsorába bekerült az "állománykezelő" kifejezés.
 - Az Újdonságok és Névjegy ablakban a verziószám előtti "v" betűt töröltük.
 - Az újdonságok ablakban mostantól "A verzió főbb újdonságai" felirat szerepel, utalva arra, hogy a kódszintű változtatásokat nem sorolja fel.
-- Frissítés után az Újdonságok ablak automatikusan megnyílik.
 - Javítások és kiegészítések, valamint az új funkciók leírása a Súgóban.
 - A bekerülés dátuma mostantól többféle formátumban is megadható (pl. 2026 Július 28, 2026-07-28, 2026.07.28., 2026 Július), a lista rendezése ezeket is helyesen kezeli.
 - A Dezideráta-kezelőben az állományhoz hasonlóan kötelező a cím megadása.
