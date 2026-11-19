@@ -32,6 +32,7 @@ from data_manager import (
     allomany_szerkesztheto,
 )
 from gyors_kereses import GyorsListaKereso, osszes_kijelolt_index
+from help import HelpNotebookDialog, sugo_megnyitasa
 from utils import masolas_vagolapra_szoveg
 from menu_bar import KeresoMenuBar
 from undo_manager import (
@@ -587,6 +588,7 @@ class KonyvtarnokKeresoApp(wx.Frame):
         self.Bind(wx.EVT_MENU, self.on_menu_deziderata, menusor.deziderata)
         self.Bind(wx.EVT_MENU, self.on_menu_allomany, menusor.allomany)
         self.Bind(wx.EVT_MENU, self.on_kilepes, menusor.kilepes)
+        self.Bind(wx.EVT_MENU, self.on_open_help, menusor.help)
 
     # --- VISSZAVONÁS / MÉGIS ---
 
@@ -1184,6 +1186,8 @@ class KonyvtarnokKeresoApp(wx.Frame):
             self, sikeres, visszautasitott, "a dezideráta-jegyzékbe", "a dezideráta-jegyzékben"
         )
 
+    def on_open_help(self, event):
+        sugo_megnyitasa(self, 5)
 
 if __name__ == "__main__":
     app = wx.App()

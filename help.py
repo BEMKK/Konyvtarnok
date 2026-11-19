@@ -15,7 +15,7 @@ class HelpNotebookDialog(wx.Dialog):
 
     def init_ui(self):
         main_sizer = wx.BoxSizer(wx.VERTICAL)
-        notebook = wx.Notebook(self)
+        self.notebook = wx.Notebook(self)
 
         pages_data = [
             (
@@ -221,15 +221,15 @@ class HelpNotebookDialog(wx.Dialog):
         ]
 
         for tab_title, content in pages_data:
-            page = wx.Panel(notebook)
+            page = wx.Panel(self.notebook)
             sizer = wx.BoxSizer(wx.VERTICAL)
             txt = wx.TextCtrl(page, style=wx.TE_MULTILINE | wx.TE_READONLY)
             txt.SetValue(content)
             sizer.Add(txt, 1, wx.EXPAND | wx.ALL, 5)
             page.SetSizer(sizer)
-            notebook.AddPage(page, tab_title)
+            self.notebook.AddPage(page, tab_title)
 
-        main_sizer.Add(notebook, 1, wx.EXPAND | wx.ALL, 10)
+        main_sizer.Add(self.notebook, 1, wx.EXPAND | wx.ALL, 10)
         
         # --- Bezárás gomb (Escape támogatással) ---
         btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -245,3 +245,9 @@ class HelpNotebookDialog(wx.Dialog):
         apply_theme_from_settings(self)
 
         self.SetSizer(main_sizer)
+
+def sugo_megnyitasa(parent, ful=0):
+    dlg = HelpNotebookDialog(parent)
+    dlg.notebook.SetSelection(ful)
+    dlg.ShowModal()
+    dlg.Destroy()

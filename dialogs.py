@@ -78,7 +78,8 @@ class UjdonsagokDialog(wx.Dialog):
         main_sizer.Add(wx.StaticLine(self), 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 15)
         
         ujdonsagok_lista = [
-            "A beállításokban külön mező a katalóguslapok alapértelmezett mappájának megadására."
+            "A beállításokban külön mező a katalóguslapok alapértelmezett mappájának megadására.",
+            "A súgó a Dezideráta-kezelőből és a KönyvTárnok-keresőből is megnyitható."
         ]
 
         szoveg_box = wx.BoxSizer(wx.VERTICAL)

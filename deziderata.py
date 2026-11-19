@@ -7,6 +7,7 @@ from contextlib import contextmanager
 import wx
 from config_manager import load_settings, save_settings
 from theme_manager import apply_theme_from_settings
+from help import HelpNotebookDialog, sugo_megnyitasa
 from data_manager import (
     load_hmac_json,
     save_hmac_json,
@@ -314,6 +315,8 @@ class Deziderata(wx.Frame):
         self.Bind(wx.EVT_MENU, self.OnVisszavonas, menusor.undo)
         self.Bind(wx.EVT_MENU, self.OnMegis, menusor.redo)
         self.Bind(wx.EVT_MENU, self.on_kereses, menusor.find)
+        self.Bind(wx.EVT_MENU, self.on_open_help, menusor.help)
+
         self.Bind(wx.EVT_MENU_OPEN, self.OnMenuNyitas)
 
         self.btn_add.Bind(wx.EVT_BUTTON, self.on_add)
@@ -1316,6 +1319,9 @@ class Deziderata(wx.Frame):
             self.list.Focus(index)
             self.list.EnsureVisible(index)
         self.list.SetFocus()
+
+    def on_open_help(self, event):
+        sugo_megnyitasa(self, 4)
 
 class App(wx.App):
     def OnInit(self):

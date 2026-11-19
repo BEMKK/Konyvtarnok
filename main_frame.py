@@ -11,7 +11,7 @@ from kereso import KeresoDialog
 from settings import BeallitasokDialog
 from konyvdialogs import KonyvReszletekDialog, KonyvSzerkesztoDialog
 from statisztika import StatisztikaDialog
-from help import HelpNotebookDialog
+from help import HelpNotebookDialog, sugo_megnyitasa
 from export_manager import tomeges_export_pdf, katalogus_mentese
 from config_manager import load_settings, save_settings
 from theme_manager import apply_theme
@@ -1336,7 +1336,4 @@ class Konyvtarnok(wx.Frame):
         check_for_updates_async(parent=self, is_manual=True)
 
     def on_open_help(self, event):
-        """Ez a metódus fut le a Súgó menüpontra vagy az F1-re kattintva."""
-        dlg = HelpNotebookDialog(self)
-        dlg.ShowModal()
-        dlg.Destroy()
+        sugo_megnyitasa(self, 0)
