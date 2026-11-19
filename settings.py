@@ -112,6 +112,14 @@ class BeallitasokDialog(wx.Dialog):
         stat_pdf_box.Add(self.txt_stat_pdf, 1, wx.RIGHT, 5)
         stat_pdf_box.Add(btn_stat_pdf_talloz, 0)
 
+        lbl_katalogus = wx.StaticText(panel_mappak, label="Katalóguslapok alapértelmezett mappája:")
+        katalogus_box = wx.BoxSizer(wx.HORIZONTAL)
+        self.txt_katalogus = wx.TextCtrl(panel_mappak, value=config.get("last_katalogus_dir", ""))
+        btn_katalogus_talloz = wx.Button(panel_mappak, label="Tallózás...")
+        btn_katalogus_talloz.Bind(wx.EVT_BUTTON, lambda e: self._talloz_mappa(self.txt_katalogus, "Katalógus mappa kiválasztása"))
+        katalogus_box.Add(self.txt_katalogus, 1, wx.RIGHT, 5)
+        katalogus_box.Add(btn_katalogus_talloz, 0)
+
         # JSON mappa mező és gomb
         lbl_json = wx.StaticText(panel_mappak, label="JSON fájlok alapértelmezett mappája:")
         json_box = wx.BoxSizer(wx.HORIZONTAL)
@@ -125,6 +133,8 @@ class BeallitasokDialog(wx.Dialog):
         mappa_sizer.Add(pdf_box, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 10)
         mappa_sizer.Add(lbl_stat_pdf, 0, wx.ALL, 5)
         mappa_sizer.Add(stat_pdf_box, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 5)
+        mappa_sizer.Add(lbl_katalogus, 0, wx.ALL, 5)
+        mappa_sizer.Add(katalogus_box, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 5)
         mappa_sizer.Add(lbl_json, 0, wx.ALL, 5)
         mappa_sizer.Add(json_box, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 10)
 
@@ -215,6 +225,9 @@ class BeallitasokDialog(wx.Dialog):
 
     def GetKivalasztottStatPdfDir(self):
         return self.txt_stat_pdf.GetValue().strip()
+
+    def GetKivalasztottKatalogusDir(self):
+        return self.txt_katalogus.GetValue().strip()
 
     def GetKivalasztottTema(self):
         """Visszaadja a kiválasztott téma kulcsát."""

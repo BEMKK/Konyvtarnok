@@ -1225,6 +1225,7 @@ class Konyvtarnok(wx.Frame):
             config["tema"] = uj_tema
             config["last_pdf_dir"] = dlg.GetKivalasztottPdfDir()
             config["last_stat_pdf_dir"] = dlg.GetKivalasztottStatPdfDir()
+            config["last_katalogus_dir"] = dlg.GetKivalasztottKatalogusDir()
             config["last_json_dir"] = dlg.GetKivalasztottJsonDir()
             config["auto_update_check"] = dlg.GetAutoUpdateCheck()
             config["update_frequency"] = dlg.GetUpdateFrequency()

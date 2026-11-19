@@ -119,7 +119,7 @@ def katalogus_mentese(szulo, sorok, oszlopok, defs=None,
     config = load_settings()
     with wx.FileDialog(
         szulo, f"{cim_szoveg} mentése PDF-be",
-        defaultDir=config.get("last_json_dir", ""),
+        defaultDir=config.get("last_katalogus_dir", ""),
         defaultFile=alap_fajlnev,
         wildcard="PDF fájl (*.pdf)|*.pdf",
         style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT,
@@ -128,7 +128,7 @@ def katalogus_mentese(szulo, sorok, oszlopok, defs=None,
             return
         utvonal = dlg.GetPath()
 
-    config["last_json_dir"] = os.path.dirname(utvonal)
+    config["last_katalogus_dir"] = os.path.dirname(utvonal)
     save_settings(config)
 
     try:

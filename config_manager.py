@@ -19,6 +19,7 @@ DEFAULT_CONFIG = {
     "last_json_dir": "",
     "last_pdf_dir": "",
     "last_stat_pdf_dir": "",
+    "last_katalogus_dir": "",
     "alapertelmezett_rendezes": "cim",
     "auto_update_check": True,
     "update_frequency": "startup",
