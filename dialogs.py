@@ -79,7 +79,8 @@ class UjdonsagokDialog(wx.Dialog):
         
         ujdonsagok_lista = [
             "A beállításokban külön mező a katalóguslapok alapértelmezett mappájának megadására.",
-            "A súgó a Dezideráta-kezelőből és a KönyvTárnok-keresőből is megnyitható."
+            "A súgó a Dezideráta-kezelőből és a KönyvTárnok-keresőből is megnyitható.",
+            "Külön menüpont és gyorsbillentyű a billentyűparancsok listájának megnyitásához."
         ]
 
         szoveg_box = wx.BoxSizer(wx.VERTICAL)

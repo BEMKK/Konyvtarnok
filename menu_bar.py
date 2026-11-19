@@ -69,7 +69,8 @@ class MenuBar(wx.MenuBar):
         self.Append(set_menu, '&Eszközök')
 
         help_menu = wx.Menu()
-        self.help = help_menu.Append(wx.ID_ANY, '&Súgó és billentyűparancsok\tF1', 'Az alkalmazás súgója és billentyűparancsai')
+        self.help = help_menu.Append(wx.ID_ANY, '&Súgó\tF1', 'Az alkalmazás súgója')
+        self.billentyu = help_menu.Append(wx.ID_ANY, '&Billentyűparancsok\tCtrl+Shift+S', 'Az alkalmazás billentyűparancsainak listája')
         self.frissites = help_menu.Append(wx.ID_ANY, '&Frissítés ellenőrzése...\tCTRL+U', 'Új verzió keresése a GitHub-on')
         help_menu.AppendSeparator()
         self.Ujdonsagok = help_menu.Append(wx.ID_ANY, '&Újdonságok\tCTRL+SHIFT+U', 'Megjeleníti az aktuális verzió újdonságait')
@@ -116,6 +117,11 @@ class DeziderataMenuBar(wx.MenuBar):
 
         self.Append(edit_menu, "S&zerkesztés")
 
+        help_menu = wx.Menu()
+        self.help = help_menu.Append(wx.ID_ANY, "Súgó\tF1")
+
+        self.Append(help_menu, "Súgó")
+
 class KeresoMenuBar(wx.MenuBar):
     def __init__(self):
         super().__init__()
@@ -139,3 +145,8 @@ class KeresoMenuBar(wx.MenuBar):
         edit_menu.AppendSubMenu(select_menu, '&Kijelölés')
 
         self.Append(edit_menu, "S&zerkesztés")
+
+        help_menu = wx.Menu()
+        self.help = help_menu.Append(wx.ID_ANY, '&Súgó\tF1', 'Az alkalmazás súgója és billentyűparancsai')
+
+        self.Append(help_menu, "Súgó")

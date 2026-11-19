@@ -177,6 +177,7 @@ class Konyvtarnok(wx.Frame):
         self.Bind(wx.EVT_MENU, self.OnStatisztika, menusor.statisztika)
         self.Bind(wx.EVT_MENU, self.OnBeallitasok, menusor.set)
         self.Bind(wx.EVT_MENU, self.on_open_help, menusor.help)
+        self.Bind(wx.EVT_MENU, self.on_billentyuparancsok, menusor.billentyu)
         self.Bind(wx.EVT_MENU, self.OnAbout, id=wx.ID_ABOUT)
         self.Bind(wx.EVT_MENU, self.OnUjdonsagok, menusor.Ujdonsagok)
         self.Bind(wx.EVT_MENU, self.OnFrissites, menusor.frissites)
@@ -1337,3 +1338,6 @@ class Konyvtarnok(wx.Frame):
 
     def on_open_help(self, event):
         sugo_megnyitasa(self, 0)
+
+    def on_billentyuparancsok(self, event):
+        sugo_megnyitasa(self, 8)
