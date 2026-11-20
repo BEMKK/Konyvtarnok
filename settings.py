@@ -1,5 +1,6 @@
 import wx
 from constants import DEFAULT_LATHATO_OSZLOPOK, ELERHETO_OSZLOPOK
+from help import HelpNotebookDialog, sugo_megnyitasa
 from theme_manager import get_theme_names, apply_theme
 
 class BeallitasokDialog(wx.Dialog):
@@ -180,9 +181,12 @@ class BeallitasokDialog(wx.Dialog):
         gomb_sizer = wx.StdDialogButtonSizer()
         ok_gomb = wx.Button(self, wx.ID_OK, label="OK")
         megse_gomb = wx.Button(self, wx.ID_CANCEL, label="Mégse")
+        sugo_gomb = wx.Button(self, wx.ID_HELP, label="Súgó")
+        sugo_gomb.Bind(wx.EVT_BUTTON, self.on_open_help)
 
         gomb_sizer.AddButton(ok_gomb)
         gomb_sizer.AddButton(megse_gomb)
+        gomb_sizer.AddButton(sugo_gomb)
         gomb_sizer.Realize()
 
         fo_sizer.Add(gomb_sizer, 0, wx.ALIGN_RIGHT | wx.RIGHT | wx.BOTTOM, 10)
@@ -255,3 +259,6 @@ class BeallitasokDialog(wx.Dialog):
         idx = self.choice_freq.GetSelection()
         freq_kulcsok = [k for k, _ in self.FREKVENCIA_OPCIOK]
         return freq_kulcsok[idx] if 0 <= idx < len(freq_kulcsok) else "startup"
+
+    def on_open_help(self, event):
+        sugo_megnyitasa(self, 6)

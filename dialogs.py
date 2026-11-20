@@ -2,10 +2,10 @@ import os
 import sys
 import logging
 import wx
-from constants import APP_NAME, APP_VERSION
-from theme_manager import apply_theme_from_settings
 from config_manager import load_settings, save_settings
+from constants import APP_NAME, APP_VERSION
 from export_manager import export_konyv_pdf, get_biztonsagos_pdf_fajlnev
+from theme_manager import apply_theme_from_settings
 
 class NevjegyDialog(wx.Dialog):
     """Saját Névjegy párbeszédablak wx.Dialog alapokon."""
@@ -49,7 +49,7 @@ class NevjegyDialog(wx.Dialog):
         sizer.Add(fejleszto_label, 0, wx.ALIGN_CENTER | wx.BOTTOM, 4)
         
         ok_gomb = wx.Button(self, id=wx.ID_OK, label="OK")
-        
+
         # Téma alkalmazása Realize/Hozzáadás után, de megjelenítés előtt
         apply_theme_from_settings(self)
 
@@ -79,7 +79,7 @@ class UjdonsagokDialog(wx.Dialog):
         
         ujdonsagok_lista = [
             "A beállításokban külön mező a katalóguslapok alapértelmezett mappájának megadására.",
-            "A súgó a Dezideráta-kezelőből és a KönyvTárnok-keresőből is megnyitható.",
+            "A súgó a Beállítások ablakból, a Dezideráta-kezelőből és a KönyvTárnok-keresőből is megnyitható.",
             "Külön menüpont és gyorsbillentyű a billentyűparancsok listájának megnyitásához."
         ]
 
