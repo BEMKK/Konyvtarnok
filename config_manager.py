@@ -23,7 +23,6 @@ DEFAULT_CONFIG = {
     "last_katalogus_dir": "",
     "kereso_json_utvonal": "",
     "alapertelmezett_rendezes": "cim",
-    "auto_update_check": True,
     "update_frequency": "startup",
     "last_update_check_date": ""
 }
@@ -34,6 +33,11 @@ def load_settings():
         try:
             with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
                 config = json.load(f)
+                # Migráció: a régi auto_update_check=False beállítás helyett
+                # most az update_frequency="never" érték jelzi a kikapcsolást.
+                # A setdefault ciklus előtt kell lefutnia.
+                if config.pop("auto_update_check", True) is False:
+                    config["update_frequency"] = "never"
                 # Összefésülés az alapértelmezettel (ha hiányozna valamilyen kulcs)
                 for key, val in DEFAULT_CONFIG.items():
                     config.setdefault(key, copy.deepcopy(val))

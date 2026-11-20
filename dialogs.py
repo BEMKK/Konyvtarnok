@@ -82,7 +82,9 @@ class UjdonsagokDialog(wx.Dialog):
             "A súgó a Beállítások ablakból, a Dezideráta-kezelőből és a KönyvTárnok-keresőből is megnyitható.",
             "Külön menüpont és gyorsbillentyű a billentyűparancsok listájának megnyitásához.",
             "A Dezideráta és ÁLlományjegyzék mappája mostantól külön-külön is megadható a Beállításokban.",
-            "A KönyvTárnok-kereső által megnyitandó adatbázis a beállításokban is megadható."
+            "A KönyvTárnok-kereső által megnyitandó adatbázis a beállításokban is megadható.",
+            "A beállítások ablak szélesebb lett a megnövekedett helyigény miatt.",
+            "A frissítések letiltására jelölőnégyzet helyett a gyakoriság Soha opciója szolgál."
         ]
 
         szoveg_box = wx.BoxSizer(wx.VERTICAL)

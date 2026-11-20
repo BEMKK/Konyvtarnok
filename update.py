@@ -311,10 +311,9 @@ def should_check_for_updates(config=None):
     if config is None:
         config = load_settings()
     
-    if not config.get("auto_update_check", True):
-        return False
-    
     freq = config.get("update_frequency", "startup")
+    if freq == "never":
+        return False
     if freq == "startup":
         return True
     

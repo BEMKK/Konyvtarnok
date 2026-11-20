@@ -10,7 +10,8 @@ class BeallitasokDialog(wx.Dialog):
         ("startup", "Minden indításkor"),
         ("daily", "Naponta"),
         ("weekly", "Hetente"),
-        ("monthly", "Havonta")
+        ("monthly", "Havonta"),
+        ("never", "Soha")
     ]
 
     # A jelölőnégyzetek (kulcs, felirat) párjai a constants.ELERHETO_OSZLOPOK
@@ -26,7 +27,7 @@ class BeallitasokDialog(wx.Dialog):
         egyetlen forrásból dolgozik. A lathato_oszlopok és a tema kulcsot is
         ebből veszi.
         """
-        super().__init__(parent, title="Beállítások", size=(420, 500), style=wx.DEFAULT_DIALOG_STYLE | wx.STAY_ON_TOP)
+        super().__init__(parent, title="Beállítások", size=(600, 500), style=wx.DEFAULT_DIALOG_STYLE | wx.STAY_ON_TOP)
         self.lathato_oszlopok = config.get("lathato_oszlopok", DEFAULT_LATHATO_OSZLOPOK)
         self.aktiv_tema = config.get("tema", "rendszer")
 
@@ -169,25 +170,17 @@ class BeallitasokDialog(wx.Dialog):
         panel_frissites = wx.Panel(self.notebook)
         frissites_sizer = wx.BoxSizer(wx.VERTICAL)
 
-        self.cb_auto_update = wx.CheckBox(panel_frissites, label="Frissítések automatikus ellenőrzése")
-        self.cb_auto_update.SetValue(config.get("auto_update_check", True))
-
-        lbl_freq = wx.StaticText(panel_frissites, label="Ellenőrzés gyakorisága:")
+        lbl_freq = wx.StaticText(panel_frissites, label="Frissítések automatikus ellenőrzése:")
         self.choice_freq = wx.Choice(panel_frissites, choices=[nev for _, nev in self.FREKVENCIA_OPCIOK])
 
         akt_freq = config.get("update_frequency", "startup")
         freq_kulcsok = [k for k, _ in self.FREKVENCIA_OPCIOK]
         self.choice_freq.SetSelection(freq_kulcsok.index(akt_freq) if akt_freq in freq_kulcsok else 0)
 
-        # Ha a checkbox nincs bepipálva, a választó legyen inaktív
-        self.choice_freq.Enable(self.cb_auto_update.IsChecked())
-        self.cb_auto_update.Bind(wx.EVT_CHECKBOX, lambda e: self.choice_freq.Enable(self.cb_auto_update.IsChecked()))
-
         btn_manual_check = wx.Button(panel_frissites, label="Frissítések keresése most...")
         btn_manual_check.Bind(wx.EVT_BUTTON, self.on_manual_update_check)
 
-        frissites_sizer.Add(self.cb_auto_update, 0, wx.ALL, 10)
-        frissites_sizer.Add(lbl_freq, 0, wx.LEFT | wx.RIGHT | wx.TOP, 10)
+        frissites_sizer.Add(lbl_freq, 0, wx.ALL, 10)
         frissites_sizer.Add(self.choice_freq, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 10)
         frissites_sizer.Add(btn_manual_check, 0, wx.ALL | wx.ALIGN_LEFT, 10)
 
@@ -292,9 +285,6 @@ class BeallitasokDialog(wx.Dialog):
 
     def GetKivalasztottDeziderataDir(self):
         return self.txt_deziderata.GetValue().strip()
-
-    def GetAutoUpdateCheck(self):
-        return self.cb_auto_update.IsChecked()
 
     def GetUpdateFrequency(self):
         idx = self.choice_freq.GetSelection()
