@@ -124,9 +124,9 @@ class HelpNotebookDialog(wx.Dialog):
                 "3. Látható oszlopok beállítása:\n"
                 "  Az oszlopok a listában fülön kiválaszthatja, hogy a főablak könyvlistájában mely oszlopok (alcím, összeállító, kiadó, kiadás éve, méret, kötés, forrás, státusz stb.) jelenjenek meg. A Cím oszlop mindig aktív, és a jelölőnégyzete le van tiltva.\n\n"
                 "4. Mappák automatikus megjegyzése:\n"
-                "  A program automatikusan megjegyzi a legutóbb használt PDF export és JSON mentési/betöltési könyvtárakat, így nem kell minden alkalommal kikeresni azokat. Az alkalmazás első használatakor ezeket manuálisan is megadhatja a beállítások ablak Mappák és elérési utak fülén.\n\n"
+                "  A program automatikusan megjegyzi a legutóbb használt könyvadatlap, statisztika, katalóguslap, állományjegyzék,\n  és dezideráta-jegyzék mentési/betöltési mappáit, valamint a KönyvTárnok-kereső adatbázisának útvonalát.\n  Ezeket manuálisan is megadhatja a beállítások ablak Mappák és elérési utak fülén.\n\n"
                 "5. Frissítések keresése:\n"
-                "  A frissítések fülön megadhatja, hogy a program keressen-e automatikusan frissítéseket. Ehhez jelölje be a frissítések automatikus ellenőrzése jelölőnégyzetet.\n  Ha a négyzet be van jelölve, megjelenik egy kombinált listamező, ahol kiválaszthatja a frissítések ellenőrzésének gyakoriságát (minden indításkor, naponta, hetente, havonta).\n\n"
+                "  A frissítések fülön megadhatja, hogy a program milyen gyakran ellenőrizze a frissítést.\n  Amennyiben a Soha opciót választja, a program nem ellenőrzi automatikusan az új verzió meglétét.\n  Amennyiben manuálisan szeretné ellenőrizni, hogy van e új frissítés a KönyvTárnok-hoz, kattintson a kombinált listamező melletti Frissítések keresése most gombra.\n\n"
                 "6. Beállítások mentése:\n"
                 "  Ha végzett a beállítások módosításával, a mentéshez kattintson az ok gombra, vagy nyomja meg a CTRL + S billentyűket.\n  Amennyiben a mentés meghiúsul, a program felugró üzenetben tájékoztat erről.\n  Ekkor a módosítások csak a program bezárásáig maradnak érvényben.\n"
             ),
