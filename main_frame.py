@@ -922,7 +922,7 @@ class Konyvtarnok(wx.Frame):
         if not allomany_szerkesztheto(self.db, self):
             return
         config = load_settings()
-        default_dir = config.get("last_json_dir", "")
+        default_dir = config.get("last_allomany_dir", "")
 
         megnyit_dlg = wx.FileDialog(
             self, "Állományjegyzék megnyitása (JSON)", 
@@ -937,7 +937,7 @@ class Konyvtarnok(wx.Frame):
         kivalasztott_utvonal = megnyit_dlg.GetPath()
         megnyit_dlg.Destroy()
 
-        config["last_json_dir"] = os.path.dirname(kivalasztott_utvonal)
+        config["last_allomany_dir"] = os.path.dirname(kivalasztott_utvonal)
         save_settings(config)
 
         # Fájl beolvasása és elemzése
@@ -1087,7 +1087,7 @@ class Konyvtarnok(wx.Frame):
             )
             return
         config = load_settings()
-        default_dir = config.get("last_json_dir", "")
+        default_dir = config.get("last_allomany_dir", "")
 
         ment_dlg = wx.FileDialog(
             self, "Állományjegyzék exportálása nyers JSON fájlba", 
@@ -1098,7 +1098,7 @@ class Konyvtarnok(wx.Frame):
         )
         if ment_dlg.ShowModal() == wx.ID_OK:
             kivalasztott_utvonal = ment_dlg.GetPath()
-            config["last_json_dir"] = os.path.dirname(kivalasztott_utvonal)
+            config["last_allomany_dir"] = os.path.dirname(kivalasztott_utvonal)
             save_settings(config)
 
             try:
@@ -1227,7 +1227,9 @@ class Konyvtarnok(wx.Frame):
             config["last_pdf_dir"] = dlg.GetKivalasztottPdfDir()
             config["last_stat_pdf_dir"] = dlg.GetKivalasztottStatPdfDir()
             config["last_katalogus_dir"] = dlg.GetKivalasztottKatalogusDir()
-            config["last_json_dir"] = dlg.GetKivalasztottJsonDir()
+            config["last_allomany_dir"] = dlg.GetKivalasztottJsonDir()
+            config["last_deziderata_dir"] = dlg.GetKivalasztottDeziderataDir()
+            config["kereso_json_utvonal"] = dlg.GetKeresoJsonUtvonal()
             config["auto_update_check"] = dlg.GetAutoUpdateCheck()
             config["update_frequency"] = dlg.GetUpdateFrequency()
             mentve = save_settings(config)

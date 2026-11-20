@@ -96,39 +96,59 @@ class BeallitasokDialog(wx.Dialog):
         panel_mappak = wx.Panel(self.notebook)
         mappa_sizer = wx.BoxSizer(wx.VERTICAL)
 
-        # PDF mappa mező és gomb
-        lbl_pdf = wx.StaticText(panel_mappak, label="PDF fájlok alapértelmezett mappája:")
+        # Könyvadatlapok alapértelmezett mappájának megadása
+        lbl_pdf = wx.StaticText(panel_mappak, label="Könyvadatlapok alapértelmezett mappája:")
         pdf_box = wx.BoxSizer(wx.HORIZONTAL)
         self.txt_pdf = wx.TextCtrl(panel_mappak, value=config.get("last_pdf_dir", ""))
         btn_pdf_talloz = wx.Button(panel_mappak, label="Tallózás...")
-        btn_pdf_talloz.Bind(wx.EVT_BUTTON, lambda e: self._talloz_mappa(self.txt_pdf, "PDF mappa kiválasztása"))
+        btn_pdf_talloz.Bind(wx.EVT_BUTTON, lambda e: self._talloz_mappa(self.txt_pdf, "Könyvadatlapok kimeneti mappája"))
         pdf_box.Add(self.txt_pdf, 1, wx.RIGHT, 5)
         pdf_box.Add(btn_pdf_talloz, 0)
 
+        # Statisztikai jelentések alapértelmezett mappája
         lbl_stat_pdf = wx.StaticText(panel_mappak, label="Statisztikai jelentések alapértelmezett mappája:")
         stat_pdf_box = wx.BoxSizer(wx.HORIZONTAL)
         self.txt_stat_pdf = wx.TextCtrl(panel_mappak, value=config.get("last_stat_pdf_dir", ""))
         btn_stat_pdf_talloz = wx.Button(panel_mappak, label="Tallózás...")
-        btn_stat_pdf_talloz.Bind(wx.EVT_BUTTON, lambda e: self._talloz_mappa(self.txt_stat_pdf, "Statisztika PDF mappa kiválasztása"))
+        btn_stat_pdf_talloz.Bind(wx.EVT_BUTTON, lambda e: self._talloz_mappa(self.txt_stat_pdf, "Statisztikai jelentések alapértelmezett mappája"))
         stat_pdf_box.Add(self.txt_stat_pdf, 1, wx.RIGHT, 5)
         stat_pdf_box.Add(btn_stat_pdf_talloz, 0)
 
+        # Katalóguslapok alapértelmezett mappája
         lbl_katalogus = wx.StaticText(panel_mappak, label="Katalóguslapok alapértelmezett mappája:")
         katalogus_box = wx.BoxSizer(wx.HORIZONTAL)
         self.txt_katalogus = wx.TextCtrl(panel_mappak, value=config.get("last_katalogus_dir", ""))
         btn_katalogus_talloz = wx.Button(panel_mappak, label="Tallózás...")
-        btn_katalogus_talloz.Bind(wx.EVT_BUTTON, lambda e: self._talloz_mappa(self.txt_katalogus, "Katalógus mappa kiválasztása"))
+        btn_katalogus_talloz.Bind(wx.EVT_BUTTON, lambda e: self._talloz_mappa(self.txt_katalogus, "Katalóguslapok alapértelmezett mappája"))
         katalogus_box.Add(self.txt_katalogus, 1, wx.RIGHT, 5)
         katalogus_box.Add(btn_katalogus_talloz, 0)
 
-        # JSON mappa mező és gomb
-        lbl_json = wx.StaticText(panel_mappak, label="JSON fájlok alapértelmezett mappája:")
-        json_box = wx.BoxSizer(wx.HORIZONTAL)
-        self.txt_json = wx.TextCtrl(panel_mappak, value=config.get("last_json_dir", ""))
-        btn_json_talloz = wx.Button(panel_mappak, label="Tallózás...")
-        btn_json_talloz.Bind(wx.EVT_BUTTON, lambda e: self._talloz_mappa(self.txt_json, "JSON mappa kiválasztása"))
-        json_box.Add(self.txt_json, 1, wx.RIGHT, 5)
-        json_box.Add(btn_json_talloz, 0)
+        # Állományjegyzék alapértelmezett import/export mappája (kizárólag a nyers JSON-hoz, a program egyébként az alapmappából tölt be!)
+        lbl_allomanyjegyzek = wx.StaticText(panel_mappak, label="Állományjegyzék alapértelmezett import/export mappája:")
+        allomanyjegyzek_box = wx.BoxSizer(wx.HORIZONTAL)
+        self.txt_allomanyjegyzek = wx.TextCtrl(panel_mappak, value=config.get("last_allomany_dir", ""))
+        btn_allomany_talloz = wx.Button(panel_mappak, label="Tallózás...")
+        btn_allomany_talloz.Bind(wx.EVT_BUTTON, lambda e: self._talloz_mappa(self.txt_allomanyjegyzek, "Állományjegyzék mappájának kiválasztása"))
+        allomanyjegyzek_box.Add(self.txt_allomanyjegyzek, 1, wx.RIGHT, 5)
+        allomanyjegyzek_box.Add(btn_allomany_talloz, 0)
+
+        # Dezideráta-jegyzék alapértelmezett import/export mappája (kizárólag a nyers JSON-hoz, a program egyébként az alapmappából tölt be!)
+        lbl_deziderata = wx.StaticText(panel_mappak, label="Dezideráta alapértelmezett import/export mappája:")
+        deziderata_box = wx.BoxSizer(wx.HORIZONTAL)
+        self.txt_deziderata = wx.TextCtrl(panel_mappak, value=config.get("last_deziderata_dir", ""))
+        btn_deziderata_talloz = wx.Button(panel_mappak, label="Tallózás...")
+        btn_deziderata_talloz.Bind(wx.EVT_BUTTON, lambda e: self._talloz_mappa(self.txt_deziderata, "Dezideráta-jegyzék alapértelmezett mappája"))
+        deziderata_box.Add(self.txt_deziderata, 1, wx.RIGHT, 5)
+        deziderata_box.Add(btn_deziderata_talloz, 0)
+
+        # KönyvTárnok-kereső adatbázis útvonala
+        lbl_adatbazis = wx.StaticText(panel_mappak, label="KönyvTárnok-kereső adatbázis:")
+        adatbazis_box = wx.BoxSizer(wx.HORIZONTAL)
+        self.txt_adatbazis = wx.TextCtrl(panel_mappak, value=config.get("kereso_json_utvonal", ""))
+        btn_adatbazis_talloz = wx.Button(panel_mappak, label="Tallózás...")
+        btn_adatbazis_talloz.Bind(wx.EVT_BUTTON, lambda e: self._talloz_fajl(self.txt_adatbazis, "JSON fájl kiválasztása"))
+        adatbazis_box.Add(self.txt_adatbazis, 1, wx.RIGHT, 5)
+        adatbazis_box.Add(btn_adatbazis_talloz, 0)
 
         mappa_sizer.Add(lbl_pdf, 0, wx.ALL, 5)
         mappa_sizer.Add(pdf_box, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 10)
@@ -136,8 +156,12 @@ class BeallitasokDialog(wx.Dialog):
         mappa_sizer.Add(stat_pdf_box, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 5)
         mappa_sizer.Add(lbl_katalogus, 0, wx.ALL, 5)
         mappa_sizer.Add(katalogus_box, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 5)
-        mappa_sizer.Add(lbl_json, 0, wx.ALL, 5)
-        mappa_sizer.Add(json_box, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 10)
+        mappa_sizer.Add(lbl_allomanyjegyzek, 0, wx.ALL, 5)
+        mappa_sizer.Add(allomanyjegyzek_box, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 10)
+        mappa_sizer.Add(lbl_deziderata, 0, wx.ALL, 5)
+        mappa_sizer.Add(deziderata_box, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 10)
+        mappa_sizer.Add(lbl_adatbazis, 0, wx.ALL, 5)
+        mappa_sizer.Add(adatbazis_box, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 10)
 
         panel_mappak.SetSizer(mappa_sizer)
 
@@ -246,11 +270,28 @@ class BeallitasokDialog(wx.Dialog):
             text_ctrl.SetValue(dlg.GetPath())
         dlg.Destroy()
 
+    def _talloz_fajl(self, text_ctrl, uzenet):
+        dlg = wx.FileDialog(
+            self, uzenet,
+            defaultFile=text_ctrl.GetValue(),
+            wildcard="JSON fájlok (*.json)|*.json|Minden fájl (*.*)|*.*",
+            style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST,
+        )
+        if dlg.ShowModal() == wx.ID_OK:
+            text_ctrl.SetValue(dlg.GetPath())
+        dlg.Destroy()
+
     def GetKivalasztottPdfDir(self):
         return self.txt_pdf.GetValue().strip()
 
-    def GetKivalasztottJsonDir(self):
-        return self.txt_json.GetValue().strip()
+    def GetKeresoJsonUtvonal(self):
+        return self.txt_adatbazis.GetValue().strip()
+
+    def GetKivalasztottAllomanyDir(self):
+        return self.txt_allomanyjegyzek.GetValue().strip()
+
+    def GetKivalasztottDeziderataDir(self):
+        return self.txt_deziderata.GetValue().strip()
 
     def GetAutoUpdateCheck(self):
         return self.cb_auto_update.IsChecked()

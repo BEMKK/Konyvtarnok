@@ -971,7 +971,7 @@ class Deziderata(wx.Frame):
             )
             return
         config = load_settings()
-        default_dir = config.get("last_json_dir", "")
+        default_dir = config.get("last_deziderata_dir", "")
 
         fileDialog = wx.FileDialog(
             self,
@@ -984,7 +984,7 @@ class Deziderata(wx.Frame):
 
         if fileDialog.ShowModal() == wx.ID_OK:
             pathname = fileDialog.GetPath()
-            config["last_json_dir"] = os.path.dirname(pathname)
+            config["last_deziderata_dir"] = os.path.dirname(pathname)
             save_settings(config)
             try:
                 with open(pathname, "w", encoding="utf-8") as f:
@@ -1000,7 +1000,7 @@ class Deziderata(wx.Frame):
         if not self._szerkesztes_engedelyezett():
             return
         config = load_settings()
-        default_dir = config.get("last_json_dir", "")
+        default_dir = config.get("last_deziderata_dir", "")
 
         with wx.FileDialog(
             self,
@@ -1014,7 +1014,7 @@ class Deziderata(wx.Frame):
                 return
 
             pathname = fileDialog.GetPath()
-            config["last_json_dir"] = os.path.dirname(pathname)
+            config["last_deziderata_dir"] = os.path.dirname(pathname)
             save_settings(config)
 
         # Fájl beolvasása és elemzése

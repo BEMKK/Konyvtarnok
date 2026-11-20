@@ -16,17 +16,16 @@ SETTINGS_FILE = _os.path.join(_BASE_DIR, "settings.json")
 DEFAULT_CONFIG = {
     "lathato_oszlopok": list(DEFAULT_LATHATO_OSZLOPOK),
     "tema": "rendszer",
-    "last_json_dir": "",
+    "last_allomany_dir": "",
+    "last_deziderata_dir": "",
     "last_pdf_dir": "",
     "last_stat_pdf_dir": "",
     "last_katalogus_dir": "",
+    "kereso_json_utvonal": "",
     "alapertelmezett_rendezes": "cim",
     "auto_update_check": True,
     "update_frequency": "startup",
-    "last_update_check_date": "",
-    # A KönyvTárnok-kereső által használt (felhasználó által megnyitott)
-    # JSON adatbázis teljes útvonala. Üres = még nincs megnyitva.
-    "kereso_json_utvonal": ""
+    "last_update_check_date": ""
 }
 
 def load_settings():
