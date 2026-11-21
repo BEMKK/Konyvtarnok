@@ -183,7 +183,7 @@ class BeallitasokDialog(wx.Dialog):
         adatbazis_box.Add(self.txt_adatbazis, 1, wx.RIGHT, 5)
         adatbazis_box.Add(btn_adatbazis_talloz, 0)
 
-        lbl_inditas = wx.StaticText(panel_kereso, label="Induláskor:")
+        lbl_inditas = wx.StaticText(panel_kereso, label="Üres keresőmező esetén:")
         self.choice_kereso_inditas = wx.Choice(
             panel_kereso, choices=[nev for _, nev in self.KERESO_INDITASI_OPCIOK]
         )
