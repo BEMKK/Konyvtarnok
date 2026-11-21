@@ -114,9 +114,15 @@ class DeziderataMenuBar(wx.MenuBar):
         self.select_none = select_menu.Append(wx.ID_ANY, "Egyik sem\tCtrl+Shift+A")
         edit_menu.AppendSubMenu(select_menu, '&Kijelölés')
         edit_menu.AppendSeparator()
-        self.find = edit_menu.Append(wx.ID_ANY, "&Keresés a gyűjteményekben\tCtrl+Shift+F", "Közös keresés az állományban és a deziderátában")
 
         self.Append(edit_menu, "S&zerkesztés")
+
+        set_menu = wx.Menu()
+        self.find = set_menu.Append(wx.ID_ANY, '&Keresés a gyűjteményekben\tCTRL+Shift+F', 'Közös keresés az állományban és a deziderátában')
+        self.konyvtarnok_kereso_item = set_menu.Append(wx.ID_ANY, '&KönyvTárnok-kereső\tCTRL+SHIFT+K', 'KönyvTárnok kereső')
+        set_menu.AppendSeparator()
+
+        self.Append(set_menu, '&Eszközök')
 
         help_menu = wx.Menu()
         self.help = help_menu.Append(wx.ID_ANY, "Súgó\tF1")
@@ -130,7 +136,7 @@ class KeresoMenuBar(wx.MenuBar):
         fajl_menu = wx.Menu()
         self.megnyitas = fajl_menu.Append(wx.ID_ANY, "Adatbázis megnyitása...\tCtrl+O", "Keresési adatbázis (JSON) megnyitása")
         fajl_menu.AppendSeparator()
-        self.deziderata = fajl_menu.Append(wx.ID_ANY, "Átemelés a Deziderátába\tCtrl+D")
+        self.deziderata = fajl_menu.Append(wx.ID_ANY, "Átemelés a Deziderátába\tCtrl+Shift+D")
         self.allomany = fajl_menu.Append(wx.ID_ANY, "Átemelés az állományba\tCtrl+F")
         self.kilepes = fajl_menu.Append(wx.ID_EXIT, "Kilépés\tCtrl+W")
 
@@ -146,6 +152,11 @@ class KeresoMenuBar(wx.MenuBar):
         edit_menu.AppendSubMenu(select_menu, '&Kijelölés')
 
         self.Append(edit_menu, "S&zerkesztés")
+
+        set_menu = wx.Menu()
+        self.deziderata_kezelo = set_menu.Append(wx.ID_ANY, '&Dezideráta-kezelő\tCTRL+D', 'Dezideráta jegyzék kezelése')
+
+        self.Append(set_menu, '&Eszközök')
 
         help_menu = wx.Menu()
         self.help = help_menu.Append(wx.ID_ANY, '&Súgó\tF1', 'Az alkalmazás súgója és billentyűparancsai')

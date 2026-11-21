@@ -589,6 +589,7 @@ class KonyvtarnokKeresoApp(wx.Frame):
         self.Bind(wx.EVT_MENU, self.on_menu_allomany, menusor.allomany)
         self.Bind(wx.EVT_MENU, self.on_kilepes, menusor.kilepes)
         self.Bind(wx.EVT_MENU, self.on_open_help, menusor.help)
+        self.Bind(wx.EVT_MENU, self.on_menu_deziderata_kezelo, menusor.deziderata_kezelo)
 
     # --- VISSZAVONÁS / MÉGIS ---
 
@@ -1188,6 +1189,10 @@ class KonyvtarnokKeresoApp(wx.Frame):
 
     def on_open_help(self, event):
         sugo_megnyitasa(self, 5)
+
+    def on_menu_deziderata_kezelo(self, event):
+        if self.parent is not None and hasattr(self.parent, "on_deziderata"):
+            self.parent.on_deziderata(event)
 
 if __name__ == "__main__":
     app = wx.App()

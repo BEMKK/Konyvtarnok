@@ -316,6 +316,7 @@ class Deziderata(wx.Frame):
         self.Bind(wx.EVT_MENU, self.OnMegis, menusor.redo)
         self.Bind(wx.EVT_MENU, self.on_kereses, menusor.find)
         self.Bind(wx.EVT_MENU, self.on_open_help, menusor.help)
+        self.Bind(wx.EVT_MENU, self.on_konyvtarnok_kereso, menusor.konyvtarnok_kereso_item)
 
         self.Bind(wx.EVT_MENU_OPEN, self.OnMenuNyitas)
 
@@ -1322,6 +1323,11 @@ class Deziderata(wx.Frame):
 
     def on_open_help(self, event):
         sugo_megnyitasa(self, 4)
+
+    def on_konyvtarnok_kereso(self, event):
+        szulo = self.GetParent()
+        if szulo is not None and hasattr(szulo, "on_konyvtarnok_kereso"):
+            szulo.on_konyvtarnok_kereso(event)
 
 class App(wx.App):
     def OnInit(self):
