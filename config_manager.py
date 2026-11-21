@@ -22,6 +22,8 @@ DEFAULT_CONFIG = {
     "last_stat_pdf_dir": "",
     "last_katalogus_dir": "",
     "kereso_json_utvonal": "",
+    # A KönyvTárnok-kereső találati listája üres keresőmezőnél: "ures" | "osszes"
+    "kereso_inditasi_lista": "ures",
     "alapertelmezett_rendezes": "cim",
     "update_frequency": "startup",
     "last_update_check_date": ""

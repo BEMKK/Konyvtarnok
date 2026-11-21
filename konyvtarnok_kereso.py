@@ -33,6 +33,7 @@ from data_manager import (
 )
 from gyors_kereses import GyorsListaKereso, osszes_kijelolt_index
 from help import HelpNotebookDialog, sugo_megnyitasa
+from settings import azonos_utvonal, beallitasok_megnyitasa_gyermekbol
 from utils import masolas_vagolapra_szoveg
 from menu_bar import KeresoMenuBar
 from undo_manager import (
@@ -79,6 +80,12 @@ class KonyvtarnokKeresoApp(wx.Frame):
         # mutató index. Az átemelés és a státuszfrissítés ebből dolgozik, nem
         # a megjelenített cellaszövegekből (lásd _sor_eredeti_dict).
         self._talalat_sorok = []
+        # A találati lista üres keresőmezőnél: "ures" | "osszes" (lásd a
+        # Beállítások > KönyvTárnok-kereső fület és az _alapallapot_beallitasa-t).
+        self.inditasi_lista = "ures"
+        # Igaz, ha a táblázat jelenleg az alaplistát ("összes tétel") mutatja;
+        # így az üres mező további szövegeseményei nem építik újra feleslegesen.
+        self._alaplista_latszik = False
 
         # Gyorskeresés (gépeléssel ugrás a listában)
         self.gyors_kereses = GyorsListaKereso()
@@ -125,7 +132,11 @@ class KonyvtarnokKeresoApp(wx.Frame):
         """Megpróbálja betölteni a beállításokban tárolt adatbázist. Ha nincs
         beállított útvonal, vagy a fájl hiányzik, NEM dob fel ablakot, csak az
         állapotsor jelez; sérült fájlnál viszont hibaüzenet jelenik meg."""
-        utvonal = load_settings().get("kereso_json_utvonal", "")
+        beallitasok = load_settings()
+        self.inditasi_lista = self._ervenyes_inditasi_lista(
+            beallitasok.get("kereso_inditasi_lista")
+        )
+        utvonal = beallitasok.get("kereso_json_utvonal", "")
         self._allapot_frissitese()
         if not utvonal:
             return
@@ -191,10 +202,12 @@ class KonyvtarnokKeresoApp(wx.Frame):
         self.adatok = adatok
         self.json_utvonal = os.path.abspath(utvonal)
 
+        # Az oszlopok újraépítése UTÁN jön az alapállapot (üres lista vagy az
+        # összes tétel, a beállítástól függően): a sorok az új oszlopokra épülnek.
         self._tablazat_uritese()
         self._checkboxok_epitese()
         self._tablazat_oszlopai_epitese()
-        self.frissit_akadalymentesites(0)
+        self._alapallapot_beallitasa(ujra=True)
         self.frissit_torles_gomb_allapot()
         self.panel.Layout()
         self._allapot_frissitese()
@@ -266,6 +279,96 @@ class KonyvtarnokKeresoApp(wx.Frame):
         """Kiüríti a találati táblázatot és az eredeti sor-dictek tárolóját."""
         self.tablazat.DeleteAllItems()
         self._talalat_sorok = []
+        self._alaplista_latszik = False
+
+    @staticmethod
+    def _ervenyes_inditasi_lista(ertek):
+        """A beállított érték ellenőrzése: ismeretlen érték esetén "ures"."""
+        return ertek if ertek in ("ures", "osszes") else "ures"
+
+    def _sorok_megjelenitese(self, sorok, alaplista=False):
+        """Kiüríti a táblázatot, majd megjeleníti a megadott sorokat a Státusz
+        oszloppal együtt. Közös a keresés (találatok) és az alaplista ("összes
+        tétel" mód) számára, hogy a két megjelenítés ne térhessen el.
+
+        A táblázat a beszúrás idejére "befagyasztott" (Freeze), mert sok sornál
+        a soronkénti újrarajzolás lenne a lassú rész."""
+        self._tablazat_uritese()
+        if not sorok:
+            self.frissit_akadalymentesites(0)
+            return
+
+        statusz_ctx = self._statusz_kontextus()
+        if not statusz_ctx.dezi_olvashato:
+            self.SetStatusText(
+                "A dezideráta-jegyzék nem olvasható, ezért a "
+                "\u201eDeziderátában\u201d jelzés nem elérhető."
+            )
+        elif alaplista:
+            self._allapot_frissitese()
+        else:
+            self.SetStatusText(f"Keresés {len(self.adatok)} kötet adataiban")
+
+        self.tablazat.Freeze()
+        try:
+            for sor in sorok:
+                elsocsella = str(sor.get(self.oszlopok[0], ""))
+                sor_index = self.tablazat.InsertItem(
+                    self.tablazat.GetItemCount(), elsocsella
+                )
+                self._talalat_sorok.append(sor)
+                self.tablazat.SetItemData(sor_index, len(self._talalat_sorok) - 1)
+                for col_idx, col_name in enumerate(self.oszlopok[1:], start=1):
+                    self.tablazat.SetItem(
+                        sor_index, col_idx, str(sor.get(col_name, ""))
+                    )
+                # UTOLSÓ OSZLOP: Státusz (Állományban / Deziderátában)
+                self._statusz_beallitasa(sor_index, sor, statusz_ctx)
+        finally:
+            self.tablazat.Thaw()
+
+        self._alaplista_latszik = alaplista
+        self.frissit_akadalymentesites(len(sorok))
+
+    def _alapallapot_beallitasa(self, ujra=False):
+        """A táblázat alapállapota, amikor a keresőmező üres: a beállítástól
+        függően üres lista, vagy a betöltött adatbázis összes tétele. A lista
+        így a keresőmező függvénye: szöveg esetén a szűrt találatok, üres
+        mezőnél ez az alapállapot.
+
+        Ha a mezőben szöveg van (pl. új adatbázis betöltésekor), a táblázat
+        üres marad (mint korábban), a keresés az Enterrel indul.
+        `ujra`: akkor is újraépíti az alaplistát, ha az már látszik."""
+        van_szoveg = bool(self.kereso_mezo.GetValue().strip())
+        if self.inditasi_lista == "osszes" and self.adatok and not van_szoveg:
+            if ujra or not self._alaplista_latszik:
+                self._sorok_megjelenitese(self.adatok, alaplista=True)
+        else:
+            self._tablazat_uritese()
+            self.frissit_akadalymentesites(0)
+
+    def beallitasok_alkalmazasa(self, config):
+        """A főablak hívja a Beállítások mentése után, ha a kereső nyitva van.
+        Átveszi az indulási lista beállítását, és ha az adatbázis útvonala
+        megváltozott, megnyitja az újat.
+
+        Visszatérési érték: False, ha az új adatbázis megnyitása nem sikerült
+        (vagy a felhasználó elvetette); ilyenkor a hívó ne mentse el az új
+        útvonalat. A hibaüzenetet az _adatbazis_betoltese már megjelenítette."""
+        regi_mod = self.inditasi_lista
+        self.inditasi_lista = self._ervenyes_inditasi_lista(
+            config.get("kereso_inditasi_lista")
+        )
+        utvonal = config.get("kereso_json_utvonal", "")
+        # Üres útvonal nem zárja be a megnyitott adatbázist: csak a következő
+        # indításkor nem töltődik be semmi.
+        betoltes_kiserlet = bool(utvonal) and not azonos_utvonal(utvonal, self.json_utvonal)
+        sikeres = self._adatbazis_betoltese(utvonal) if betoltes_kiserlet else True
+        if self.inditasi_lista != regi_mod and not (betoltes_kiserlet and sikeres):
+            # (Sikeres betöltésnél az alapállapotot a betöltés már felépítette.)
+            self._alapallapot_beallitasa(ujra=True)
+            self.frissit_torles_gomb_allapot()
+        return sikeres
 
     def _sor_eredeti_dict(self, sor_index):
         """Visszaadja a táblázat adott sorához tartozó EREDETI forrás-dictet.
@@ -590,6 +693,7 @@ class KonyvtarnokKeresoApp(wx.Frame):
         self.Bind(wx.EVT_MENU, self.on_kilepes, menusor.kilepes)
         self.Bind(wx.EVT_MENU, self.on_open_help, menusor.help)
         self.Bind(wx.EVT_MENU, self.on_menu_deziderata_kezelo, menusor.deziderata_kezelo)
+        self.Bind(wx.EVT_MENU, self.on_beallitasok, menusor.beallitasok)
 
     # --- VISSZAVONÁS / MÉGIS ---
 
@@ -732,30 +836,41 @@ class KonyvtarnokKeresoApp(wx.Frame):
         self.tablazat.SetName(szoveg)
 
     def frissit_torles_gomb_allapot(self):
-        """Engedélyezi a törlés gombot, ha van szöveg a mezőben vagy van találat a táblázatban."""
+        """Engedélyezi a törlés gombot, ha van szöveg a mezőben vagy van találat a táblázatban.
+        "Összes tétel" módban a táblázat tartalma önmagában nem ok a törlésre
+        (az csak az alaplista), ott csak a mezőben lévő szöveg számít."""
         van_szoveg = bool(self.kereso_mezo.GetValue().strip())
-        van_talalat = self.tablazat.GetItemCount() > 0
+        van_talalat = self.tablazat.GetItemCount() > 0 and self.inditasi_lista != "osszes"
         self.btn_kereses_torlese.Enable(van_szoveg or van_talalat)
 
     def on_szoveg_valtozas(self, event):
-        """Ha a felhasználó kiüríti a keresőmezőt, a táblázat is kiürül, és frissül a törlés gomb."""
+        """Ha a felhasználó kiüríti a keresőmezőt, a táblázat az alapállapotba
+        kerül (üres lista vagy az összes tétel), és frissül a törlés gomb."""
         if not self.kereso_mezo.GetValue().strip():
-            self._tablazat_uritese()
-            self.frissit_akadalymentesites(0)
+            self._alapallapot_beallitasa()
         self.frissit_torles_gomb_allapot()
         event.Skip()
 
     def on_kereses_torlese(self, event):
         """Kiüríti a keresőmezőt és a találati táblázatot, majd fókuszba helyezi a mezőt."""
-        self.kereso_mezo.Clear()
-        self._tablazat_uritese()
-        self.frissit_akadalymentesites(0)
+        # ChangeValue: nem vált ki EVT_TEXT-et, így az alapállapot (összes tétel
+        # módban akár több ezer sor) csak egyszer épül fel.
+        self.kereso_mezo.ChangeValue("")
+        self._alapallapot_beallitasa()
         self.frissit_torles_gomb_allapot()
         self.btn_kereses_torlese.Enable(False)
         self.kereso_mezo.SetFocus()
 
     def on_kereses(self, event):
         """A keresés logikája gombnyomásra vagy Enterre (Pandas nélkül)."""
+        if (self.adatok is not None and self.inditasi_lista == "osszes"
+                and not self.kereso_mezo.GetValue().strip()):
+            # Üres mező + "összes tétel" mód: a lista már az alapállapotot mutatja
+            # (csak akkor építjük újra, ha valamiért nem az látszik).
+            self._alapallapot_beallitasa()
+            self.tablazat.SetFocus()
+            return
+
         self._tablazat_uritese()
 
         if self.adatok is None:
@@ -772,6 +887,11 @@ class KonyvtarnokKeresoApp(wx.Frame):
 
         keresett_szo = self.kereso_mezo.GetValue().strip().lower()
         if not keresett_szo:
+            if self.inditasi_lista == "osszes":
+                # Az adatbázis most, a felkínált megnyitással töltődött be, és a
+                # betöltés már az alaplistát építette fel.
+                self.tablazat.SetFocus()
+                return
             wx.MessageBox(
                 "Adja meg a keresendő kifejezést!",
                 "Figyelmeztetés",
@@ -821,40 +941,8 @@ class KonyvtarnokKeresoApp(wx.Frame):
             if all(any(szo_talalt(minta, ertek) for ertek in ertekek) for minta in szo_mintak):
                 szurt_adatok.append(sor)
 
-        if szurt_adatok:
-            talalatok_szama = len(szurt_adatok)
-            statusz_ctx = self._statusz_kontextus()
-            if statusz_ctx.dezi_olvashato:
-                self.SetStatusText(f"Keresés {len(self.adatok)} kötet adataiban")
-            else:
-                self.SetStatusText(
-                    "A dezideráta-jegyzék nem olvasható, ezért a "
-                    "\u201eDeziderátában\u201d jelzés nem elérhető."
-                )
-
-            for sor in szurt_adatok:
-                # Sor beszúrása a táblázatba
-                elsocsella = str(sor.get(self.oszlopok[0], ""))
-                sor_index = self.tablazat.InsertItem(
-                    self.tablazat.GetItemCount(), elsocsella
-                )
-                self._talalat_sorok.append(sor)
-                self.tablazat.SetItemData(sor_index, len(self._talalat_sorok) - 1)
-                for col_idx, col_name in enumerate(self.oszlopok[1:], start=1):
-                    self.tablazat.SetItem(
-                        sor_index, col_idx, str(sor.get(col_name, ""))
-                    )
-
-                # UTOLSÓ OSZLOP: Státusz (Állományban / Deziderátában)
-                self._statusz_beallitasa(sor_index, sor, statusz_ctx)
-
-            self.frissit_akadalymentesites(talalatok_szama)
-        else:
-            self.frissit_akadalymentesites(0)
-
-        if self.tablazat.GetItemCount() > 0:
-            for i in range(self.tablazat.GetItemCount()):
-                self.tablazat.Select(i, on=False)
+        # A találatok (vagy a 0 találat) megjelenítése a közös metódussal.
+        self._sorok_megjelenitese(szurt_adatok)
 
         self.btn_kereses_torlese.Enable(True)
         self.tablazat.SetFocus()
@@ -1189,6 +1277,10 @@ class KonyvtarnokKeresoApp(wx.Frame):
 
     def on_open_help(self, event):
         sugo_megnyitasa(self, 5)
+
+    def on_beallitasok(self, event):
+        # A főablak Beállítások ablaka a 3. (0-tól számolt) fülön: KönyvTárnok-kereső.
+        beallitasok_megnyitasa_gyermekbol(self, 3)
 
     def on_menu_deziderata_kezelo(self, event):
         if self.parent is not None and hasattr(self.parent, "on_deziderata"):

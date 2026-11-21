@@ -1,3 +1,4 @@
+import os
 import wx
 from constants import DEFAULT_LATHATO_OSZLOPOK, ELERHETO_OSZLOPOK
 from help import HelpNotebookDialog, sugo_megnyitasa
@@ -21,15 +22,30 @@ class BeallitasokDialog(wx.Dialog):
     # is működnek.
     ELERHETO_OSZLOPOK = ELERHETO_OSZLOPOK
 
-    def __init__(self, parent, config):
+    KERESO_INDITASI_OPCIOK = [
+        ("ures", "Üres lista"),
+        ("osszes", "A betöltött adatbázis összes tétele"),
+    ]
+
+    def __init__(self, parent, config, kezdo_ful=None):
         """A `config` a hívó által betöltött beállítás-szótár (load_settings()
         eredménye) - a dialógus maga nem olvassa újra a settings.json-t, így
         egyetlen forrásból dolgozik. A lathato_oszlopok és a tema kulcsot is
         ebből veszi.
+
+        A `kezdo_ful` a megnyitáskor kiválasztott fül sorszáma (0-tól számolva,
+        az AddPage-hívások sorrendjében): 0 Megjelenés, 1 Oszlopok a listában,
+        2 Mappák és elérési utak, 3 KönyvTárnok-kereső, 4 Frissítések. None vagy
+        érvénytelen szám esetén az első fül. Fül beszúrásakor/áthelyezésekor a
+        hívók (konyvtarnok_kereso.py, deziderata.py: on_beallitasok) számait kell
+        átírni.
         """
         super().__init__(parent, title="Beállítások", size=(600, 500), style=wx.DEFAULT_DIALOG_STYLE | wx.STAY_ON_TOP)
         self.lathato_oszlopok = config.get("lathato_oszlopok", DEFAULT_LATHATO_OSZLOPOK)
         self.aktiv_tema = config.get("tema", "rendszer")
+        # Az OK-nál ehhez viszonyítjuk, hogy a kereső-adatbázis útvonala
+        # megváltozott-e (csak a megváltozott, nem létező útvonalat utasítjuk el).
+        self._eredeti_kereso_utvonal = config.get("kereso_json_utvonal", "")
 
         fo_sizer = wx.BoxSizer(wx.VERTICAL)
 
@@ -142,15 +158,6 @@ class BeallitasokDialog(wx.Dialog):
         deziderata_box.Add(self.txt_deziderata, 1, wx.RIGHT, 5)
         deziderata_box.Add(btn_deziderata_talloz, 0)
 
-        # KönyvTárnok-kereső adatbázis útvonala
-        lbl_adatbazis = wx.StaticText(panel_mappak, label="KönyvTárnok-kereső adatbázis:")
-        adatbazis_box = wx.BoxSizer(wx.HORIZONTAL)
-        self.txt_adatbazis = wx.TextCtrl(panel_mappak, value=config.get("kereso_json_utvonal", ""))
-        btn_adatbazis_talloz = wx.Button(panel_mappak, label="Tallózás...")
-        btn_adatbazis_talloz.Bind(wx.EVT_BUTTON, lambda e: self._talloz_fajl(self.txt_adatbazis, "JSON fájl kiválasztása"))
-        adatbazis_box.Add(self.txt_adatbazis, 1, wx.RIGHT, 5)
-        adatbazis_box.Add(btn_adatbazis_talloz, 0)
-
         mappa_sizer.Add(lbl_pdf, 0, wx.ALL, 5)
         mappa_sizer.Add(pdf_box, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 10)
         mappa_sizer.Add(lbl_stat_pdf, 0, wx.ALL, 5)
@@ -161,12 +168,38 @@ class BeallitasokDialog(wx.Dialog):
         mappa_sizer.Add(allomanyjegyzek_box, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 10)
         mappa_sizer.Add(lbl_deziderata, 0, wx.ALL, 5)
         mappa_sizer.Add(deziderata_box, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 10)
-        mappa_sizer.Add(lbl_adatbazis, 0, wx.ALL, 5)
-        mappa_sizer.Add(adatbazis_box, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 10)
 
         panel_mappak.SetSizer(mappa_sizer)
 
-        # --- 4. FÜL: Frissítések ---
+        # --- 4. FÜL: KönyvTárnok-kereső ---
+        panel_kereso = self.panel_kereso = wx.Panel(self.notebook)
+        kereso_sizer = wx.BoxSizer(wx.VERTICAL)
+
+        lbl_adatbazis = wx.StaticText(panel_kereso, label="Adatbázis (JSON fájl):")
+        adatbazis_box = wx.BoxSizer(wx.HORIZONTAL)
+        self.txt_adatbazis = wx.TextCtrl(panel_kereso, value=self._eredeti_kereso_utvonal)
+        btn_adatbazis_talloz = wx.Button(panel_kereso, label="Tallózás...")
+        btn_adatbazis_talloz.Bind(wx.EVT_BUTTON, lambda e: self._talloz_fajl(self.txt_adatbazis, "JSON fájl kiválasztása"))
+        adatbazis_box.Add(self.txt_adatbazis, 1, wx.RIGHT, 5)
+        adatbazis_box.Add(btn_adatbazis_talloz, 0)
+
+        lbl_inditas = wx.StaticText(panel_kereso, label="Induláskor:")
+        self.choice_kereso_inditas = wx.Choice(
+            panel_kereso, choices=[nev for _, nev in self.KERESO_INDITASI_OPCIOK]
+        )
+        inditas_kulcsok = [k for k, _ in self.KERESO_INDITASI_OPCIOK]
+        akt_inditas = config.get("kereso_inditasi_lista", "ures")
+        self.choice_kereso_inditas.SetSelection(
+            inditas_kulcsok.index(akt_inditas) if akt_inditas in inditas_kulcsok else 0
+        )
+
+        kereso_sizer.Add(lbl_inditas, 0, wx.ALL, 10)
+        kereso_sizer.Add(self.choice_kereso_inditas, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 10)
+        kereso_sizer.Add(lbl_adatbazis, 0, wx.LEFT | wx.RIGHT | wx.TOP, 10)
+        kereso_sizer.Add(adatbazis_box, 0, wx.EXPAND | wx.ALL, 10)
+        panel_kereso.SetSizer(kereso_sizer)
+
+        # --- 5. FÜL: Frissítések ---
         panel_frissites = wx.Panel(self.notebook)
         frissites_sizer = wx.BoxSizer(wx.VERTICAL)
 
@@ -190,7 +223,11 @@ class BeallitasokDialog(wx.Dialog):
         self.notebook.AddPage(panel_tema, "Megjelenés")
         self.notebook.AddPage(panel_oszlopok, "Oszlopok a listában")
         self.notebook.AddPage(panel_mappak, "Mappák és elérési utak")
+        self.notebook.AddPage(panel_kereso, "KönyvTárnok-kereső")
         self.notebook.AddPage(panel_frissites, "Frissítések")
+
+        if isinstance(kezdo_ful, int) and 0 <= kezdo_ful < self.notebook.GetPageCount():
+            self.notebook.SetSelection(kezdo_ful)
 
         fo_sizer.Add(self.notebook, 1, wx.EXPAND | wx.ALL, 10)
 
@@ -200,6 +237,10 @@ class BeallitasokDialog(wx.Dialog):
         megse_gomb = wx.Button(self, wx.ID_CANCEL, label="Mégse")
         sugo_gomb = wx.Button(self, wx.ID_HELP, label="Súgó")
         sugo_gomb.Bind(wx.EVT_BUTTON, self.on_open_help)
+        # Az OK-t (gomb és Ctrl+S) mi kezeljük, hogy hibás adatbázis-útvonalnál
+        # a párbeszédablak nyitva maradjon.
+        ok_gomb.Bind(wx.EVT_BUTTON, self.on_ok)
+        self.Bind(wx.EVT_MENU, self.on_ok, id=wx.ID_OK)
 
         gomb_sizer.AddButton(ok_gomb)
         gomb_sizer.AddButton(megse_gomb)
@@ -219,6 +260,22 @@ class BeallitasokDialog(wx.Dialog):
         # A téma alkalmazása akkor történik, amikor már minden vezérlő létezik
         apply_theme(self, self.aktiv_tema)
         self.Centre()
+
+    def on_ok(self, event):
+        """Mentés előtti ellenőrzés: egy ÚJONNAN megadott, nem létező
+        adatbázisfájlt nem fogadunk el (az útvonal változatlan, de időközben
+        eltűnt értéke viszont nem akadályozza a többi beállítás mentését)."""
+        utvonal = self.GetKeresoJsonUtvonal()
+        if (utvonal and not os.path.isfile(utvonal)
+                and not azonos_utvonal(utvonal, self._eredeti_kereso_utvonal)):
+            wx.MessageBox(
+                f"A megadott adatbázisfájl nem található:\n{utvonal}",
+                "Hibás elérési út", wx.OK | wx.ICON_WARNING, self,
+            )
+            self.notebook.SetSelection(self.notebook.FindPage(self.panel_kereso))
+            self.txt_adatbazis.SetFocus()
+            return
+        self.EndModal(wx.ID_OK)
 
     def on_tema_valtas_elo_nezet(self, event):
         uj_tema = self.GetKivalasztottTema()
@@ -264,9 +321,12 @@ class BeallitasokDialog(wx.Dialog):
         dlg.Destroy()
 
     def _talloz_fajl(self, text_ctrl, uzenet):
+        aktualis = text_ctrl.GetValue().strip()
+        kezdo_mappa = os.path.dirname(aktualis)
         dlg = wx.FileDialog(
             self, uzenet,
-            defaultFile=text_ctrl.GetValue(),
+            defaultDir=kezdo_mappa if os.path.isdir(kezdo_mappa) else "",
+            defaultFile=os.path.basename(aktualis),
             wildcard="JSON fájlok (*.json)|*.json|Minden fájl (*.*)|*.*",
             style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST,
         )
@@ -279,6 +339,12 @@ class BeallitasokDialog(wx.Dialog):
 
     def GetKeresoJsonUtvonal(self):
         return self.txt_adatbazis.GetValue().strip()
+
+    def GetKeresoInditasiLista(self):
+        """A kereső üres-mezős listaállapotának kulcsa ("ures" | "osszes")."""
+        idx = self.choice_kereso_inditas.GetSelection()
+        kulcsok = [k for k, _ in self.KERESO_INDITASI_OPCIOK]
+        return kulcsok[idx] if 0 <= idx < len(kulcsok) else "ures"
 
     def GetKivalasztottAllomanyDir(self):
         return self.txt_allomanyjegyzek.GetValue().strip()
@@ -293,3 +359,32 @@ class BeallitasokDialog(wx.Dialog):
 
     def on_open_help(self, event):
         sugo_megnyitasa(self, 6)
+
+
+# ==============================================================================
+# SEGÉDFÜGGVÉNYEK: a Beállítások megnyitása a gyermekablakokból
+# ==============================================================================
+def azonos_utvonal(a, b):
+    """Igaz, ha a két (nem üres) elérési út ugyanarra a fájlra mutat (az
+    elválasztó-karakter, a relatív/abszolút alak és - Windowson - a kis- és
+    nagybetű különbsége nem számít)."""
+    if not a or not b:
+        return False
+    return os.path.normcase(os.path.abspath(a)) == os.path.normcase(os.path.abspath(b))
+
+
+def beallitasok_megnyitasa_gyermekbol(ablak, ful):
+    """A gyermekablak (kereső, Dezideráta) kéri a főablaktól a Beállítások
+    megnyitását a `ful` sorszámú fülön (0-tól számolva, lásd a
+    BeallitasokDialog.__init__ docstringjét). A főablak kezeli a mentést és az
+    alkalmazást is, ezért a párbeszédablak nem itt jön létre."""
+    foablak = ablak.GetParent()
+    megnyito = getattr(foablak, "beallitasok_megnyitasa", None)
+    if megnyito is None:
+        # Önálló futás (nincs főablak): nincs mit megnyitni.
+        wx.MessageBox(
+            "A beállítások csak a főablakból érhetők el, a program önálló futtatásakor nem.",
+            "Beállítások", wx.OK | wx.ICON_INFORMATION, ablak,
+        )
+        return
+    megnyito(ful=ful, szulo=ablak)

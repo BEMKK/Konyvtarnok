@@ -1201,12 +1201,21 @@ class Konyvtarnok(wx.Frame):
         event.Skip()
 
     def OnBeallitasok(self, event):
+        self.beallitasok_megnyitasa()
+
+    def beallitasok_megnyitasa(self, ful=None, szulo=None):
+        """Megnyitja a Beállítások ablakot. A `ful` a megnyitandó fül sorszáma
+        (0-tól, lásd BeallitasokDialog.__init__); a `szulo` a hívó ablak: a
+        gyermekablakok (kereső, Dezideráta) innen kérik a megnyitást, hogy a
+        mentés és az alkalmazás egy helyen, a főablakban történjen, a bezárás
+        után pedig a fókusz a hívó ablakba térjen vissza."""
+        szulo = szulo or self
         config = load_settings()
         # A dialógus a kapott config-ból dolgozik, maga nem olvassa újra a
         # settings.json-t. Az oszlopoknál a lista jelenlegi állapota az irányadó
         # (ez eltérhet a fájltól, pl. ha egy korábbi mentés nem sikerült).
         config["lathato_oszlopok"] = list(self.lista.aktiv_oszlopok)
-        dlg = BeallitasokDialog(self, config)
+        dlg = BeallitasokDialog(szulo, config, kezdo_ful=ful)
         if dlg.ShowModal() == wx.ID_OK:
             uj_oszlopok = dlg.GetKivalasztottOszlopok()
             uj_tema = dlg.GetKivalasztottTema()
@@ -1230,8 +1239,18 @@ class Konyvtarnok(wx.Frame):
             config["last_katalogus_dir"] = dlg.GetKivalasztottKatalogusDir()
             config["last_allomany_dir"] = dlg.GetKivalasztottAllomanyDir()
             config["last_deziderata_dir"] = dlg.GetKivalasztottDeziderataDir()
+            regi_kereso_utvonal = config.get("kereso_json_utvonal", "")
             config["kereso_json_utvonal"] = dlg.GetKeresoJsonUtvonal()
+            config["kereso_inditasi_lista"] = dlg.GetKeresoInditasiLista()
             config["update_frequency"] = dlg.GetUpdateFrequency()
+
+            # Nyitott keresőnél az új adatbázist MENTÉS ELŐTT megpróbáljuk
+            # megnyitni: ha nem sikerül (sérült fájl, a felhasználó elveti), a
+            # hibás útvonal nem kerül a settings.json-ba. A hibaüzenetet a
+            # kereső maga jeleníti meg.
+            if self.konyvtarnok_kereso_frame:
+                if not self.konyvtarnok_kereso_frame.beallitasok_alkalmazasa(config):
+                    config["kereso_json_utvonal"] = regi_kereso_utvonal
             mentve = save_settings(config)
 
             if tema_valtozott:
@@ -1249,7 +1268,7 @@ class Konyvtarnok(wx.Frame):
                     "A beállításokat nem sikerült elmenteni a settings.json fájlba "
                     "Lehetséges, hogy a programnak nincs írási jogosultsága a mappában, vagy a lemez megtelt.\n\n"
                     "A módosítások csak a program bezárásáig érvényesek.",
-                    "Mentési hiba", wx.OK | wx.ICON_ERROR, self,
+                    "Mentési hiba", wx.OK | wx.ICON_ERROR, szulo,
                 )
         dlg.Destroy()
 

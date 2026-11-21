@@ -121,6 +121,7 @@ class DeziderataMenuBar(wx.MenuBar):
         self.find = set_menu.Append(wx.ID_ANY, '&Keresés a gyűjteményekben\tCTRL+Shift+F', 'Közös keresés az állományban és a deziderátában')
         self.konyvtarnok_kereso_item = set_menu.Append(wx.ID_ANY, '&KönyvTárnok-kereső\tCTRL+SHIFT+K', 'KönyvTárnok kereső')
         set_menu.AppendSeparator()
+        self.beallitasok = set_menu.Append(wx.ID_ANY, '&Beállítások\tCTRL+B', 'Beállítások')
 
         self.Append(set_menu, '&Eszközök')
 
@@ -155,6 +156,8 @@ class KeresoMenuBar(wx.MenuBar):
 
         set_menu = wx.Menu()
         self.deziderata_kezelo = set_menu.Append(wx.ID_ANY, '&Dezideráta-kezelő\tCTRL+D', 'Dezideráta jegyzék kezelése')
+        set_menu.AppendSeparator()
+        self.beallitasok = set_menu.Append(wx.ID_ANY, '&Beállítások\tCTRL+B', 'Beállítások')
 
         self.Append(set_menu, '&Eszközök')
 

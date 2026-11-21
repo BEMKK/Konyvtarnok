@@ -8,6 +8,7 @@ import wx
 from config_manager import load_settings, save_settings
 from theme_manager import apply_theme_from_settings
 from help import HelpNotebookDialog, sugo_megnyitasa
+from settings import beallitasok_megnyitasa_gyermekbol
 from data_manager import (
     load_hmac_json,
     save_hmac_json,
@@ -317,6 +318,7 @@ class Deziderata(wx.Frame):
         self.Bind(wx.EVT_MENU, self.on_kereses, menusor.find)
         self.Bind(wx.EVT_MENU, self.on_open_help, menusor.help)
         self.Bind(wx.EVT_MENU, self.on_konyvtarnok_kereso, menusor.konyvtarnok_kereso_item)
+        self.Bind(wx.EVT_MENU, self.on_beallitasok, menusor.beallitasok)
 
         self.Bind(wx.EVT_MENU_OPEN, self.OnMenuNyitas)
 
@@ -1323,6 +1325,12 @@ class Deziderata(wx.Frame):
 
     def on_open_help(self, event):
         sugo_megnyitasa(self, 4)
+
+    def on_beallitasok(self, event):
+        # A főablak Beállítások ablaka a 2. (0-tól számolt) fülön: Mappák és
+        # elérési utak (itt van a dezideráta import/export mappája). A
+        # Dezideráta-kezelőnek még nincs saját füle.
+        beallitasok_megnyitasa_gyermekbol(self, 2)
 
     def on_konyvtarnok_kereso(self, event):
         szulo = self.GetParent()
