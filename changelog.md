@@ -4,6 +4,18 @@ A projekten végrehajtott lényegi változtatások dokumentációja.
 
 
 
+## [4.1.0] - 2026-11-21
+
+- A beállításokban külön mező a katalóguslap, valamint az állomány- és dezideráta-jegyzék mappájának.
+- A súgó a Beállítások ablakból, a Dezideráta-kezelőből és a KönyvTárnok-keresőből is megnyitható.
+- Külön menüpont és gyorsbillentyű a billentyűparancsok listájának megnyitásához.
+- A KönyvTárnok-kereső által megnyitandó adatbázis a beállításokban is megadható.
+- A beállítások ablak szélesebb lett a megnövekedett helyigény miatt.
+- A frissítések letiltására jelölőnégyzet helyett a gyakoriság Soha opciója szolgál.
+- A licenc szövege megtekinthető a programon belül menüből és a névjegy ablakból is.
+
+
+
 ## [4.0.0] - 2026-11-18
 
 - Könyvek kiválasztása és hiányzó adatok pótlási lehetősége JSON import esetén.

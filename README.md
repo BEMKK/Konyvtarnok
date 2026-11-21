@@ -1,6 +1,6 @@
 # KönyvTárnok
 
-> **Verzió:** 4.0.0
+> **Verzió:** 4.1.0
 
 > **Támogatott operációs rendszer:** Windows 10 és 11 (64 bit)
 

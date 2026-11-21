@@ -155,7 +155,8 @@ class UjdonsagokDialog(wx.Dialog):
             "Külön menüpont és gyorsbillentyű a billentyűparancsok listájának megnyitásához.",
             "A KönyvTárnok-kereső által megnyitandó adatbázis a beállításokban is megadható.",
             "A beállítások ablak szélesebb lett a megnövekedett helyigény miatt.",
-            "A frissítések letiltására jelölőnégyzet helyett a gyakoriság Soha opciója szolgál."
+            "A frissítések letiltására jelölőnégyzet helyett a gyakoriság Soha opciója szolgál.",
+            "A licencszerződés szövege elérhető a programon belül menüből és a Névjegy ablakból."
         ]
 
         szoveg_box = wx.BoxSizer(wx.VERTICAL)
