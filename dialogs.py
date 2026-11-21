@@ -150,13 +150,9 @@ class UjdonsagokDialog(wx.Dialog):
         main_sizer.Add(wx.StaticLine(self), 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 15)
         
         ujdonsagok_lista = [
-            "A beállításokban külön mező a katalóguslapok, valamint az Állomány- és Dezideráta-jegyzék alapértelmezett mappájának.",
-            "A súgó a Beállítások ablakból, a Dezideráta-kezelőből és a KönyvTárnok-keresőből is megnyitható.",
-            "Külön menüpont és gyorsbillentyű a billentyűparancsok listájának megnyitásához.",
-            "A KönyvTárnok-kereső által megnyitandó adatbázis a beállításokban is megadható.",
-            "A beállítások ablak szélesebb lett a megnövekedett helyigény miatt.",
-            "A frissítések letiltására jelölőnégyzet helyett a gyakoriság Soha opciója szolgál.",
-            "A licencszerződés szövege elérhető a programon belül menüből és a Névjegy ablakból."
+            "A Dezideráta-kezelő és a KönyvTárnok-kereső egymásból is megnyitható.",
+            "A KönyvTárnok-keresőben lehetőség van az adatbázis összes tételének listázására a Beállítások KönyvTárnok-kereső fülén.",
+            "Ugyanitt érhető el az adatbázis útvonalának megadása."
         ]
 
         szoveg_box = wx.BoxSizer(wx.VERTICAL)
