@@ -7,6 +7,60 @@ from constants import APP_NAME, APP_VERSION
 from export_manager import export_konyv_pdf, get_biztonsagos_pdf_fajlnev
 from theme_manager import apply_theme_from_settings
 
+def _eroforras_utvonal(fajlnev):
+    """Csomagolt (PyInstaller) és forrásból futtatott környezetben is megkeresi a fájlt."""
+    helyek = [
+        getattr(sys, '_MEIPASS', None),
+        os.path.dirname(os.path.abspath(__file__)),
+        os.path.dirname(os.path.abspath(sys.argv[0])) if sys.argv and sys.argv[0] else None,
+    ]
+    for hely in helyek:
+        if hely:
+            ut = os.path.join(hely, fajlnev)
+            if os.path.exists(ut):
+                return ut
+    return None
+
+
+class LicencDialog(wx.Dialog):
+    """Licencinformációk megjelenítése görgethető, csak olvasható mezőben."""
+    def __init__(self, parent, szoveg):
+        super().__init__(parent, title="Licencszerződés",
+                         size=(600, 450),
+                         style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER | wx.STAY_ON_TOP)
+        self.SetMinSize((420, 300))
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        self.szoveg_mezo = wx.TextCtrl(self, value=szoveg,
+                                       style=wx.TE_MULTILINE | wx.TE_READONLY)
+        sizer.Add(self.szoveg_mezo, 1, wx.EXPAND | wx.ALL, 10)
+        ok = wx.Button(self, wx.ID_OK, "&OK")
+        ok.SetDefault()
+        sizer.Add(ok, 0, wx.ALIGN_CENTER | wx.BOTTOM, 10)
+        self.SetSizer(sizer)
+        apply_theme_from_settings(self)
+        self.CentreOnParent()
+        self.szoveg_mezo.SetFocus()
+
+def licenc_megjelenitese(parent):
+    """Betölti a license.txt-t és megjeleníti a licencablakot.
+    Névjegy gombból és menüből is ez hívandó."""
+    licenc_ut = _eroforras_utvonal("license.txt")
+    szoveg = None
+    if licenc_ut:
+        try:
+            with open(licenc_ut, "r", encoding="utf-8") as f:
+                szoveg = f.read()
+        except OSError as e:
+            logging.error(f"Licencfájl nem olvasható: {e}")
+    else:
+        logging.warning("A license.txt nem található.")
+    if not szoveg:
+        szoveg = ("A licencfájl nem található.\n\n"
+                  "A GNU Általános Nyilvános Licenc 3. verziójának teljes szövege itt olvasható:\n"
+                  "https://www.gnu.org/licenses/gpl-3.0.html")
+    with LicencDialog(parent, szoveg) as dlg:
+        dlg.ShowModal()
+
 class NevjegyDialog(wx.Dialog):
     """Saját Névjegy párbeszédablak wx.Dialog alapokon."""
     def __init__(self, parent=None):
@@ -48,16 +102,34 @@ class NevjegyDialog(wx.Dialog):
         fejleszto_label = wx.StaticText(self, label="© 2026 KönyvTárnok")
         sizer.Add(fejleszto_label, 0, wx.ALIGN_CENTER | wx.BOTTOM, 4)
         
-        ok_gomb = wx.Button(self, id=wx.ID_OK, label="OK")
+        licenc_label = wx.StaticText(
+            self,
+            label=("A KönyvTárnok nyílt forráskódú szoftver, a Free Software Foundation által "
+                   "közzétett GNU General Public License 3.0 feltételei "
+                   "szerint terjeszthető és módosítható. A program szavatosság nélkül "
+                   "kerül terjesztésre.")
+        )
+        licenc_label.Wrap(380)
+        sizer.Add(licenc_label, 0, wx.ALIGN_CENTER | wx.LEFT | wx.RIGHT | wx.BOTTOM, 15)
 
-        # Téma alkalmazása Realize/Hozzáadás után, de megjelenítés előtt
+        ok_gomb = wx.Button(self, id=wx.ID_OK, label="&OK")
+        ok_gomb.SetDefault()
+        licenc_gomb = wx.Button(self, label="&Licencszerződés")
+        licenc_gomb.Bind(wx.EVT_BUTTON, self.on_licenc)
+
+        gomb_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        gomb_sizer.Add(ok_gomb, 0, wx.RIGHT, 8)
+        gomb_sizer.Add(licenc_gomb, 0)
+        sizer.Add(gomb_sizer, 0, wx.ALIGN_CENTER | wx.BOTTOM, 20)
+
+        # Téma alkalmazása a widgetek felépítése után, de megjelenítés előtt
         apply_theme_from_settings(self)
 
-        sizer.Add(ok_gomb, 0, wx.ALIGN_CENTER | wx.BOTTOM, 20)
-        
-        self.SetSizer(sizer)
-        
+        self.SetSizerAndFit(sizer)
         self.Centre()
+
+    def on_licenc(self, event):
+        licenc_megjelenitese(self)
 
 class UjdonsagokDialog(wx.Dialog):
     def __init__(self, parent=None):
@@ -78,10 +150,9 @@ class UjdonsagokDialog(wx.Dialog):
         main_sizer.Add(wx.StaticLine(self), 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 15)
         
         ujdonsagok_lista = [
-            "A beállításokban külön mező a katalóguslapok alapértelmezett mappájának megadására.",
+            "A beállításokban külön mező a katalóguslapok, valamint az Állomány- és Dezideráta-jegyzék alapértelmezett mappájának.",
             "A súgó a Beállítások ablakból, a Dezideráta-kezelőből és a KönyvTárnok-keresőből is megnyitható.",
             "Külön menüpont és gyorsbillentyű a billentyűparancsok listájának megnyitásához.",
-            "A Dezideráta és ÁLlományjegyzék mappája mostantól külön-külön is megadható a Beállításokban.",
             "A KönyvTárnok-kereső által megnyitandó adatbázis a beállításokban is megadható.",
             "A beállítások ablak szélesebb lett a megnövekedett helyigény miatt.",
             "A frissítések letiltására jelölőnégyzet helyett a gyakoriság Soha opciója szolgál."
@@ -105,7 +176,7 @@ class UjdonsagokDialog(wx.Dialog):
 
         # Gomb elhelyezése
         btn_sizer = wx.StdDialogButtonSizer()
-        ok_gomb = wx.Button(self, id=wx.ID_OK, label="OK")
+        ok_gomb = wx.Button(self, id=wx.ID_OK, label="&OK")
         ok_gomb.SetDefault()
         btn_sizer.AddButton(ok_gomb)
         

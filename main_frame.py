@@ -6,7 +6,7 @@ import json
 import logging
 from contextlib import contextmanager
 from constants import APP_TITLE, MEZO_DEFINICIOK
-from dialogs import NevjegyDialog, UjdonsagokDialog, FajlutkozesDialog, exportal_egy_konyv, JsonImportValasztoDialog
+from dialogs import NevjegyDialog, UjdonsagokDialog, FajlutkozesDialog, exportal_egy_konyv, JsonImportValasztoDialog, licenc_megjelenitese
 from kereso import KeresoDialog
 from settings import BeallitasokDialog
 from konyvdialogs import KonyvReszletekDialog, KonyvSzerkesztoDialog
@@ -180,6 +180,7 @@ class Konyvtarnok(wx.Frame):
         self.Bind(wx.EVT_MENU, self.on_billentyuparancsok, menusor.billentyu)
         self.Bind(wx.EVT_MENU, self.OnAbout, id=wx.ID_ABOUT)
         self.Bind(wx.EVT_MENU, self.OnUjdonsagok, menusor.Ujdonsagok)
+        self.Bind(wx.EVT_MENU, self.OnLicenc, menusor.licenc)
         self.Bind(wx.EVT_MENU, self.OnFrissites, menusor.frissites)
 
         self.Bind(wx.EVT_MENU, lambda e: self.kereso_ctrl.SetFocus(), id=id_kereso_fokusz)
@@ -1342,3 +1343,6 @@ class Konyvtarnok(wx.Frame):
 
     def on_billentyuparancsok(self, event):
         sugo_megnyitasa(self, 8)
+
+    def OnLicenc(self, event):
+        licenc_megjelenitese(self)

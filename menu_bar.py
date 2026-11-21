@@ -74,6 +74,7 @@ class MenuBar(wx.MenuBar):
         self.frissites = help_menu.Append(wx.ID_ANY, '&Frissítés ellenőrzése...\tCTRL+U', 'Új verzió keresése a GitHub-on')
         help_menu.AppendSeparator()
         self.Ujdonsagok = help_menu.Append(wx.ID_ANY, '&Újdonságok\tCTRL+SHIFT+U', 'Megjeleníti az aktuális verzió újdonságait')
+        self.licenc = help_menu.Append(wx.ID_ANY, '&Licencszerződés', 'Megjeleníti a program licencfeltételeit')
         self.nevjegy = help_menu.Append(wx.ID_ABOUT, '&Névjegy\tCTRL+SHIFT+N', 'Megjeleníti a névjegy ablakot')
 
         self.Append(help_menu, '&Súgó')
