@@ -1215,9 +1215,14 @@ class Konyvtarnok(wx.Frame):
         # settings.json-t. Az oszlopoknál a lista jelenlegi állapota az irányadó
         # (ez eltérhet a fájltól, pl. ha egy korábbi mentés nem sikerült).
         config["lathato_oszlopok"] = list(self.lista.aktiv_oszlopok)
+        # Ugyanez a Dezideráta-kezelőnél: ha nyitva van, a lista jelenlegi
+        # oszlopai az irányadók; egyébként a settings.json értéke.
+        if self.deziderata_frame:
+            config["deziderata_lathato_oszlopok"] = list(self.deziderata_frame.lathato_kulcsok)
         dlg = BeallitasokDialog(szulo, config, kezdo_ful=ful)
         if dlg.ShowModal() == wx.ID_OK:
             uj_oszlopok = dlg.GetKivalasztottOszlopok()
+            uj_dez_oszlopok = dlg.GetKivalasztottDeziderataOszlopok()
             uj_tema = dlg.GetKivalasztottTema()
 
             # Csak azt alkalmazzuk, ami ténylegesen változott: a téma
@@ -1233,12 +1238,18 @@ class Konyvtarnok(wx.Frame):
                     self.lista.SetAktivOszlopok(uj_oszlopok)
 
             config["lathato_oszlopok"] = uj_oszlopok
+            config["deziderata_lathato_oszlopok"] = uj_dez_oszlopok
             config["tema"] = uj_tema
             config["last_pdf_dir"] = dlg.GetKivalasztottPdfDir()
             config["last_stat_pdf_dir"] = dlg.GetKivalasztottStatPdfDir()
             config["last_katalogus_dir"] = dlg.GetKivalasztottKatalogusDir()
             config["last_allomany_dir"] = dlg.GetKivalasztottAllomanyDir()
             config["last_deziderata_dir"] = dlg.GetKivalasztottDeziderataDir()
+            # A nyitott Dezideráta-kezelő listája azonnal az új oszlopokat
+            # mutatja (a fókusz, a kijelölés és a görgetés megmarad; ha az
+            # oszlopok nem változtak, a metódus nem csinál semmit).
+            if self.deziderata_frame:
+                self.deziderata_frame.oszlopok_ujraepitese(config)
             regi_kereso_utvonal = config.get("kereso_json_utvonal", "")
             config["kereso_json_utvonal"] = dlg.GetKeresoJsonUtvonal()
             config["kereso_inditasi_lista"] = dlg.GetKeresoInditasiLista()

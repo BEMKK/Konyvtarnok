@@ -3,7 +3,7 @@ import os as _os
 import json
 import logging
 
-from constants import DEFAULT_LATHATO_OSZLOPOK
+from constants import DEFAULT_LATHATO_OSZLOPOK, DEFAULT_DEZIDERATA_LATHATO_OSZLOPOK
 # Az alkalmazás alapmappájának (exe melletti, ill. szkript-mappa)
 # meghatározása az utils.py-ba került, mert ezt korábban a
 # config_manager.py, a data_manager.py, a deziderata.py és a main.py
@@ -15,6 +15,8 @@ _BASE_DIR = alkalmazas_alapmappa()
 SETTINGS_FILE = _os.path.join(_BASE_DIR, "settings.json")
 DEFAULT_CONFIG = {
     "lathato_oszlopok": list(DEFAULT_LATHATO_OSZLOPOK),
+    # A Dezideráta-kezelő listájában látható oszlopok (a "cim" mindig látszik).
+    "deziderata_lathato_oszlopok": list(DEFAULT_DEZIDERATA_LATHATO_OSZLOPOK),
     "tema": "rendszer",
     "last_allomany_dir": "",
     "last_deziderata_dir": "",

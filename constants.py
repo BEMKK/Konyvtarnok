@@ -1,5 +1,5 @@
 APP_NAME = "KönyvTárnok"
-APP_VERSION = "4.1.0"
+APP_VERSION = "4.2.0"
 APP_STAGE = ""
 APP_TITLE = f"{APP_NAME} – Állománykezelő"
 # A különálló ablakok (programrészek) címe. EZ AZ EGYETLEN HELY, ahol definiálva van.
@@ -177,3 +177,17 @@ DEZIDERATA_OSZLOP_ADATOK = {
     "status":          (130, 1.5),
 }
 DEZIDERATA_OSZLOP_KULCSOK = list(DEZIDERATA_OSZLOP_ADATOK)
+
+# A dezideráta listájában alapértelmezetten megjelenő oszlopok (kulcsok). A
+# "cim" mindig látszik (a lista 0. oszlopa és a gyorskeresés is erre épül).
+# Alapértelmezés: minden oszlop, hogy a meglévő felhasználóknál ne változzon
+# a nézet. EZ AZ EGYETLEN HELY, ahol ez a lista definiálva van (lásd a
+# config_manager.py, a deziderata.py és a settings.py hivatkozásait).
+DEFAULT_DEZIDERATA_LATHATO_OSZLOPOK = list(DEZIDERATA_OSZLOP_KULCSOK)
+
+# A beállítások ablak dezideráta-oszlopválasztójának (kulcs, felirat) párjai;
+# a felirat megegyezik a lista tényleges oszlopfejlécével.
+_DEZ_FELIRATOK = dict(DEZIDERATA_MEZO_DEFINICIOK)
+DEZIDERATA_ELERHETO_OSZLOPOK = [
+    (k, _DEZ_FELIRATOK[k].rstrip(":")) for k in DEZIDERATA_OSZLOP_KULCSOK
+]

@@ -26,6 +26,7 @@ from data_manager import (
 )
 from dialogs import JsonImportValasztoDialog
 from constants import (
+    DEFAULT_DEZIDERATA_LATHATO_OSZLOPOK,
     DEZIDERATA_APP_TITLE,
     DEZIDERATA_MEZO_DEFINICIOK,
     DEZIDERATA_OSZLOP_ADATOK,
@@ -81,6 +82,18 @@ def katalogus_oszlop_definiciok():
     feliratok = dict(DEZIDERATA_MEZO_DEFINICIOK)
     return {k: (feliratok[k].rstrip(":"), LISTA_OSZLOP_ADATOK[k][0])
             for k in LISTA_OSZLOP_KULCSOK}
+
+
+def lathato_oszlop_kulcsok(config):
+    """A dezideráta listájában megjelenő oszlopok kulcsai a beállításokból,
+    a LISTA_OSZLOP_KULCSOK sorrendjében. A "cim" mindig szerepel (ez a lista
+    0. oszlopa); ismeretlen kulcsot és hibás (nem lista) értéket figyelmen
+    kívül hagyunk, utóbbinál az alapértelmezés érvényes."""
+    kert = config.get("deziderata_lathato_oszlopok",
+                      DEFAULT_DEZIDERATA_LATHATO_OSZLOPOK)
+    if not isinstance(kert, (list, tuple)):
+        kert = DEFAULT_DEZIDERATA_LATHATO_OSZLOPOK
+    return [k for k in LISTA_OSZLOP_KULCSOK if k == "cim" or k in kert]
 
 
 def lista_ertek(item, kulcs):
@@ -277,17 +290,12 @@ class Deziderata(wx.Frame):
         # --- Lista (táblázat) ---
         self.list = wx.ListCtrl(panel, style=wx.LC_REPORT | wx.BORDER_SUNKEN)
 
-        # A táblázat oszlopfejléceit a constants.DEZIDERATA_MEZO_DEFINICIOK
-        # feliratkészletéből származtatjuk (a meződefiníció végén álló
-        # kettőspontot levágva), ahelyett hogy itt egy második, kézzel
-        # karbantartott listát tartanánk ugyanezekre a feliratokra - korábban
-        # ez a két lista egymástól függetlenül létezett, ezért egy feliratot
-        # csak az egyik helyen átnevezve a kettő csendben szétcsúszott volna.
-        mezo_feliratok = dict(DEZIDERATA_MEZO_DEFINICIOK)
-        columns = [mezo_feliratok[kulcs].rstrip(":") for kulcs in LISTA_OSZLOP_KULCSOK]
-
-        for idx, (kulcs, col) in enumerate(zip(LISTA_OSZLOP_KULCSOK, columns)):
-            self.list.InsertColumn(idx, col, width=LISTA_OSZLOP_ADATOK[kulcs][0])
+        # A látható oszlopok a beállításokból jönnek (lásd
+        # lathato_oszlop_kulcsok); a fejlécek felirata a
+        # constants.DEZIDERATA_MEZO_DEFINICIOK-ból származik (lásd
+        # _oszlopok_felepitese).
+        self.lathato_kulcsok = lathato_oszlop_kulcsok(load_settings())
+        self._oszlopok_felepitese()
 
         # Átméretezéskor a főlistához hasonlóan elosztjuk a többletszélességet
         self.list.Bind(wx.EVT_SIZE, self.on_lista_atmeretezes)
@@ -711,6 +719,34 @@ class Deziderata(wx.Frame):
         finally:
             self._lista_helyzet_visszaallitasa(allapot, erintett_idk)
 
+    def _oszlopok_felepitese(self):
+        """A lista oszlopainak (újra)építése a self.lathato_kulcsok alapján.
+        A fejléceket a constants.DEZIDERATA_MEZO_DEFINICIOK feliratkészletéből
+        származtatjuk (a végi kettőspontot levágva), ahelyett hogy itt egy
+        második, kézzel karbantartott listát tartanánk ugyanezekre a
+        feliratokra."""
+        mezo_feliratok = dict(DEZIDERATA_MEZO_DEFINICIOK)
+        self.list.DeleteAllColumns()
+        for idx, kulcs in enumerate(self.lathato_kulcsok):
+            self.list.InsertColumn(
+                idx, mezo_feliratok[kulcs].rstrip(":"),
+                width=LISTA_OSZLOP_ADATOK[kulcs][0],
+            )
+
+    def oszlopok_ujraepitese(self, config=None):
+        """A látható oszlopok újraolvasása a beállításokból és a lista
+        újraépítése (a fókusz, a kijelölés és a görgetés megmarad). A főablak
+        hívja a Beállítások mentése után, ha a Dezideráta-kezelő nyitva van."""
+        if config is None:
+            config = load_settings()
+        uj_kulcsok = lathato_oszlop_kulcsok(config)
+        if uj_kulcsok == self.lathato_kulcsok:
+            return
+        with self._lista_helyzet_megtartasa():
+            self.lathato_kulcsok = uj_kulcsok
+            self._oszlopok_felepitese()
+            self.refresh_list()
+
     def on_lista_atmeretezes(self, event):
         event.Skip()
         self.IgazitOszlopSzelesseg()
@@ -723,11 +759,11 @@ class Deziderata(wx.Frame):
         vízszintesen görgethető."""
         szerel_szelesseg = (self.list.GetClientSize().width
                             - wx.SystemSettings.GetMetric(wx.SYS_VSCROLL_X))
-        osszes_alap = sum(LISTA_OSZLOP_ADATOK[k][0] for k in LISTA_OSZLOP_KULCSOK)
-        osszes_suly = sum(LISTA_OSZLOP_ADATOK[k][1] for k in LISTA_OSZLOP_KULCSOK)
+        osszes_alap = sum(LISTA_OSZLOP_ADATOK[k][0] for k in self.lathato_kulcsok)
+        osszes_suly = sum(LISTA_OSZLOP_ADATOK[k][1] for k in self.lathato_kulcsok)
 
         maradek_hely = max(szerel_szelesseg - osszes_alap, 0)
-        for i, kulcs in enumerate(LISTA_OSZLOP_KULCSOK):
+        for i, kulcs in enumerate(self.lathato_kulcsok):
             alap, suly = LISTA_OSZLOP_ADATOK[kulcs]
             plusz = int(maradek_hely * (suly / osszes_suly))
             self.list.SetColumnWidth(i, alap + plusz)
@@ -745,7 +781,7 @@ class Deziderata(wx.Frame):
         try:
             self.list.DeleteAllItems()
             for item in self.items:
-                ertekek = [lista_ertek(item, k) for k in LISTA_OSZLOP_KULCSOK]
+                ertekek = [lista_ertek(item, k) for k in self.lathato_kulcsok]
                 index = self.list.InsertItem(self.list.GetItemCount(), ertekek[0])
                 for oszlop, ertek in enumerate(ertekek[1:], start=1):
                     self.list.SetItem(index, oszlop, ertek)
@@ -1327,9 +1363,8 @@ class Deziderata(wx.Frame):
         sugo_megnyitasa(self, 4)
 
     def on_beallitasok(self, event):
-        # A főablak Beállítások ablaka a 2. (0-tól számolt) fülön: Mappák és
-        # elérési utak (itt van a dezideráta import/export mappája). A
-        # Dezideráta-kezelőnek még nincs saját füle.
+        # A főablak Beállítások ablaka a 2. (0-tól számolt) fülön: a
+        # Dezideráta-kezelő saját füle (látható oszlopok, import/export mappa).
         beallitasok_megnyitasa_gyermekbol(self, 2)
 
     def on_konyvtarnok_kereso(self, event):

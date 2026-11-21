@@ -1,6 +1,9 @@
 import os
 import wx
-from constants import DEFAULT_LATHATO_OSZLOPOK, ELERHETO_OSZLOPOK
+from constants import (
+    DEFAULT_LATHATO_OSZLOPOK, ELERHETO_OSZLOPOK,
+    DEFAULT_DEZIDERATA_LATHATO_OSZLOPOK, DEZIDERATA_ELERHETO_OSZLOPOK,
+)
 from help import HelpNotebookDialog, sugo_megnyitasa
 from theme_manager import get_theme_names, apply_theme
 
@@ -21,6 +24,7 @@ class BeallitasokDialog(wx.Dialog):
     # Osztályszintű néven a régi BeallitasokDialog.ELERHETO_OSZLOPOK hivatkozások
     # is működnek.
     ELERHETO_OSZLOPOK = ELERHETO_OSZLOPOK
+    DEZIDERATA_ELERHETO_OSZLOPOK = DEZIDERATA_ELERHETO_OSZLOPOK
 
     KERESO_INDITASI_OPCIOK = [
         ("ures", "Üres lista"),
@@ -34,14 +38,24 @@ class BeallitasokDialog(wx.Dialog):
         ebből veszi.
 
         A `kezdo_ful` a megnyitáskor kiválasztott fül sorszáma (0-tól számolva,
-        az AddPage-hívások sorrendjében): 0 Megjelenés, 1 Oszlopok a listában,
-        2 Mappák és elérési utak, 3 KönyvTárnok-kereső, 4 Frissítések. None vagy
-        érvénytelen szám esetén az első fül. Fül beszúrásakor/áthelyezésekor a
-        hívók (konyvtarnok_kereso.py, deziderata.py: on_beallitasok) számait kell
-        átírni.
+        az AddPage-hívások sorrendjében): 0 Megjelenés, 1 Állománykezelő
+        (oszlopok a listában + az állomány mappái), 2 Dezideráta-kezelő
+        (oszlopok a listában + import/export mappa), 3 KönyvTárnok-kereső,
+        4 Frissítések. None vagy érvénytelen szám esetén az első fül. Fül
+        beszúrásakor/áthelyezésekor a hívók (konyvtarnok_kereso.py,
+        deziderata.py: on_beallitasok) számait kell átírni.
         """
-        super().__init__(parent, title="Beállítások", size=(600, 500), style=wx.DEFAULT_DIALOG_STYLE | wx.STAY_ON_TOP)
+        # Az Állománykezelő fül (12 oszlopsor + 4 mappamező) magasabb ablakot kér;
+        # az átméretezhető keret biztonsági háló kisebb képernyőre/nagyobb
+        # betűméretre: ilyenkor a lista magassága alkalmazkodik.
+        super().__init__(parent, title="Beállítások", size=(620, 700),
+                         style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER | wx.STAY_ON_TOP)
+        self.SetMinSize((560, 520))
         self.lathato_oszlopok = config.get("lathato_oszlopok", DEFAULT_LATHATO_OSZLOPOK)
+        self.dez_lathato_oszlopok = config.get(
+            "deziderata_lathato_oszlopok", DEFAULT_DEZIDERATA_LATHATO_OSZLOPOK)
+        if not isinstance(self.dez_lathato_oszlopok, (list, tuple)):
+            self.dez_lathato_oszlopok = DEFAULT_DEZIDERATA_LATHATO_OSZLOPOK
         self.aktiv_tema = config.get("tema", "rendszer")
         # Az OK-nál ehhez viszonyítjuk, hogy a kereső-adatbázis útvonala
         # megváltozott-e (csak a megváltozott, nem létező útvonalat utasítjuk el).
@@ -72,106 +86,64 @@ class BeallitasokDialog(wx.Dialog):
         tema_sizer.Add(self.tema_valaszto, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 10)
         panel_tema.SetSizer(tema_sizer)
 
-        # --- 2. FÜL: Oszlopok beállítása ---
-        panel_oszlopok = wx.Panel(self.notebook)
-        oszlop_sizer = wx.BoxSizer(wx.VERTICAL)
-        lbl_oszlopok = wx.StaticText(panel_oszlopok, label="Válassza ki a listában megjelenő oszlopokat:")
-        oszlop_sizer.Add(lbl_oszlopok, 0, wx.ALL, 10)
+        # Az oszlopválasztó natív jelölőnégyzetes listavezérlője (wx.ListCtrl)
+        # wxPython 4.1-től érhető el.
+        self._oszlop_jelolo_tamogatott = hasattr(wx.ListCtrl, "EnableCheckBoxes")
 
-        # Gördíthető felület arra az esetre, ha tovább bővülne a mezők listája
-        scroll = wx.ScrolledWindow(panel_oszlopok, style=wx.VSCROLL)
-        scroll.SetScrollRate(0, 15)
+        # --- 2. FÜL: Állománykezelő (oszlopok a listában + mappák) ---
+        panel_allomany = wx.Panel(self.notebook)
+        allomany_sizer = wx.BoxSizer(wx.VERTICAL)
 
-        # cols=1 -> szigorúan egymás alatti, lineáris Tab sorrend
-        grid_sizer = wx.FlexGridSizer(cols=1, vgap=6, hgap=0)
-        self.jelolo_negyzetek = {}
+        self.oszlop_lista, self.oszlop_kulcsok = self._oszlop_blokk(
+            panel_allomany, allomany_sizer,
+            self.ELERHETO_OSZLOPOK, self.lathato_oszlopok,
+            "Listában megjelenő oszlopok", DEFAULT_LATHATO_OSZLOPOK,
+        )
+        self.txt_pdf = self._mappa_sor(
+            panel_allomany, allomany_sizer,
+            "Könyvadatlapok alapértelmezett mappája:",
+            config.get("last_pdf_dir", ""),
+            "Könyvadatlapok kimeneti mappája")
+        self.txt_stat_pdf = self._mappa_sor(
+            panel_allomany, allomany_sizer,
+            "Statisztikai jelentések alapértelmezett mappája:",
+            config.get("last_stat_pdf_dir", ""),
+            "Statisztikai jelentések alapértelmezett mappája")
+        self.txt_katalogus = self._mappa_sor(
+            panel_allomany, allomany_sizer,
+            "Katalóguslapok alapértelmezett mappája:",
+            config.get("last_katalogus_dir", ""),
+            "Katalóguslapok alapértelmezett mappája")
+        # Állományjegyzék alapértelmezett import/export mappája (kizárólag a
+        # nyers JSON-hoz, a program egyébként az alapmappából tölt be!)
+        self.txt_allomanyjegyzek = self._mappa_sor(
+            panel_allomany, allomany_sizer,
+            "Állományjegyzék alapértelmezett import/export mappája:",
+            config.get("last_allomany_dir", ""),
+            "Állományjegyzék mappájának kiválasztása")
+        allomany_sizer.AddSpacer(10)
+        panel_allomany.SetSizer(allomany_sizer)
 
-        for kulcs, cimke in self.ELERHETO_OSZLOPOK:
-            cb = wx.CheckBox(scroll, label=cimke)
-            cb.SetValue(kulcs in self.lathato_oszlopok)
-            if kulcs == "cim":
-                cb.Disable()
-            self.jelolo_negyzetek[kulcs] = cb
-            grid_sizer.Add(cb, 0, wx.LEFT | wx.RIGHT | wx.TOP, 3)
+        # --- 3. FÜL: Dezideráta-kezelő (oszlopok a listában + mappa) ---
+        panel_dez = wx.Panel(self.notebook)
+        dez_sizer = wx.BoxSizer(wx.VERTICAL)
 
-        scroll.SetSizer(grid_sizer)
-        oszlop_sizer.Add(scroll, 1, wx.EXPAND | wx.ALL, 10)
-        btn_oszlop_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        btn_select_all = wx.Button(panel_oszlopok, label="Mindet kijelöl")
-        btn_reset_def = wx.Button(panel_oszlopok, label="Alapértelmezettek visszaállítása")
+        self.dez_oszlop_lista, self.dez_oszlop_kulcsok = self._oszlop_blokk(
+            panel_dez, dez_sizer,
+            self.DEZIDERATA_ELERHETO_OSZLOPOK, self.dez_lathato_oszlopok,
+            "Dezideráta-listában megjelenő oszlopok", DEFAULT_DEZIDERATA_LATHATO_OSZLOPOK,
+        )
+        # Dezideráta-jegyzék alapértelmezett import/export mappája (kizárólag
+        # a nyers JSON-hoz, a program egyébként az alapmappából tölt be!)
+        self.txt_deziderata = self._mappa_sor(
+            panel_dez, dez_sizer,
+            "Dezideráta alapértelmezett import/export mappája:",
+            config.get("last_deziderata_dir", ""),
+            "Dezideráta-jegyzék alapértelmezett mappája")
+        dez_sizer.AddSpacer(10)
+        panel_dez.SetSizer(dez_sizer)
 
-        btn_select_all.Bind(wx.EVT_BUTTON, self.on_mindet_kijelol)
-        btn_reset_def.Bind(wx.EVT_BUTTON, self.on_alapertelmezett_oszlopok)
-
-        btn_oszlop_sizer.Add(btn_select_all, 0, wx.RIGHT, 5)
-        btn_oszlop_sizer.Add(btn_reset_def, 0)
-        oszlop_sizer.Add(btn_oszlop_sizer, 0, wx.ALL | wx.ALIGN_CENTER, 10)
-
-        panel_oszlopok.SetSizer(oszlop_sizer)
-
-        # --- 3. FÜL: Alapértelmezett mappák ---
-        panel_mappak = wx.Panel(self.notebook)
-        mappa_sizer = wx.BoxSizer(wx.VERTICAL)
-
-        # Könyvadatlapok alapértelmezett mappájának megadása
-        lbl_pdf = wx.StaticText(panel_mappak, label="Könyvadatlapok alapértelmezett mappája:")
-        pdf_box = wx.BoxSizer(wx.HORIZONTAL)
-        self.txt_pdf = wx.TextCtrl(panel_mappak, value=config.get("last_pdf_dir", ""))
-        btn_pdf_talloz = wx.Button(panel_mappak, label="Tallózás...")
-        btn_pdf_talloz.Bind(wx.EVT_BUTTON, lambda e: self._talloz_mappa(self.txt_pdf, "Könyvadatlapok kimeneti mappája"))
-        pdf_box.Add(self.txt_pdf, 1, wx.RIGHT, 5)
-        pdf_box.Add(btn_pdf_talloz, 0)
-
-        # Statisztikai jelentések alapértelmezett mappája
-        lbl_stat_pdf = wx.StaticText(panel_mappak, label="Statisztikai jelentések alapértelmezett mappája:")
-        stat_pdf_box = wx.BoxSizer(wx.HORIZONTAL)
-        self.txt_stat_pdf = wx.TextCtrl(panel_mappak, value=config.get("last_stat_pdf_dir", ""))
-        btn_stat_pdf_talloz = wx.Button(panel_mappak, label="Tallózás...")
-        btn_stat_pdf_talloz.Bind(wx.EVT_BUTTON, lambda e: self._talloz_mappa(self.txt_stat_pdf, "Statisztikai jelentések alapértelmezett mappája"))
-        stat_pdf_box.Add(self.txt_stat_pdf, 1, wx.RIGHT, 5)
-        stat_pdf_box.Add(btn_stat_pdf_talloz, 0)
-
-        # Katalóguslapok alapértelmezett mappája
-        lbl_katalogus = wx.StaticText(panel_mappak, label="Katalóguslapok alapértelmezett mappája:")
-        katalogus_box = wx.BoxSizer(wx.HORIZONTAL)
-        self.txt_katalogus = wx.TextCtrl(panel_mappak, value=config.get("last_katalogus_dir", ""))
-        btn_katalogus_talloz = wx.Button(panel_mappak, label="Tallózás...")
-        btn_katalogus_talloz.Bind(wx.EVT_BUTTON, lambda e: self._talloz_mappa(self.txt_katalogus, "Katalóguslapok alapértelmezett mappája"))
-        katalogus_box.Add(self.txt_katalogus, 1, wx.RIGHT, 5)
-        katalogus_box.Add(btn_katalogus_talloz, 0)
-
-        # Állományjegyzék alapértelmezett import/export mappája (kizárólag a nyers JSON-hoz, a program egyébként az alapmappából tölt be!)
-        lbl_allomanyjegyzek = wx.StaticText(panel_mappak, label="Állományjegyzék alapértelmezett import/export mappája:")
-        allomanyjegyzek_box = wx.BoxSizer(wx.HORIZONTAL)
-        self.txt_allomanyjegyzek = wx.TextCtrl(panel_mappak, value=config.get("last_allomany_dir", ""))
-        btn_allomany_talloz = wx.Button(panel_mappak, label="Tallózás...")
-        btn_allomany_talloz.Bind(wx.EVT_BUTTON, lambda e: self._talloz_mappa(self.txt_allomanyjegyzek, "Állományjegyzék mappájának kiválasztása"))
-        allomanyjegyzek_box.Add(self.txt_allomanyjegyzek, 1, wx.RIGHT, 5)
-        allomanyjegyzek_box.Add(btn_allomany_talloz, 0)
-
-        # Dezideráta-jegyzék alapértelmezett import/export mappája (kizárólag a nyers JSON-hoz, a program egyébként az alapmappából tölt be!)
-        lbl_deziderata = wx.StaticText(panel_mappak, label="Dezideráta alapértelmezett import/export mappája:")
-        deziderata_box = wx.BoxSizer(wx.HORIZONTAL)
-        self.txt_deziderata = wx.TextCtrl(panel_mappak, value=config.get("last_deziderata_dir", ""))
-        btn_deziderata_talloz = wx.Button(panel_mappak, label="Tallózás...")
-        btn_deziderata_talloz.Bind(wx.EVT_BUTTON, lambda e: self._talloz_mappa(self.txt_deziderata, "Dezideráta-jegyzék alapértelmezett mappája"))
-        deziderata_box.Add(self.txt_deziderata, 1, wx.RIGHT, 5)
-        deziderata_box.Add(btn_deziderata_talloz, 0)
-
-        mappa_sizer.Add(lbl_pdf, 0, wx.ALL, 5)
-        mappa_sizer.Add(pdf_box, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 10)
-        mappa_sizer.Add(lbl_stat_pdf, 0, wx.ALL, 5)
-        mappa_sizer.Add(stat_pdf_box, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 5)
-        mappa_sizer.Add(lbl_katalogus, 0, wx.ALL, 5)
-        mappa_sizer.Add(katalogus_box, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 5)
-        mappa_sizer.Add(lbl_allomanyjegyzek, 0, wx.ALL, 5)
-        mappa_sizer.Add(allomanyjegyzek_box, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 10)
-        mappa_sizer.Add(lbl_deziderata, 0, wx.ALL, 5)
-        mappa_sizer.Add(deziderata_box, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 10)
-
-        panel_mappak.SetSizer(mappa_sizer)
-
-        # --- 4. FÜL: KönyvTárnok-kereső ---
+        # --- 4. FÜL: KönyvTárnok-kereső (sorszáma: 3) ---
         panel_kereso = self.panel_kereso = wx.Panel(self.notebook)
         kereso_sizer = wx.BoxSizer(wx.VERTICAL)
 
@@ -199,7 +171,7 @@ class BeallitasokDialog(wx.Dialog):
         kereso_sizer.Add(adatbazis_box, 0, wx.EXPAND | wx.ALL, 10)
         panel_kereso.SetSizer(kereso_sizer)
 
-        # --- 5. FÜL: Frissítések ---
+        # --- 5. FÜL: Frissítések (sorszáma: 4) ---
         panel_frissites = wx.Panel(self.notebook)
         frissites_sizer = wx.BoxSizer(wx.VERTICAL)
 
@@ -221,8 +193,8 @@ class BeallitasokDialog(wx.Dialog):
 
         # Fülek hozzáadása a Notebook-hoz
         self.notebook.AddPage(panel_tema, "Megjelenés")
-        self.notebook.AddPage(panel_oszlopok, "Oszlopok a listában")
-        self.notebook.AddPage(panel_mappak, "Mappák és elérési utak")
+        self.notebook.AddPage(panel_allomany, "Állománykezelő")
+        self.notebook.AddPage(panel_dez, "Dezideráta-kezelő")
         self.notebook.AddPage(panel_kereso, "KönyvTárnok-kereső")
         self.notebook.AddPage(panel_frissites, "Frissítések")
 
@@ -281,13 +253,88 @@ class BeallitasokDialog(wx.Dialog):
         uj_tema = self.GetKivalasztottTema()
         apply_theme(self, uj_tema)
 
-    def on_mindet_kijelol(self, event):
-        for cb in self.jelolo_negyzetek.values():
-            cb.SetValue(True)
+    def _oszlop_blokk(self, panel, sizer, elerheto, lathato, lista_nev, alapertelmezett):
+        """Felépíti egy fül oszlopválasztóját: felirat, jelölőnégyzetes lista
+        és a két gomb. A Cím oszlop mindig látszik, ezért nincs a listában
+        (a Get...Oszlopok metódusok mindig hozzáfűzik). A felirat a lista
+        ELŐTT jön létre, hogy a képernyőolvasó annak szövegét társítsa hozzá.
+        Visszaadja a (listavezérlő, kulcsok) párt; a kulcsok a lista sorainak
+        sorrendjében állnak."""
+        if self._oszlop_jelolo_tamogatott:
+            cimke_szoveg = ("Válassza ki a listában megjelenő oszlopokat "
+                            "(szóközzel kapcsolható). A Cím oszlop mindig látszik.")
+        else:
+            cimke_szoveg = ("Az oszlopok kiválasztásához wxPython 4.1 vagy újabb "
+                            "verzió szükséges. A jelenlegi oszlopbeállítás változatlan marad.")
+        lbl = wx.StaticText(panel, label=cimke_szoveg)
+        lbl.Wrap(540)
+        sizer.Add(lbl, 0, wx.ALL, 10)
 
-    def on_alapertelmezett_oszlopok(self, event):
-        for kulcs, cb in self.jelolo_negyzetek.items():
-            cb.SetValue(kulcs in DEFAULT_LATHATO_OSZLOPOK)
+        lista = wx.ListCtrl(panel, style=wx.LC_REPORT | wx.LC_NO_HEADER | wx.LC_SINGLE_SEL)
+        lista.SetName(lista_nev)
+        lista.InsertColumn(0, "Megjelenő oszlopok", width=400)
+        kulcsok = []
+        if self._oszlop_jelolo_tamogatott:
+            lista.EnableCheckBoxes(True)
+            for kulcs, cimke in elerheto:
+                if kulcs == "cim":
+                    continue  # mindig látszik, nem kapcsolható
+                idx = lista.InsertItem(lista.GetItemCount(), cimke)
+                lista.CheckItem(idx, kulcs in lathato)
+                kulcsok.append(kulcs)
+            if kulcsok:
+                # Kijelölt, fókuszált első sor nélkül a képernyőolvasó a
+                # listára lépéskor nem mondana semmit.
+                lista.Select(0)
+                lista.Focus(0)
+        else:
+            lista.Disable()
+        lista.SetMinSize((-1, 130))
+        lista.Bind(wx.EVT_SIZE, self.on_oszlop_lista_atmeretezes)
+        sizer.Add(lista, 1, wx.EXPAND | wx.LEFT | wx.RIGHT, 10)
+
+        gombok = wx.BoxSizer(wx.HORIZONTAL)
+        btn_mind = wx.Button(panel, label="Mindet kijelöl")
+        btn_alap = wx.Button(panel, label="Alapértelmezettek visszaállítása")
+        if not self._oszlop_jelolo_tamogatott:
+            btn_mind.Disable()
+            btn_alap.Disable()
+        btn_mind.Bind(wx.EVT_BUTTON, lambda e: self._oszlopok_mind(lista, kulcsok))
+        btn_alap.Bind(wx.EVT_BUTTON, lambda e: self._oszlopok_alapertelmezett(lista, kulcsok, alapertelmezett))
+        gombok.Add(btn_mind, 0, wx.RIGHT, 5)
+        gombok.Add(btn_alap, 0)
+        sizer.Add(gombok, 0, wx.ALL | wx.ALIGN_CENTER, 8)
+        return lista, kulcsok
+
+    def _mappa_sor(self, panel, sizer, felirat, ertek, talloz_cim):
+        """Mappaválasztó sor: felirat, szövegmező és Tallózás gomb. A felirat
+        a mező ELŐTT jön létre (képernyőolvasós társítás). Visszaadja a mezőt."""
+        lbl = wx.StaticText(panel, label=felirat)
+        txt = wx.TextCtrl(panel, value=ertek)
+        btn = wx.Button(panel, label="Tallózás...")
+        btn.Bind(wx.EVT_BUTTON, lambda e: self._talloz_mappa(txt, talloz_cim))
+        sor = wx.BoxSizer(wx.HORIZONTAL)
+        sor.Add(txt, 1, wx.RIGHT, 5)
+        sor.Add(btn, 0)
+        sizer.Add(lbl, 0, wx.LEFT | wx.RIGHT | wx.TOP, 10)
+        sizer.Add(sor, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 4)
+        return txt
+
+    def _oszlopok_mind(self, lista, kulcsok):
+        for idx in range(len(kulcsok)):
+            lista.CheckItem(idx, True)
+
+    def _oszlopok_alapertelmezett(self, lista, kulcsok, alapertelmezett):
+        for idx, kulcs in enumerate(kulcsok):
+            lista.CheckItem(idx, kulcs in alapertelmezett)
+
+    def on_oszlop_lista_atmeretezes(self, event):
+        """Az egyetlen oszlop kitölti a lista szélességét."""
+        event.Skip()
+        lista = event.GetEventObject()
+        szelesseg = lista.GetClientSize().GetWidth()
+        if szelesseg > 40:
+            lista.SetColumnWidth(0, szelesseg - 4)
 
     def on_manual_update_check(self, event):
         # Szándékosan lokális (lusta) import: az update modul csak a kézi
@@ -297,9 +344,29 @@ class BeallitasokDialog(wx.Dialog):
         from update import check_for_updates_async
         check_for_updates_async(parent=self, is_manual=True)
 
+    def _kivalasztott_oszlopok(self, lista, kulcsok, jelenlegi):
+        """A jelölt oszlopok kulcsai a lista sorrendjében, elöl a Cím-mel. Ha
+        a jelölőnégyzetes lista nem támogatott, a kapott beállítás marad."""
+        if not self._oszlop_jelolo_tamogatott:
+            return list(jelenlegi)
+        kijelolt = ["cim"]
+        for idx, kulcs in enumerate(kulcsok):
+            if lista.IsItemChecked(idx):
+                kijelolt.append(kulcs)
+        return kijelolt
+
     def GetKivalasztottOszlopok(self):
-        """Visszaadja a kiválasztott oszlopok kulcsainak listáját."""
-        return [kulcs for kulcs, cb in self.jelolo_negyzetek.items() if cb.IsChecked()]
+        """Az állomány listájában látható oszlopok kulcsai (a Cím mindig
+        szerepel, az ELERHETO_OSZLOPOK sorrendjében)."""
+        return self._kivalasztott_oszlopok(
+            self.oszlop_lista, self.oszlop_kulcsok, self.lathato_oszlopok)
+
+    def GetKivalasztottDeziderataOszlopok(self):
+        """A dezideráta listájában látható oszlopok kulcsai (a Cím mindig
+        szerepel, a DEZIDERATA_OSZLOP_KULCSOK sorrendjében). Mentési kulcs:
+        \"deziderata_lathato_oszlopok\"."""
+        return self._kivalasztott_oszlopok(
+            self.dez_oszlop_lista, self.dez_oszlop_kulcsok, self.dez_lathato_oszlopok)
 
     def GetKivalasztottStatPdfDir(self):
         return self.txt_stat_pdf.GetValue().strip()
