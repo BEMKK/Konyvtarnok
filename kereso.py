@@ -67,7 +67,7 @@ class KeresoDialog(wx.Dialog):
         self.scope_choice.SetName("Keresés helye")
 
         # 2. Csak teljes szó (a keresett szavak egész szóként egyezzenek)
-        self.exact_match_cb = wx.CheckBox(self, label="Csak teljes &szó")
+        self.exact_match_cb = wx.CheckBox(self, label="Cs&ak teljes szó")
 
         # 3. Keresett kifejezés
         self.label_keresett = wx.StaticText(self, label="Keresett &kifejezés:")

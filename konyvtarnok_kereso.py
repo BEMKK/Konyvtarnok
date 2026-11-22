@@ -359,8 +359,9 @@ class KonyvtarnokKeresoApp(wx.Frame):
                 "\u201eDeziderátában\u201d jelzés nem elérhető."
             )
         elif self.szuro_statusz != "osszes":
+            # Aktív szűrésnél a főablakkal azonos felirat.
             self.SetStatusText(
-                f"Szűrt nézet: {len(sorok)} / {len(nyers_sorok)} találat."
+                f"Találatok száma: {len(sorok)} a {len(nyers_sorok)} kötetből."
             )
         elif alaplista:
             self._allapot_frissitese()
@@ -653,7 +654,7 @@ class KonyvtarnokKeresoApp(wx.Frame):
         # következő vezérlőre visz, ennek a keresőmezőnek kell lennie.
         # "Csak teljes szó": a keresett szavak egész szóként egyezzenek (ne
         # részszövegként).
-        self.cb_teljes_szo = wx.CheckBox(self.panel, label="Csak teljes &szó")
+        self.cb_teljes_szo = wx.CheckBox(self.panel, label="Cs&ak teljes szó")
 
         kereso_szoveg = wx.StaticText(
             self.panel, label="Keresendő &kifejezés:"
@@ -699,8 +700,19 @@ class KonyvtarnokKeresoApp(wx.Frame):
         fő_sizer.Add(self.checkbox_sizer, flag=wx.ALL, border=10)
 
         # --- Eredmény lista (wx.ListCtrl táblázat) ---
+        # A szűrő-felirat a "Találatok" felirat ELŐTT jön létre, hogy annak
+        # Alt-gyorsbillentyűje továbbra is közvetlenül a táblázatra vigyen.
+        self.szuro_kijelzo = wx.StaticText(self.panel, label="")
+        szuro_font = self.szuro_kijelzo.GetFont()
+        szuro_font.MakeItalic()
+        self.szuro_kijelzo.SetFont(szuro_font)
+
         self.eredmeny_szoveg = wx.StaticText(self.panel, label="Találatok:")
-        fő_sizer.Add(self.eredmeny_szoveg, flag=wx.LEFT, border=10)
+        eredmeny_fejlec = wx.BoxSizer(wx.HORIZONTAL)
+        eredmeny_fejlec.Add(self.eredmeny_szoveg, flag=wx.ALIGN_CENTER_VERTICAL)
+        eredmeny_fejlec.AddStretchSpacer(1)
+        eredmeny_fejlec.Add(self.szuro_kijelzo, flag=wx.ALIGN_CENTER_VERTICAL)
+        fő_sizer.Add(eredmeny_fejlec, flag=wx.EXPAND | wx.LEFT | wx.RIGHT, border=10)
 
         self.tablazat = wx.ListCtrl(self.panel, style=wx.LC_REPORT)
 
@@ -965,6 +977,27 @@ class KonyvtarnokKeresoApp(wx.Frame):
         szoveg = f"Találatok listája, {darabszam} elem"
         self.eredmeny_szoveg.SetLabel(f"Ta&lálatok ({darabszam} db):")
         self.tablazat.SetName(szoveg)
+        self._szuro_cimke_frissitese(darabszam)
+
+    # A Státusz szűrés értékei a felirathoz.
+    _STATUSZ_SZURO_NEVEK = {
+        "allomanyban": "Állományban",
+        "deziderataban": "Deziderátában",
+    }
+
+    def _szuro_cimke_frissitese(self, darabszam):
+        """A szűrő-felirat (főablak: szuro_kijelzo) beállítása: csak akkor
+        látszik, ha a Státusz szűrés aktív és van mit szűrni; egyébként üres."""
+        cimke = getattr(self, "szuro_kijelzo", None)
+        if cimke is None:
+            return
+        szoveg = ""
+        if self.szuro_statusz != "osszes" and self._nyers_talalatok:
+            nev = self._STATUSZ_SZURO_NEVEK.get(self.szuro_statusz, self.szuro_statusz)
+            szoveg = f"Szűrés: Státusz = '{nev}' ({darabszam} találat)"
+        if cimke.GetLabel() != szoveg:
+            cimke.SetLabel(szoveg)
+            cimke.GetParent().Layout()
 
     def frissit_torles_gomb_allapot(self):
         """Engedélyezi a törlés gombot, ha van szöveg a mezőben vagy van találat a táblázatban.
