@@ -101,7 +101,7 @@ class KeresoDialog(wx.Dialog):
             self.oszlop_checkboxok[kulcs] = cb
 
         # 7. Találati lista (felirat + táblázat)
-        self.eredmeny_szoveg = wx.StaticText(self, label="Találatok:")
+        self.eredmeny_szoveg = wx.StaticText(self, label="Ta&lálatok:")
         self.list_ctrl = wx.ListCtrl(
             self,
             style=wx.LC_REPORT | wx.LC_SINGLE_SEL | wx.BORDER_SUNKEN,
@@ -329,7 +329,7 @@ class KeresoDialog(wx.Dialog):
     def frissit_akadalymentesites(self, darabszam):
         """Beállítja a táblázat belső nevét és a felette lévő feliratot."""
         szoveg = f"Találatok listája, {darabszam} elem"
-        self.eredmeny_szoveg.SetLabel(f"Találatok ({darabszam} db):")
+        self.eredmeny_szoveg.SetLabel(f"Ta&lálatok ({darabszam} db):")
         self.list_ctrl.SetName(szoveg)
 
     def _lista_uritese(self):

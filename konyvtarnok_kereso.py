@@ -963,7 +963,7 @@ class KonyvtarnokKeresoApp(wx.Frame):
     def frissit_akadalymentesites(self, darabszam):
         """Beállítja a táblázat belső nevét és a felette lévő feliratot."""
         szoveg = f"Találatok listája, {darabszam} elem"
-        self.eredmeny_szoveg.SetLabel(f"Találatok ({darabszam} db):")
+        self.eredmeny_szoveg.SetLabel(f"Ta&lálatok ({darabszam} db):")
         self.tablazat.SetName(szoveg)
 
     def frissit_torles_gomb_allapot(self):
