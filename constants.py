@@ -184,7 +184,7 @@ DEZIDERATA_OSZLOP_KULCSOK = list(DEZIDERATA_OSZLOP_ADATOK)
 # a nézet. EZ AZ EGYETLEN HELY, ahol ez a lista definiálva van (lásd a
 # config_manager.py, a deziderata.py és a settings.py hivatkozásait).
 DEFAULT_DEZIDERATA_LATHATO_OSZLOPOK = [
-    "cim", "szerzo", "egyeb_szemelyek", "kiado", "hely", "ev",
+    "cim", "szerzo", "kiado", "hely", "ev",
     "priority", "status",
 ]
 
