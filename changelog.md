@@ -12,6 +12,8 @@ A projekten végrehajtott lényegi változtatások dokumentációja.
 - Javítva az oszlopszélességek számítása, mely a program lassú betöltését okozta.
 - Nézet menü és rendezési, szűrési lehetőség a Dezideráta-kezelőben és a KönyvTárnok-keresőben.
 - Újratervezett Beállítások ablak, külön fül a Dezideráta-kezelőnek, az oszlopok jelölőnégyzetei listában jelennek meg.
+- Könyvadatlap exportnál, fájlütközés esetén jelölőnégyzet a választott művelet összes ütközésre való alkalmazására.
+- Az exportálás megszakítására a Mégse gomb szolgál, a kihagyás gomb valóban csak a már meglévő adatlapokat hagyja ki.
 
 
 
