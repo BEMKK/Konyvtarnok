@@ -12,8 +12,8 @@ from settings import BeallitasokDialog
 from konyvdialogs import KonyvReszletekDialog, KonyvSzerkesztoDialog
 from statisztika import StatisztikaDialog
 from help import HelpNotebookDialog, sugo_megnyitasa
-from export_manager import tomeges_export_pdf, katalogus_mentese
-from config_manager import load_settings, save_settings
+from export_manager import tomeges_export_pdf, katalogus_mentese, FajlUtkozesValasz
+from config_manager import load_settings, save_settings, beallitas_mentese
 from theme_manager import apply_theme
 from konyvtarnok_kereso import KonyvtarnokKeresoApp
 from menu_bar import MenuBar
@@ -847,19 +847,26 @@ class Konyvtarnok(wx.Frame):
     def OnKilepes(self, event):
         self.Close()
 
-    def kezel_fajlutkozes(self, fajlnev):
-        dlg = FajlutkozesDialog(self, fajlnev)
+    def kezel_fajlutkozes(self, fajlnev, hatralevo_utkozesek=1, osszes_utkozes=1):
+        dlg = FajlutkozesDialog(
+            self,
+            fajlnev,
+            hatralevo_utkozesek=hatralevo_utkozesek,
+            osszes_utkozes=osszes_utkozes,
+        )
         valasz = dlg.ShowModal()
         dlg.Destroy()
 
         if valasz == wx.ID_YES:
-            return "FELULIRAS"
+            return FajlUtkozesValasz.FELULIR
         elif valasz == wx.ID_YESTOALL:
-            return "MINDET_FELULIR"
+            return FajlUtkozesValasz.MINDET_FELULIR
         elif valasz == wx.ID_NO:
-            return "KIHAGYAS"
-        else: # X gomb, ESC vagy "Összes kihagyása" (wx.ID_CANCEL)
-            return "OSSZES_KIHAGYASA"
+            return FajlUtkozesValasz.KIHAGYAS
+        elif valasz == wx.ID_NOTOALL:
+            return FajlUtkozesValasz.MINDET_KIHAGY
+        else: # X gomb, ESC vagy Mégse gomb (wx.ID_CANCEL)
+            return FajlUtkozesValasz.MEGSE
 
     def OnExportalas(self, event):
         indexek = self.lista.GetKijeloltIndexek()
@@ -899,10 +906,16 @@ class Konyvtarnok(wx.Frame):
                 fajl_letezik_callback=self.kezel_fajlutkozes
             )
 
-            uzenet = (
-                f"Tömeges exportálás kész!\n"
-                f"Sikeresen mentve: {eredmeny.sikeres}/{len(indexek)} db PDF."
-            )
+            if getattr(eredmeny, "megszakitva", False):
+                uzenet = (
+                    f"A tömeges exportálás meg lett szakítva!\n"
+                    f"A megszakításig sikeresen mentve: {eredmeny.sikeres}/{len(indexek)} db PDF."
+                )
+            else:
+                uzenet = (
+                    f"Tömeges exportálás kész!\n"
+                    f"Sikeresen mentve: {eredmeny.sikeres}/{len(indexek)} db PDF."
+                )
             if eredmeny.kihagyott:
                 uzenet += f"\nKihagyva: {eredmeny.kihagyott} db."
             if eredmeny.hibas:
@@ -915,7 +928,7 @@ class Konyvtarnok(wx.Frame):
             wx.MessageBox(
                 uzenet,
                 "Exportálás eredménye",
-                wx.OK | (wx.ICON_WARNING if eredmeny.hibas else wx.ICON_INFORMATION),
+                wx.OK | (wx.ICON_WARNING if (eredmeny.hibas or getattr(eredmeny, "megszakitva", False)) else wx.ICON_INFORMATION),
                 self,
             )
 
@@ -1299,17 +1312,14 @@ class Konyvtarnok(wx.Frame):
         # A választott rendezés megmarad a következő indításra is. Csak a
         # menüből történő rendezést mentjük: a statisztikai szűrés rendezése
         # (OnStatisztika) szándékosan ideiglenes marad.
-        config = load_settings()
-        if config.get("alapertelmezett_rendezes") != mezo_kulcs:
-            config["alapertelmezett_rendezes"] = mezo_kulcs
-            if not save_settings(config):
-                if not getattr(self, "_rendezes_mentes_hiba_jelezve", False):
-                    self._rendezes_mentes_hiba_jelezve = True
-                    wx.MessageBox(
-                        "A rendezés mentése nem sikerült, ezért a program újraindítás után "
-                        "az előző rendezéssel nyílik meg.",
-                        "Mentési hiba", wx.OK | wx.ICON_WARNING, self,
-                    )
+        if not beallitas_mentese("alapertelmezett_rendezes", mezo_kulcs):
+            if not getattr(self, "_rendezes_mentes_hiba_jelezve", False):
+                self._rendezes_mentes_hiba_jelezve = True
+                wx.MessageBox(
+                    "A rendezés mentése nem sikerült, ezért a program újraindítás után "
+                    "az előző rendezéssel nyílik meg.",
+                    "Mentési hiba", wx.OK | wx.ICON_WARNING, self,
+                )
 
     def on_deziderata(self, event):
         if self.deziderata_frame is None:

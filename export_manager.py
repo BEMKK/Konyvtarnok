@@ -279,7 +279,9 @@ class FajlUtkozesValasz(str, Enum):
     FELULIR = "FELULIR"
     KIHAGYAS = "KIHAGYAS"
     MINDET_FELULIR = "MINDET_FELULIR"
+    MINDET_KIHAGY = "MINDET_KIHAGY"
     OSSZES_KIHAGYASA = "OSSZES_KIHAGYASA"
+    MEGSE = "MEGSE"
 
 
 class ExportEredmeny(int):
@@ -293,12 +295,14 @@ class ExportEredmeny(int):
       .hibas         - a hibás fájlok száma
       .kihagyott     - a kihagyott könyvek száma (cím nélküli, vagy a
                        felhasználó által kihagyott)
+      .megszakitva   - True, ha a felhasználó megszakította az exportálást
     """
-    def __new__(cls, sikeres, hibak, kihagyott):
+    def __new__(cls, sikeres, hibak, kihagyott, megszakitva=False):
         peldany = super().__new__(cls, sikeres)
         peldany.sikeres = sikeres
         peldany.hibak = list(hibak)
         peldany.kihagyott = kihagyott
+        peldany.megszakitva = megszakitva
         return peldany
 
     @property
@@ -309,9 +313,10 @@ class ExportEredmeny(int):
 def tomeges_export_pdf(konyvek_listaja, mentesi_utvonal, fajl_letezik_callback=None):
     """Több könyv exportálása PDF-be a megadott mappába.
 
-    fajl_letezik_callback(fajlnev) egy már létező fájlnál hívódik, és egy
-    FajlUtkozesValasz tagot ad vissza (FELULIR / KIHAGYAS / MINDET_FELULIR /
-    OSSZES_KIHAGYASA). Más (pl. None) válasz felülírást jelent.
+    fajl_letezik_callback(fajlnev, hatralevo_utkozesek=..., osszes_utkozes=...)
+    egy már létező fájlnál hívódik, és egy FajlUtkozesValasz tagot ad vissza
+    (FELULIR / KIHAGYAS / MINDET_FELULIR / MINDET_KIHAGY / MEGSE / OSSZES_KIHAGYASA).
+    Más (pl. None) válasz felülírást jelent.
 
     Visszatérés: ExportEredmeny (egészként a sikeres fájlok száma).
     """
@@ -319,7 +324,24 @@ def tomeges_export_pdf(konyvek_listaja, mentesi_utvonal, fajl_letezik_callback=N
     kihagyott = 0
     hibak = []
     mindent_felulir = False
+    mindet_kihagy = False
+    megszakitva = False
     konyvek = list(konyvek_listaja)
+
+    # Előzetes felmérés: hány fájlütközés várható a célmappában
+    # (vagy a kötegen belüli azonos fájlnevek miatt)?
+    tervezett_fajlnevek = set()
+    utkozesek_szama = 0
+    for konyv in konyvek:
+        if not konyv.get('cim'):
+            continue
+        fn = get_biztonsagos_pdf_fajlnev(konyv)
+        fpath = os.path.join(mentesi_utvonal, fn)
+        if os.path.exists(fpath) or fn.lower() in tervezett_fajlnevek:
+            utkozesek_szama += 1
+        tervezett_fajlnevek.add(fn.lower())
+
+    hatralevo_utkozesek = utkozesek_szama
 
     for sorszam, konyv in enumerate(konyvek):
         if not konyv.get('cim'):
@@ -329,18 +351,36 @@ def tomeges_export_pdf(konyvek_listaja, mentesi_utvonal, fajl_letezik_callback=N
         fajlnev = get_biztonsagos_pdf_fajlnev(konyv)
         fajl_utvonal = os.path.join(mentesi_utvonal, fajlnev)
 
-        if os.path.exists(fajl_utvonal) and not mindent_felulir and fajl_letezik_callback:
-            valasz = fajl_letezik_callback(fajlnev)
-
-            if valasz == FajlUtkozesValasz.KIHAGYAS:
+        if os.path.exists(fajl_utvonal):
+            if mindet_kihagy:
                 kihagyott += 1
+                hatralevo_utkozesek = max(0, hatralevo_utkozesek - 1)
                 continue
-            elif valasz == FajlUtkozesValasz.MINDET_FELULIR:
-                mindent_felulir = True
-            elif valasz == FajlUtkozesValasz.OSSZES_KIHAGYASA:
-                # Ez a könyv és az összes hátralévő kihagyottnak számít
-                kihagyott += len(konyvek) - sorszam
-                break
+            elif not mindent_felulir and fajl_letezik_callback:
+                try:
+                    valasz = fajl_letezik_callback(
+                        fajlnev,
+                        hatralevo_utkozesek=max(1, hatralevo_utkozesek),
+                        osszes_utkozes=utkozesek_szama,
+                    )
+                except TypeError:
+                    valasz = fajl_letezik_callback(fajlnev)
+
+                hatralevo_utkozesek = max(0, hatralevo_utkozesek - 1)
+
+                if valasz in (FajlUtkozesValasz.MEGSE, FajlUtkozesValasz.OSSZES_KIHAGYASA):
+                    megszakitva = True
+                    break
+                elif valasz == FajlUtkozesValasz.MINDET_KIHAGY:
+                    mindet_kihagy = True
+                    kihagyott += 1
+                    continue
+                elif valasz == FajlUtkozesValasz.KIHAGYAS:
+                    kihagyott += 1
+                    continue
+                elif valasz == FajlUtkozesValasz.MINDET_FELULIR:
+                    mindent_felulir = True
+                # Egyéb válasz (pl. FELULIR, "FELULIRAS", None) -> felülírás, folytatódik az export
 
         try:
             export_konyv_pdf(konyv, fajl_utvonal)
@@ -349,4 +389,4 @@ def tomeges_export_pdf(konyvek_listaja, mentesi_utvonal, fajl_letezik_callback=N
             logging.error(f"Hiba a(z) {konyv.get('cim')} exportálásakor", exc_info=True)
             hibak.append((konyv.get('cim'), str(e)))
 
-    return ExportEredmeny(sikeres, hibak, kihagyott)
+    return ExportEredmeny(sikeres, hibak, kihagyott, megszakitva=megszakitva)

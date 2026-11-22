@@ -155,7 +155,9 @@ class UjdonsagokDialog(wx.Dialog):
             "Ugyanitt érhető el az adatbázis útvonalának megadása.",
             "Javítva az oszlopszélességek számítása, mely a program lassú betöltését okozta.",
             "Nézet menü és rendezési, szűrési lehetőség a Dezideráta-kezelőben és a KönyvTárnok-keresőben.",
-            "Újratervezett Beállítások ablak, külön fül a Dezideráta-kezelőnek, az oszlopok jelölőnégyzetei listában jelennek meg."
+            "Újratervezett Beállítások ablak, külön fül a Dezideráta-kezelőnek, az oszlopok jelölőnégyzetei listában jelennek meg.",
+            "Könyvadatlap exportnál, fájlütközés esetén jelölőnégyzet a választott művelet összes ütközésre való alkalmazására.",
+            "Az exportálás megszakítására a Mégse gomb szolgál, a kihagyás gomb valóban csak a már meglévő adatlapokat hagyja ki."
         ]
 
         szoveg_box = wx.BoxSizer(wx.VERTICAL)
@@ -197,7 +199,7 @@ class UjdonsagokDialog(wx.Dialog):
         self.Centre()
 
 class FajlutkozesDialog(wx.Dialog):
-    def __init__(self, parent, fajlnev):
+    def __init__(self, parent, fajlnev, hatralevo_utkozesek=1, osszes_utkozes=1):
         super().__init__(parent, title="Fájlütközés", style=wx.DEFAULT_DIALOG_STYLE | wx.STAY_ON_TOP)
         
         main_sizer = wx.BoxSizer(wx.VERTICAL)
@@ -206,29 +208,51 @@ class FajlutkozesDialog(wx.Dialog):
         lbl = wx.StaticText(self, label=msg)
         main_sizer.Add(lbl, 0, wx.ALL, 15)
         
+        if hatralevo_utkozesek > 1:
+            if hatralevo_utkozesek == osszes_utkozes:
+                cb_label = f"Legyen érvényes az összes ütközésnél (összesen {osszes_utkozes} db)"
+            else:
+                cb_label = f"Legyen érvényes az összes hátralévő ütközésnél (még {hatralevo_utkozesek} db)"
+        else:
+            cb_label = "Legyen érvényes az összes ütközésnél (1 db)"
+
+        self.chk_mindre = wx.CheckBox(self, label=cb_label)
+        main_sizer.Add(self.chk_mindre, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 15)
+        
         btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
         
         btn_felulir = wx.Button(self, wx.ID_YES, "Felülírás")
-        btn_mindent_felulir = wx.Button(self, wx.ID_YESTOALL, "Mindet felülír")
         btn_kihagy = wx.Button(self, wx.ID_NO, "Kihagyás")
-        btn_osszes_kihagy = wx.Button(self, wx.ID_CANCEL, "Összes kihagyása")
+        btn_megse = wx.Button(self, wx.ID_CANCEL, "Mégse")
         
-        btn_sizer.Add(btn_felulir, 0, wx.RIGHT, 5)
-        btn_sizer.Add(btn_mindent_felulir, 0, wx.RIGHT, 5)
-        btn_sizer.Add(btn_kihagy, 0, wx.RIGHT, 5)
-        btn_sizer.Add(btn_osszes_kihagy, 0)
+        btn_sizer.Add(btn_felulir, 0, wx.RIGHT, 8)
+        btn_sizer.Add(btn_kihagy, 0, wx.RIGHT, 8)
+        btn_sizer.Add(btn_megse, 0)
         
-        main_sizer.Add(btn_sizer, 0, wx.ALL | wx.ALIGN_CENTER, 15)
+        main_sizer.Add(btn_sizer, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM | wx.ALIGN_RIGHT, 15)
         
-        btn_felulir.Bind(wx.EVT_BUTTON, lambda e: self.EndModal(wx.ID_YES))
-        btn_mindent_felulir.Bind(wx.EVT_BUTTON, lambda e: self.EndModal(wx.ID_YESTOALL))
-        btn_kihagy.Bind(wx.EVT_BUTTON, lambda e: self.EndModal(wx.ID_NO))
-        btn_osszes_kihagy.Bind(wx.EVT_BUTTON, lambda e: self.EndModal(wx.ID_CANCEL))
+        btn_felulir.Bind(wx.EVT_BUTTON, self._on_felulir)
+        btn_kihagy.Bind(wx.EVT_BUTTON, self._on_kihagy)
+        btn_megse.Bind(wx.EVT_BUTTON, lambda e: self.EndModal(wx.ID_CANCEL))
+        self.Bind(wx.EVT_CLOSE, lambda e: self.EndModal(wx.ID_CANCEL))
+        self.SetEscapeId(wx.ID_CANCEL)
         
         apply_theme_from_settings(self)
         
         self.SetSizerAndFit(main_sizer)
         self.CentreOnParent()
+
+    def _on_felulir(self, event):
+        if self.chk_mindre.GetValue():
+            self.EndModal(wx.ID_YESTOALL)
+        else:
+            self.EndModal(wx.ID_YES)
+
+    def _on_kihagy(self, event):
+        if self.chk_mindre.GetValue():
+            self.EndModal(wx.ID_NOTOALL)
+        else:
+            self.EndModal(wx.ID_NO)
 
 
 def exportal_egy_konyv(szulo_ablak, konyv_adatok):
