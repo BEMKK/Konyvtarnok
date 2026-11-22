@@ -153,7 +153,9 @@ class UjdonsagokDialog(wx.Dialog):
             "A Dezideráta-kezelő és a KönyvTárnok-kereső egymásból is megnyitható.",
             "A KönyvTárnok-keresőben lehetőség van az adatbázis összes tételének listázására a Beállítások KönyvTárnok-kereső fülén.",
             "Ugyanitt érhető el az adatbázis útvonalának megadása.",
-            "Javítva az oszlopszélességek számítása, mely a program lassú betöltését okozta."
+            "Javítva az oszlopszélességek számítása, mely a program lassú betöltését okozta.",
+            "Nézet menü és rendezési, szűrési lehetőség a Dezideráta-kezelőben és a KönyvTárnok-keresőben.",
+            "Újratervezett Beállítások ablak, külön fül a Dezideráta-kezelőnek, az oszlopok jelölőnégyzetei listában jelennek meg."
         ]
 
         szoveg_box = wx.BoxSizer(wx.VERTICAL)

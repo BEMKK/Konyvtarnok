@@ -10,6 +10,8 @@ A projekten végrehajtott lényegi változtatások dokumentációja.
 - A KönyvTárnok-keresőben lehetőség van az adatbázis összes tételének listázására a Beállítások KönyvTárnok-kereső fülén.
 - Ugyanitt érhető el az adatbázis útvonalának megadása.
 - Javítva az oszlopszélességek számítása, mely a program lassú betöltését okozta.
+- Nézet menü és rendezési, szűrési lehetőség a Dezideráta-kezelőben és a KönyvTárnok-keresőben.
+- Újratervezett Beállítások ablak, külön fül a Dezideráta-kezelőnek, az oszlopok jelölőnégyzetei listában jelennek meg.
 
 
 
