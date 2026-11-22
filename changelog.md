@@ -14,6 +14,7 @@ A projekten végrehajtott lényegi változtatások dokumentációja.
 - Újratervezett Beállítások ablak, külön fül a Dezideráta-kezelőnek, az oszlopok jelölőnégyzetei listában jelennek meg.
 - Könyvadatlap exportnál, fájlütközés esetén jelölőnégyzet a választott művelet összes ütközésre való alkalmazására.
 - Az exportálás megszakítására a Mégse gomb szolgál, a kihagyás gomb valóban csak a már meglévő adatlapokat hagyja ki.
+- Az új verzióról szóló felugró értesítésben lehetőség a verzió figyelmen kívül hagyására.
 
 
 
