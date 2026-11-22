@@ -4,6 +4,15 @@ A projekten végrehajtott lényegi változtatások dokumentációja.
 
 
 
+## [4.2.0 - 2026-11-22
+
+- A Dezideráta-kezelő és a KönyvTárnok-kereső egymásból is megnyitható.
+- A KönyvTárnok-keresőben lehetőség van az adatbázis összes tételének listázására a Beállítások KönyvTárnok-kereső fülén.
+- Ugyanitt érhető el az adatbázis útvonalának megadása.
+- Javítva az oszlopszélességek számítása, mely a program lassú betöltését okozta.
+
+
+
 ## [4.1.0] - 2026-11-21
 
 - A beállításokban külön mező a katalóguslap, valamint az állomány- és dezideráta-jegyzék mappájának.

@@ -1,6 +1,6 @@
 # KönyvTárnok
 
-> **Verzió:** 4.1.0
+> **Verzió:** 4.2.0
 
 > **Támogatott operációs rendszer:** Windows 10 és 11 (64 bit)
 
@@ -80,6 +80,7 @@ python main.py
 ├─ gyors_kereses.py                # A lista gépelés közbeni szűrése mindhárom modulban
 ├─ utils.py                # Rendezési és állománystatisztikai segédfügvények
 ├─ undo_manager                # Visszavonás és ismétlés funkció kezelése
+├─ oszlop_szelesseg.py        # egédmodul az oszlopszélességek számításához
 ├─ ikon.ico                    # Alkalmazásikon
 ├─ Enekeskonyvek_adatai.json   # Példa JSON adatbázis a KönyvTárnok keresőhöz (megnyitható a Fájl > Adatbázis megnyitása menüponttal)
 ├─ Futtatas.bat                # Indító script
