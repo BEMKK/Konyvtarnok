@@ -25,6 +25,7 @@ from data_manager import (
     DEZIDERATA_ALAPERTEKEK,
 )
 from dialogs import JsonImportValasztoDialog
+from oszlop_szelesseg import hasznalhato_szelesseg, szamol_celok, igazit
 from constants import (
     DEFAULT_DEZIDERATA_LATHATO_OSZLOPOK,
     DEZIDERATA_APP_TITLE,
@@ -235,6 +236,9 @@ class DeziderataFajlTarolo(ListaTarolo):
 
 
 class Deziderata(wx.Frame):
+    # Az átméretezési események összevonásához (lásd on_lista_atmeretezes).
+    _igazitas_fuggoben = False
+
     def __init__(self, parent=None):
         super().__init__(parent, title=DEZIDERATA_APP_TITLE, size=(1050, 500))
 
@@ -719,19 +723,24 @@ class Deziderata(wx.Frame):
         finally:
             self._lista_helyzet_visszaallitasa(allapot, erintett_idk)
 
+    def _celszelessegek(self):
+        alapok = [LISTA_OSZLOP_ADATOK[k][0] for k in self.lathato_kulcsok]
+        sulyok = [LISTA_OSZLOP_ADATOK[k][1] for k in self.lathato_kulcsok]
+        return szamol_celok(alapok, sulyok, hasznalhato_szelesseg(self.list))
+
     def _oszlopok_felepitese(self):
         """A lista oszlopainak (újra)építése a self.lathato_kulcsok alapján.
         A fejléceket a constants.DEZIDERATA_MEZO_DEFINICIOK feliratkészletéből
         származtatjuk (a végi kettőspontot levágva), ahelyett hogy itt egy
         második, kézzel karbantartott listát tartanánk ugyanezekre a
-        feliratokra."""
+        feliratokra. Az oszlopok eleve a (közelítőleg) végleges szélességgel
+        jönnek létre, így nem kell utólag SetColumnWidth-et hívni."""
         mezo_feliratok = dict(DEZIDERATA_MEZO_DEFINICIOK)
         self.list.DeleteAllColumns()
-        for idx, kulcs in enumerate(self.lathato_kulcsok):
+        for idx, (kulcs, szelesseg) in enumerate(
+                zip(self.lathato_kulcsok, self._celszelessegek())):
             self.list.InsertColumn(
-                idx, mezo_feliratok[kulcs].rstrip(":"),
-                width=LISTA_OSZLOP_ADATOK[kulcs][0],
-            )
+                idx, mezo_feliratok[kulcs].rstrip(":"), width=szelesseg)
 
     def oszlopok_ujraepitese(self, config=None):
         """A látható oszlopok újraolvasása a beállításokból és a lista
@@ -749,24 +758,26 @@ class Deziderata(wx.Frame):
 
     def on_lista_atmeretezes(self, event):
         event.Skip()
-        self.IgazitOszlopSzelesseg()
+        # Az egy eseményciklusban érkező több átméretezési eseményt egyetlen
+        # igazításra vonjuk össze.
+        if not self._igazitas_fuggoben:
+            self._igazitas_fuggoben = True
+            wx.CallAfter(self._kesleltetett_igazitas)
+
+    def _kesleltetett_igazitas(self):
+        self._igazitas_fuggoben = False
+        if self:  # az ablak közben megsemmisülhetett
+            self.IgazitOszlopSzelesseg()
 
     def IgazitOszlopSzelesseg(self):
         """Az oszlopok alap szélességéhez hozzáadja a lista szélességéből
         megmaradó helyet az oszlopok súlyának arányában (a főlista
-        KonyvListaCtrl.IgazitOszlopSzelesseg-ével azonos módon). Ha a lista
-        nem elég széles az alap szélességekhez, azok maradnak, és a lista
-        vízszintesen görgethető."""
-        szerel_szelesseg = (self.list.GetClientSize().width
-                            - wx.SystemSettings.GetMetric(wx.SYS_VSCROLL_X))
-        osszes_alap = sum(LISTA_OSZLOP_ADATOK[k][0] for k in self.lathato_kulcsok)
-        osszes_suly = sum(LISTA_OSZLOP_ADATOK[k][1] for k in self.lathato_kulcsok)
-
-        maradek_hely = max(szerel_szelesseg - osszes_alap, 0)
-        for i, kulcs in enumerate(self.lathato_kulcsok):
-            alap, suly = LISTA_OSZLOP_ADATOK[kulcs]
-            plusz = int(maradek_hely * (suly / osszes_suly))
-            self.list.SetColumnWidth(i, alap + plusz)
+        KonyvListaCtrl.IgazitOszlopSzelesseg-ével azonos módon). Csak azokat
+        az oszlopokat állítja át, amelyek szélessége érdemben eltér a
+        kívántól (lásd oszlop_szelesseg.igazit). Ha a lista nem elég széles
+        az alap szélességekhez, azok maradnak, és a lista vízszintesen
+        görgethető."""
+        igazit(self.list, self._celszelessegek())
 
     def refresh_list(self):
         """Frissíti a ListCtrl elemét a tételek ábécérendbe rendezése után."""

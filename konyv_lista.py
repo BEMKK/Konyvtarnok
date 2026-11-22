@@ -14,9 +14,13 @@ from gyors_kereses import GyorsListaKereso, osszes_kijelolt_index
 # és a StatisztikaDialog.on_szamol helyi riport_rendezes függvényében
 # egymástól függetlenül, szó szerint megegyező formában volt megírva.
 from utils import magyar_rendezesi_kulcs, konyv_mezo_rendezesi_kulcs
+from oszlop_szelesseg import hasznalhato_szelesseg, szamol_celok, igazit
 
 
 class KonyvListaCtrl(wx.ListCtrl):
+    # Az átméretezési események összevonásához (lásd OnSize).
+    _igazitas_fuggoben = False
+
     # Az oszlopdefiníciók és a súlyok a constants.py-ban élnek (egyetlen
     # forrás); osztályszintű néven azért érhetők el itt is, hogy a
     # KonyvListaCtrl.OSZLOP_DEFINICIOK-ra hivatkozó kód változatlanul működjön.
@@ -43,12 +47,22 @@ class KonyvListaCtrl(wx.ListCtrl):
         self.Bind(wx.EVT_CHAR, self.OnChar)
         self.Bind(wx.EVT_SIZE, self.OnSize)
 
+    def _oszlop_kulcsok(self):
+        return [k for k in self.aktiv_oszlopok if k in self.OSZLOP_DEFINICIOK]
+
+    def _celszelessegek(self, kulcsok):
+        alapok = [self.OSZLOP_DEFINICIOK[k][1] for k in kulcsok]
+        sulyok = [self.SULYOK.get(k, 1.0) for k in kulcsok]
+        return szamol_celok(alapok, sulyok, hasznalhato_szelesseg(self))
+
     def InitOszlopok(self):
         self.ClearAll()
-        for idx, kulcs in enumerate(self.aktiv_oszlopok):
-            if kulcs in self.OSZLOP_DEFINICIOK:
-                nev, szelesseg = self.OSZLOP_DEFINICIOK[kulcs]
-                self.InsertColumn(idx, nev, width=szelesseg)
+        kulcsok = self._oszlop_kulcsok()
+        # Az oszlopok eleve a (közelítőleg) végleges szélességgel jönnek
+        # létre, így indításkor nem kell utólag SetColumnWidth-et hívni.
+        for idx, (kulcs, szelesseg) in enumerate(
+                zip(kulcsok, self._celszelessegek(kulcsok))):
+            self.InsertColumn(idx, self.OSZLOP_DEFINICIOK[kulcs][0], width=szelesseg)
 
     def SetAktivOszlopok(self, aktiv_oszlopok):
         self.aktiv_oszlopok = aktiv_oszlopok
@@ -203,7 +217,16 @@ class KonyvListaCtrl(wx.ListCtrl):
 
     def OnSize(self, event):
         event.Skip()
-        self.IgazitOszlopSzelesseg()
+        # Az egy eseményciklusban érkező több átméretezési eseményt egyetlen
+        # igazításra vonjuk össze.
+        if not self._igazitas_fuggoben:
+            self._igazitas_fuggoben = True
+            wx.CallAfter(self._KesleltetettIgazitas)
+
+    def _KesleltetettIgazitas(self):
+        self._igazitas_fuggoben = False
+        if self:  # a vezérlő közben megsemmisülhetett
+            self.IgazitOszlopSzelesseg()
 
     def IgazitOszlopSzelesseg(self):
         # Üres virtuális listán a SetColumnWidth Windowson érvénytelen elemre
@@ -211,22 +234,6 @@ class KonyvListaCtrl(wx.ListCtrl):
         # oszlopok addig megtartják az utolsó szélességüket.
         if self.GetItemCount() == 0:
             return
-
-        szerel_szelesseg = self.GetClientSize().width - wx.SystemSettings.GetMetric(wx.SYS_VSCROLL_X)
-        
-        osszes_alap = sum(self.OSZLOP_DEFINICIOK[k][1] for k in self.aktiv_oszlopok if k in self.OSZLOP_DEFINICIOK)
-        
-        if osszes_alap > 0 and szerel_szelesseg > osszes_alap:
-            maradek_hely = szerel_szelesseg - osszes_alap
-            osszes_suly = sum(self.SULYOK.get(k, 1.0) for k in self.aktiv_oszlopok if k in self.OSZLOP_DEFINICIOK)
-            
-            for i, kulcs in enumerate(self.aktiv_oszlopok):
-                if kulcs in self.OSZLOP_DEFINICIOK:
-                    alap = self.OSZLOP_DEFINICIOK[kulcs][1]
-                    suly = self.SULYOK.get(kulcs, 1.0)
-                    plusz_szelesseg = int(maradek_hely * (suly / osszes_suly))
-                    self.SetColumnWidth(i, alap + plusz_szelesseg)
-        else:
-            for i, kulcs in enumerate(self.aktiv_oszlopok):
-                if kulcs in self.OSZLOP_DEFINICIOK:
-                    self.SetColumnWidth(i, self.OSZLOP_DEFINICIOK[kulcs][1])
+        # Csak azokat az oszlopokat állítjuk át, amelyek szélessége érdemben
+        # eltér a kívántól (lásd oszlop_szelesseg.igazit).
+        igazit(self, self._celszelessegek(self._oszlop_kulcsok()))
