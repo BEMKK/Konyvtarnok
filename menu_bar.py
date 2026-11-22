@@ -1,6 +1,33 @@
 import wx
 
-class MenuBar(wx.MenuBar):
+
+class NezetMenuBar(wx.MenuBar):
+    """Közös ősosztály a három ablak menüsorához: a Nézet menü rádiócsoportjainak
+    (rendezés, szűrések) jelölését végző segédek. Az utódok a kulcs -> menüelem
+    szótárakat (rendezes_elemek, prioritas_elemek, statusz_elemek) töltik fel."""
+
+    @staticmethod
+    def RadioJelolese(elemek, kulcs):
+        """Egy rádiócsoportban a megadott kulcsú elemet jelöli be (ha még nem
+        az), hogy a képernyőolvasó mindig a valódi állapotot mondja be."""
+        elem = elemek.get(kulcs)
+        if elem is not None and not elem.IsChecked():
+            elem.Check(True)
+
+    def RendezesJelolese(self, kulcs):
+        """A Nézet > Rendezés rádiócsoportban a megadott kulcsú elemet jelöli be."""
+        self.RadioJelolese(self.rendezes_elemek, kulcs)
+
+    def PrioritasJelolese(self, kulcs):
+        """A Nézet > Szűrés > Prioritás rádiócsoport jelölése (Dezideráta)."""
+        self.RadioJelolese(self.prioritas_elemek, kulcs)
+
+    def StatuszJelolese(self, kulcs):
+        """A Nézet > Státusz (Szűrés > Státusz) rádiócsoport jelölése."""
+        self.RadioJelolese(self.statusz_elemek, kulcs)
+
+
+class MenuBar(NezetMenuBar):
     def __init__(self):
         super().__init__()
         
@@ -79,14 +106,7 @@ class MenuBar(wx.MenuBar):
 
         self.Append(help_menu, '&Súgó')
 
-    def RendezesJelolese(self, kulcs):
-        """A Nézet > Rendezés rádiócsoportban a megadott kulcsú elemet jelöli be,
-        hogy a képernyőolvasó mindig a valódi rendezést mondja be."""
-        elem = self.rendezes_elemek.get(kulcs)
-        if elem is not None and not elem.IsChecked():
-            elem.Check(True)
-
-class DeziderataMenuBar(wx.MenuBar):
+class DeziderataMenuBar(NezetMenuBar):
     def __init__(self):
         super().__init__()
 
@@ -117,6 +137,49 @@ class DeziderataMenuBar(wx.MenuBar):
 
         self.Append(edit_menu, "S&zerkesztés")
 
+        view_menu = wx.Menu()
+        ord_menu = wx.Menu()
+        self.cim = ord_menu.AppendRadioItem(wx.ID_ANY, '&Cím szerint\tALT+C', 'Rendezés cím szerint')
+        self.szerzo = ord_menu.AppendRadioItem(wx.ID_ANY, '&Összeállító szerint\tALT+S', 'Rendezés összeállító szerint')
+        self.kiado = ord_menu.AppendRadioItem(wx.ID_ANY, '&Kiadó szerint\tALT+K', 'Rendezés kiadó szerint')
+        self.ev = ord_menu.AppendRadioItem(wx.ID_ANY, '&Kiadás éve szerint\tALT+E', 'Rendezés a kiadás éve szerint')
+        view_menu.AppendSubMenu(ord_menu, '&Rendezés')
+        szures_menu = wx.Menu()
+        priority_menu = wx.Menu()
+        self.prioritas_mind = priority_menu.AppendRadioItem(wx.ID_ANY, '&Összes')
+        self.elsodleges = priority_menu.AppendRadioItem(wx.ID_ANY, 'Elsődleges')
+        self.masodlagos = priority_menu.AppendRadioItem(wx.ID_ANY, 'Másodlagos')
+        szures_menu.AppendSubMenu(priority_menu, '&Prioritás')
+        status_menu = wx.Menu()
+        self.statusz_mind = status_menu.AppendRadioItem(wx.ID_ANY, '&Összes')
+        self.beszerzes = status_menu.AppendRadioItem(wx.ID_ANY, 'Beszerzés alatt')
+        self.kaphato = status_menu.AppendRadioItem(wx.ID_ANY, 'Jelenleg kapható')
+        self.nemkaphato = status_menu.AppendRadioItem(wx.ID_ANY, 'Jelenleg nem kapható')
+        szures_menu.AppendSubMenu(status_menu, '&Státusz')
+        view_menu.AppendSubMenu(szures_menu, '&Szűrés')
+
+        self.Append(view_menu, '&Nézet')
+
+        # A rendezési mező / szűrési érték kulcsa -> menüelem. A rádiócsoportok
+        # jelölésének szinkronizálásához kellenek (lásd NezetMenuBar).
+        self.rendezes_elemek = {
+            "cim": self.cim,
+            "szerzo": self.szerzo,
+            "kiado": self.kiado,
+            "ev": self.ev,
+        }
+        self.prioritas_elemek = {
+            "mind": self.prioritas_mind,
+            "elsodleges": self.elsodleges,
+            "masodlagos": self.masodlagos,
+        }
+        self.statusz_elemek = {
+            "mind": self.statusz_mind,
+            "beszerzes": self.beszerzes,
+            "kaphato": self.kaphato,
+            "nemkaphato": self.nemkaphato,
+        }
+
         set_menu = wx.Menu()
         self.find = set_menu.Append(wx.ID_ANY, '&Keresés a gyűjteményekben\tCTRL+Shift+F', 'Közös keresés az állományban és a deziderátában')
         self.konyvtarnok_kereso_item = set_menu.Append(wx.ID_ANY, '&KönyvTárnok-kereső\tCTRL+SHIFT+K', 'KönyvTárnok kereső')
@@ -130,7 +193,7 @@ class DeziderataMenuBar(wx.MenuBar):
 
         self.Append(help_menu, "Súgó")
 
-class KeresoMenuBar(wx.MenuBar):
+class KeresoMenuBar(NezetMenuBar):
     def __init__(self):
         super().__init__()
         
@@ -153,6 +216,34 @@ class KeresoMenuBar(wx.MenuBar):
         edit_menu.AppendSubMenu(select_menu, '&Kijelölés')
 
         self.Append(edit_menu, "S&zerkesztés")
+
+        view_menu = wx.Menu()
+        ord_menu = wx.Menu()
+        self.cim = ord_menu.AppendRadioItem(wx.ID_ANY, '&Cím szerint\tALT+C', 'Rendezés cím szerint')
+        self.szerzo = ord_menu.AppendRadioItem(wx.ID_ANY, '&Összeállító szerint\tALT+S', 'Rendezés összeállító szerint')
+        self.kiado = ord_menu.AppendRadioItem(wx.ID_ANY, '&Kiadó szerint\tALT+K', 'Rendezés kiadó szerint')
+        self.ev = ord_menu.AppendRadioItem(wx.ID_ANY, '&Kiadás éve szerint\tALT+E', 'Rendezés a kiadás éve szerint')
+        view_menu.AppendSubMenu(ord_menu, '&Rendezés')
+        status_menu = wx.Menu()
+        self.osszes = status_menu.AppendRadioItem(wx.ID_ANY, '&Összes')
+        self.allomanyban = status_menu.AppendRadioItem(wx.ID_ANY, 'Állományban')
+        self.deziderataban = status_menu.AppendRadioItem(wx.ID_ANY, 'Deziderátában')
+        view_menu.AppendSubMenu(status_menu, '&Státusz')
+        self.Append(view_menu, '&Nézet')
+
+        # A rendezési mező / szűrési érték kulcsa -> menüelem. A rádiócsoportok
+        # jelölésének szinkronizálásához kellenek (lásd NezetMenuBar).
+        self.rendezes_elemek = {
+            "cim": self.cim,
+            "szerzo": self.szerzo,
+            "kiado": self.kiado,
+            "ev": self.ev,
+        }
+        self.statusz_elemek = {
+            "osszes": self.osszes,
+            "allomanyban": self.allomanyban,
+            "deziderataban": self.deziderataban,
+        }
 
         set_menu = wx.Menu()
         self.deziderata_kezelo = set_menu.Append(wx.ID_ANY, '&Dezideráta-kezelő\tCTRL+D', 'Dezideráta jegyzék kezelése')

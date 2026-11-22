@@ -80,14 +80,21 @@ DATA_FILE = os.path.join(BASE_DIR, "deziderata.json")
 LISTA_OSZLOP_KULCSOK = DEZIDERATA_OSZLOP_KULCSOK
 LISTA_OSZLOP_ADATOK = DEZIDERATA_OSZLOP_ADATOK
 
+# A "Beszerzés alatt" státusz tárolt értéke. Ha a constants.py már tartalmaz
+# ilyen nevű konstanst, azt használjuk; egyébként a menüfelirattal azonos szöveg.
+import constants as _constants
+DEZIDERATA_STATUS_BESZERZES = getattr(
+    _constants, "DEZIDERATA_STATUS_BESZERZES", "Beszerzés alatt"
+)
+
 # A Nézet > Szűrés menü kulcsai -> a tétel "priority" / "status" mezőjének
-# tárolt értéke. A "mind" kulcs nem szűr. (A "Beszerzés alatt" státuszú tételek
-# csak az "Összes" nézetben látszanak.)
+# tárolt értéke. A "mind" kulcs nem szűr.
 SZURO_PRIORITAS_ERTEKEK = {
     "elsodleges": "Elsődleges",
     "masodlagos": "Másodlagos",
 }
 SZURO_STATUSZ_ERTEKEK = {
+    "beszerzes": DEZIDERATA_STATUS_BESZERZES,
     "kaphato": DEZIDERATA_STATUS_KAPHATO,
     "nemkaphato": DEZIDERATA_STATUS_NEM_KAPHATO,
 }
@@ -317,7 +324,16 @@ class Deziderata(wx.Frame):
         btn_box.Add(self.btn_delete, 0, wx.ALL, 5)
         btn_box.Add(self.btn_katalogus, 0, wx.ALL, 5)
 
-        vbox.Add(btn_box, 0, wx.LEFT | wx.TOP, 5)
+        # Az aktív szűrést kijelző felirat (a főablak szuro_kijelzo-jával
+        # azonos megjelenéssel). Szűrés nélkül üres.
+        btn_box.AddStretchSpacer(1)
+        self.szuro_kijelzo = wx.StaticText(panel, label="")
+        szuro_font = self.szuro_kijelzo.GetFont()
+        szuro_font.MakeItalic()
+        self.szuro_kijelzo.SetFont(szuro_font)
+        btn_box.Add(self.szuro_kijelzo, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 15)
+
+        vbox.Add(btn_box, 0, wx.EXPAND | wx.LEFT | wx.TOP, 5)
 
         # --- Lista (táblázat) ---
         self.list = wx.ListCtrl(panel, style=wx.LC_REPORT | wx.BORDER_SUNKEN)
@@ -611,11 +627,36 @@ class Deziderata(wx.Frame):
             return
         db_szam = self.list.GetItemCount()
         if self._szures_aktiv():
+            # Aktív szűrésnél a főablakkal azonos felirat: a szűrt és az
+            # összes darabszám együtt.
             self.statusbar.SetStatusText(
-                f"Dezideráta tételei: {db_szam} / {len(self.items)} (szűrt nézet)."
+                f"Találatok száma: {db_szam} a {len(self.items)} kötetből."
             )
         else:
             self.statusbar.SetStatusText(f"Dezideráta tételeinek száma: {db_szam}.")
+        self._szuro_cimke_frissitese(db_szam)
+
+    def _szuro_cimke_frissitese(self, db_szam):
+        """A szűrő-felirat (főablak: szuro_kijelzo) beállítása az aktív
+        Nézet > Szűrés értékek szerint; szűrés nélkül üres."""
+        cimke = getattr(self, "szuro_kijelzo", None)
+        if cimke is None:
+            return
+        szoveg = ""
+        if self._szures_aktiv():
+            reszek = []
+            if self.szuro_prioritas != "mind":
+                reszek.append(
+                    f"Prioritás = '{SZURO_PRIORITAS_ERTEKEK.get(self.szuro_prioritas, self.szuro_prioritas)}'"
+                )
+            if self.szuro_statusz != "mind":
+                reszek.append(
+                    f"Státusz = '{SZURO_STATUSZ_ERTEKEK.get(self.szuro_statusz, self.szuro_statusz)}'"
+                )
+            szoveg = f"Szűrés: {', '.join(reszek)} ({db_szam} találat)"
+        if cimke.GetLabel() != szoveg:
+            cimke.SetLabel(szoveg)
+            cimke.GetParent().Layout()
 
     def OnMasolas(self, event=None):
         """Szerkesztés > Másolás (Ctrl+C): a kijelölt tételek a vágólapra.
