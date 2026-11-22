@@ -358,8 +358,9 @@ def fetch_latest_release():
 
 class FrissitesDialog(wx.Dialog):
     """Párbeszédablak az új verzió értesítéséhez."""
-    def __init__(self, parent, current_ver, latest_ver, release_url, release_notes="", exe_asset_url=None):
-        super().__init__(parent, title="Frissítés", size=(480, 340), style=wx.DEFAULT_DIALOG_STYLE | wx.STAY_ON_TOP)
+    def __init__(self, parent, current_ver, latest_ver, release_url, release_notes="",
+                 exe_asset_url=None, kihagyva=False):
+        super().__init__(parent, title="Frissítés", size=(480, 380), style=wx.DEFAULT_DIALOG_STYLE | wx.STAY_ON_TOP)
         self.release_url = release_url
         self.latest_ver = latest_ver
         # Az önfrissítés csak akkor kínálható fel, ha (a) csomagolt (frozen)
@@ -386,14 +387,25 @@ class FrissitesDialog(wx.Dialog):
             txt_notes = wx.TextCtrl(self, value=release_notes, style=wx.TE_MULTILINE | wx.TE_READONLY)
             main_sizer.Add(txt_notes, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 12)
 
+        # Az adott verzió kihagyása. Ha a felhasználó korábban már kihagyta
+        # ezt a verziót (kézi ellenőrzésnél), a négyzet előre be van jelölve;
+        # a pipa kivétele a döntés visszavonása. Bejelölt állapotban a
+        # "Frissítés most" gomb tiltott, mert a kettő kizárja egymást.
+        self.chk_kihagy = wx.CheckBox(self, label="Ezt a verziót ne jelezze többet")
+        self.chk_kihagy.SetValue(kihagyva)
+        self.chk_kihagy.Bind(wx.EVT_CHECKBOX, self.on_kihagy_valtozas)
+        main_sizer.Add(self.chk_kihagy, 0, wx.LEFT | wx.RIGHT | wx.TOP, 12)
+
         # Gombok
         btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
 
+        self.btn_telepit = None
         if self.exe_asset_url:
-            btn_telepit = wx.Button(self, label="Frissítés most")
-            btn_telepit.SetDefault()
-            btn_telepit.Bind(wx.EVT_BUTTON, self.on_telepites)
-            btn_sizer.Add(btn_telepit, 0, wx.RIGHT, 10)
+            self.btn_telepit = wx.Button(self, label="Frissítés most")
+            self.btn_telepit.SetDefault()
+            self.btn_telepit.Bind(wx.EVT_BUTTON, self.on_telepites)
+            self.btn_telepit.Enable(not kihagyva)
+            btn_sizer.Add(self.btn_telepit, 0, wx.RIGHT, 10)
 
         btn_open = wx.Button(self, label="Megtekintés a GitHub-on")
         btn_close = wx.Button(self, wx.ID_CANCEL, label="Frissítés elhalasztása")
@@ -406,6 +418,13 @@ class FrissitesDialog(wx.Dialog):
 
         self.SetSizer(main_sizer)
         self.Centre()
+
+    def on_kihagy_valtozas(self, event):
+        if self.btn_telepit:
+            self.btn_telepit.Enable(not self.chk_kihagy.IsChecked())
+
+    def kihagyas_kerve(self):
+        return self.chk_kihagy.IsChecked()
 
     def on_open_browser(self, event):
         webbrowser.open(self.release_url)
@@ -433,8 +452,12 @@ def check_for_updates_async(parent=None, is_manual=False):
             release_data = fetch_latest_release()
             if release_data:
                 # Dátum frissítése a beállításokban
-                config["last_update_check_date"] = str(datetime.date.today())
-                save_settings(config)
+                # Friss beolvasás: a hálózati hívás alatt a beállítások
+                # megváltozhattak, a korábban betöltött példány mentése
+                # felülírná őket.
+                cfg = load_settings()
+                cfg["last_update_check_date"] = str(datetime.date.today())
+                save_settings(cfg)
 
                 tag_name = release_data.get("tag_name", "").strip()
                 clean_tag = tag_name.lstrip("vV")
@@ -447,12 +470,29 @@ def check_for_updates_async(parent=None, is_manual=False):
                 latest_tuple = parse_version(latest_ver)
 
                 if latest_tuple > current_tuple:
+                    kihagyott = load_settings().get("kihagyott_verzio", "")
+                    kihagyva = bool(kihagyott) and parse_version(kihagyott) == latest_tuple
+                    if kihagyva and not is_manual:
+                        # A felhasználó ezt a verziót már elutasította;
+                        # csak újabb kiadásnál jelzünk újra.
+                        return
+
                     def _show():
                         dlg = FrissitesDialog(
                             parent, APP_VERSION, latest_ver, release_url, release_notes,
-                            exe_asset_url=exe_asset_url,
+                            exe_asset_url=exe_asset_url, kihagyva=kihagyva,
                         )
-                        dlg.ShowModal()
+                        eredmeny = dlg.ShowModal()
+                        if eredmeny == wx.ID_CANCEL:
+                            if dlg.kihagyas_kerve():
+                                cfg = load_settings()
+                                cfg["kihagyott_verzio"] = latest_ver
+                                save_settings(cfg)
+                            elif kihagyva:
+                                # A pipa kivétele: a korábbi döntés visszavonva.
+                                cfg = load_settings()
+                                cfg["kihagyott_verzio"] = ""
+                                save_settings(cfg)
                         dlg.Destroy()
                     wx.CallAfter(_show)
                 elif is_manual:
