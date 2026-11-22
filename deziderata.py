@@ -5,7 +5,7 @@ import os
 import uuid
 from contextlib import contextmanager
 import wx
-from config_manager import load_settings, save_settings
+from config_manager import load_settings, save_settings, beallitas_mentese
 from theme_manager import apply_theme_from_settings
 from help import HelpNotebookDialog, sugo_megnyitasa
 from settings import beallitasok_megnyitasa_gyermekbol
@@ -32,6 +32,8 @@ from constants import (
     DEZIDERATA_MEZO_DEFINICIOK,
     DEZIDERATA_OSZLOP_ADATOK,
     DEZIDERATA_OSZLOP_KULCSOK,
+    DEZIDERATA_STATUS_KAPHATO,
+    DEZIDERATA_STATUS_NEM_KAPHATO,
 )
 from konyvdialogs import (
     DeziderataReszletekDialog,
@@ -50,7 +52,10 @@ from undo_manager import (
 # meghatározó, wx-től független logika (utóbbit korábban a
 # config_manager.py, a data_manager.py, a deziderata.py és a main.py is
 # egymástól függetlenül, szó szerint megegyező formában tartalmazta).
-from utils import magyar_rendezesi_kulcs, alkalmazas_alapmappa, masolas_vagolapra_szoveg
+from utils import (
+    magyar_rendezesi_kulcs, osszetett_rendezesi_kulcs, alkalmazas_alapmappa,
+    masolas_vagolapra_szoveg,
+)
 
 # Magyar locale beállítása
 try:
@@ -74,6 +79,18 @@ DATA_FILE = os.path.join(BASE_DIR, "deziderata.json")
 # mekkora részt kap.
 LISTA_OSZLOP_KULCSOK = DEZIDERATA_OSZLOP_KULCSOK
 LISTA_OSZLOP_ADATOK = DEZIDERATA_OSZLOP_ADATOK
+
+# A Nézet > Szűrés menü kulcsai -> a tétel "priority" / "status" mezőjének
+# tárolt értéke. A "mind" kulcs nem szűr. (A "Beszerzés alatt" státuszú tételek
+# csak az "Összes" nézetben látszanak.)
+SZURO_PRIORITAS_ERTEKEK = {
+    "elsodleges": "Elsődleges",
+    "masodlagos": "Másodlagos",
+}
+SZURO_STATUSZ_ERTEKEK = {
+    "kaphato": DEZIDERATA_STATUS_KAPHATO,
+    "nemkaphato": DEZIDERATA_STATUS_NEM_KAPHATO,
+}
 
 
 def katalogus_oszlop_definiciok():
@@ -249,6 +266,17 @@ class Deziderata(wx.Frame):
         # megfelelője); a refresh_list építi újra minden frissítéskor.
         self.sor_id_terkep = {}
 
+        # Nézet: a választott rendezés (Nézet > Rendezés; a beállításokból
+        # töltődik, lásd lentebb) és a szűrések (Nézet > Szűrés; ezek
+        # szándékosan nem mentődnek, indításkor mindig "Összes"). A self.items
+        # a TELJES adat marad; a listában látszó, szűrt és rendezett tételek a
+        # self.lathato_items-ben vannak (a sor_id_terkep ezekre épül).
+        self.rendezes_kulcs = "cim"
+        self.szuro_prioritas = "mind"
+        self.szuro_statusz = "mind"
+        self.lathato_items = []
+        self._rendezes_mentes_hiba_jelezve = False
+
         # Visszavonás/mégis (lásd undo_manager.py). Ha a főablak gyermeke
         # vagyunk, annak adatbázisával közös regisztert használunk: az
         # állományba átemelés így EGY, mindkét oldalt érintő lépés, amely
@@ -313,6 +341,13 @@ class Deziderata(wx.Frame):
         self.menusor = menusor
         self.SetMenuBar(menusor)
 
+        # Az utoljára választott rendezés (ismeretlen/sérült érték esetén cím).
+        alap_rendezes = load_settings().get("deziderata_rendezes", "cim")
+        if alap_rendezes not in menusor.rendezes_elemek:
+            alap_rendezes = "cim"
+        self.rendezes_kulcs = alap_rendezes
+        menusor.RendezesJelolese(alap_rendezes)
+
         # --- Események ---
         self.Bind(wx.EVT_MENU, self.on_add, menusor.uj_tetel)
         self.Bind(wx.EVT_MENU, self.on_edit, menusor.szerk)
@@ -331,6 +366,12 @@ class Deziderata(wx.Frame):
         self.Bind(wx.EVT_MENU, self.on_open_help, menusor.help)
         self.Bind(wx.EVT_MENU, self.on_konyvtarnok_kereso, menusor.konyvtarnok_kereso_item)
         self.Bind(wx.EVT_MENU, self.on_beallitasok, menusor.beallitasok)
+        for kulcs, elem in menusor.rendezes_elemek.items():
+            self.Bind(wx.EVT_MENU, lambda e, k=kulcs: self.OnRendezes(k), elem)
+        for kulcs, elem in menusor.prioritas_elemek.items():
+            self.Bind(wx.EVT_MENU, lambda e, k=kulcs: self.OnSzuresPrioritas(k), elem)
+        for kulcs, elem in menusor.statusz_elemek.items():
+            self.Bind(wx.EVT_MENU, lambda e, k=kulcs: self.OnSzuresStatusz(k), elem)
 
         self.Bind(wx.EVT_MENU_OPEN, self.OnMenuNyitas)
 
@@ -362,12 +403,36 @@ class Deziderata(wx.Frame):
         self.Show()
 
     def rendez_listat(self):
-        """A tételek ábécérendbe rendezése Cím szerint a magyar ábécé szabályai alapján."""
+        """A teljes adat (self.items) cím szerinti rendezése a magyar ábécé
+        szabályai alapján. Ez a háttéradat sorrendje (a fájlé is); a listában
+        látszó sorrendet a választott rendezés adja (lásd _lathato_tetelek)."""
         def get_sort_key(item):
             val = item.get("cim", "")
             return magyar_rendezesi_kulcs(val)
 
         self.items.sort(key=get_sort_key)
+
+    def _szures_aktiv(self):
+        return self.szuro_prioritas != "mind" or self.szuro_statusz != "mind"
+
+    def _illeszkedik_szuroknek(self, item):
+        """Igaz, ha a tétel megfelel a Nézet > Szűrés aktuális beállításainak."""
+        if self.szuro_prioritas != "mind":
+            if item.get("priority") != SZURO_PRIORITAS_ERTEKEK.get(self.szuro_prioritas):
+                return False
+        if self.szuro_statusz != "mind":
+            if item.get("status") != SZURO_STATUSZ_ERTEKEK.get(self.szuro_statusz):
+                return False
+        return True
+
+    def _lathato_tetelek(self):
+        """A listában látszó tételek: a szűrőknek megfelelők, a választott
+        rendezés szerint (a főlistával azonos összetett kulccsal)."""
+        kulcs = self.rendezes_kulcs
+        tetelek = [it for it in self.items
+                   if isinstance(it, dict) and self._illeszkedik_szuroknek(it)]
+        tetelek.sort(key=lambda it: osszetett_rendezesi_kulcs(it, kulcs))
+        return tetelek
 
     # --- ID ALAPÚ AZONOSÍTÁS ---
 
@@ -545,7 +610,12 @@ class Deziderata(wx.Frame):
             )
             return
         db_szam = self.list.GetItemCount()
-        self.statusbar.SetStatusText(f"Dezideráta tételeinek száma: {db_szam}.")
+        if self._szures_aktiv():
+            self.statusbar.SetStatusText(
+                f"Dezideráta tételei: {db_szam} / {len(self.items)} (szűrt nézet)."
+            )
+        else:
+            self.statusbar.SetStatusText(f"Dezideráta tételeinek száma: {db_szam}.")
 
     def OnMasolas(self, event=None):
         """Szerkesztés > Másolás (Ctrl+C): a kijelölt tételek a vágólapra.
@@ -597,6 +667,10 @@ class Deziderata(wx.Frame):
 
     def OnMenuNyitas(self, event):
         frissit_undo_menu(self.menusor.undo, self.menusor.redo, self.undo)
+        # A Nézet menü rádiócsoportjai mindig a valódi állapotot mutassák.
+        self.menusor.RendezesJelolese(self.rendezes_kulcs)
+        self.menusor.PrioritasJelolese(self.szuro_prioritas)
+        self.menusor.StatuszJelolese(self.szuro_statusz)
         event.Skip()
 
     def OnVisszavonas(self, event=None):
@@ -780,18 +854,19 @@ class Deziderata(wx.Frame):
         igazit(self.list, self._celszelessegek())
 
     def refresh_list(self):
-        """Frissíti a ListCtrl elemét a tételek ábécérendbe rendezése után."""
+        """Frissíti a ListCtrl elemét: a teljes adatból (self.items) felépíti a
+        látható nézetet (szűrés és a választott rendezés), és kirajzolja."""
         self._biztosit_idk()
         self.rendez_listat()
+        self.lathato_items = self._lathato_tetelek()
         self.sor_id_terkep = {
-            idx: item.get("id") for idx, item in enumerate(self.items)
-            if isinstance(item, dict)
+            idx: item.get("id") for idx, item in enumerate(self.lathato_items)
         }
         # Freeze/Thaw: a sorok beszúrása közben nincs közbenső újrarajzolás.
         self.list.Freeze()
         try:
             self.list.DeleteAllItems()
-            for item in self.items:
+            for item in self.lathato_items:
                 ertekek = [lista_ertek(item, k) for k in self.lathato_kulcsok]
                 index = self.list.InsertItem(self.list.GetItemCount(), ertekek[0])
                 for oszlop, ertek in enumerate(ertekek[1:], start=1):
@@ -802,6 +877,41 @@ class Deziderata(wx.Frame):
         # A görgetősáv megjelenése/eltűnése a hasznos szélességet módosíthatja
         self.IgazitOszlopSzelesseg()
         self.FrissitStatusBar()
+
+    # --- NÉZET: RENDEZÉS ÉS SZŰRÉS ---
+
+    def _nezet_frissitese(self):
+        """A lista újraépítése a fókusz, a kijelölés és a görgetés megtartásával."""
+        with self._lista_helyzet_megtartasa():
+            self.refresh_list()
+
+    def OnRendezes(self, mezo_kulcs):
+        self.rendezes_kulcs = mezo_kulcs
+        self._nezet_frissitese()
+        # A választott rendezés megmarad a következő indításra is.
+        if not beallitas_mentese("deziderata_rendezes", mezo_kulcs):
+            if not self._rendezes_mentes_hiba_jelezve:
+                self._rendezes_mentes_hiba_jelezve = True
+                wx.MessageBox(
+                    "A rendezés mentése nem sikerült, ezért a program újraindítás után "
+                    "az előző rendezéssel nyílik meg.",
+                    "Mentési hiba", wx.OK | wx.ICON_WARNING, self,
+                )
+
+    def OnSzuresPrioritas(self, kulcs):
+        self.szuro_prioritas = kulcs
+        self._nezet_frissitese()
+
+    def OnSzuresStatusz(self, kulcs):
+        self.szuro_statusz = kulcs
+        self._nezet_frissitese()
+
+    def _rejtett_tetel_jelzese(self):
+        wx.MessageBox(
+            "A tétel mentésre került, de az aktív szűrés miatt jelenleg nem látható "
+            "a listában. A Nézet > Szűrés menüben állíthatja át a szűrést.",
+            "Szűrés aktív", wx.OK | wx.ICON_INFORMATION, self,
+        )
 
     # --- ESEMÉNYKEZELŐK ---
 
@@ -872,10 +982,13 @@ class Deziderata(wx.Frame):
             self.refresh_list()
 
         target_idx = self._sorindex_idhoz(szerkesztett_id)
+        rejtett = target_idx == -1 and self._szures_aktiv()
         if (target_idx == -1 and eredeti_sorindex is not None
                 and self.list.GetItemCount() > 0):
             target_idx = min(eredeti_sorindex, self.list.GetItemCount() - 1)
         self.select_and_focus(target_idx)
+        if rejtett:
+            self._rejtett_tetel_jelzese()
         return True
 
     def tetelek_felvetele(self, uj_tetelek):
@@ -901,6 +1014,13 @@ class Deziderata(wx.Frame):
             # ablak-fókuszt nem vesszük el a (másik ablakban dolgozó) kereső
             # elől.
             self._kijelol_idk([t["id"] for t in felvett], ablak_fokusz=False)
+            if self._szures_aktiv():
+                lathato_idk = set(self.sor_id_terkep.values())
+                rejtett = sum(1 for t in felvett if t["id"] not in lathato_idk)
+                if rejtett:
+                    self.statusbar.SetStatusText(
+                        f"{rejtett} új tétel az aktív szűrés miatt nem látható a listában."
+                    )
         return sikeres, visszautasitott
 
     def on_kereses(self, event=None):
@@ -925,6 +1045,8 @@ class Deziderata(wx.Frame):
 
             if target_idx != -1:
                 self.select_and_focus(target_idx)
+            elif self._szures_aktiv():
+                self._rejtett_tetel_jelzese()
         dlg.Destroy()
         # Mégse / Escape esetén a fókusz különben a gombon maradna.
         self.list.SetFocus()
@@ -1174,11 +1296,13 @@ class Deziderata(wx.Frame):
         wx.MessageBox("\n".join(uzenet_sorok), "Siker", wx.OK | wx.ICON_INFORMATION, self)
 
     def on_katalogus_export(self, event):
-        """A teljes dezideráta-lista exportálása katalóguslapként (PDF).
-        Csak olvas, ezért betöltési hiba után sem kell letiltani."""
-        sorok = [{k: lista_ertek(it, k) for k in LISTA_OSZLOP_KULCSOK}
-                 for it in self.items]  # a self.items már rendezett
-        katalogus_mentese(self, sorok, LISTA_OSZLOP_KULCSOK,
+        """A listában látható tételek exportálása katalóguslapként (PDF), a
+        főablakhoz hasonlóan: a szűrt és rendezett nézet, csak a látható
+        oszlopokkal. Csak olvas, ezért betöltési hiba után sem kell letiltani."""
+        kulcsok = list(self.lathato_kulcsok)
+        sorok = [{k: lista_ertek(it, k) for k in kulcsok}
+                 for it in self.lathato_items]
+        katalogus_mentese(self, sorok, kulcsok,
                           defs=katalogus_oszlop_definiciok(),
                           cim_szoveg="Dezideráta-lap",
                           alap_fajlnev="dezideratalap.pdf")

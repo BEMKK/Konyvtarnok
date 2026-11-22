@@ -27,6 +27,10 @@ DEFAULT_CONFIG = {
     # A KönyvTárnok-kereső találati listája üres keresőmezőnél: "ures" | "osszes"
     "kereso_inditasi_lista": "ures",
     "alapertelmezett_rendezes": "cim",
+    # A Dezideráta-kezelő és a KönyvTárnok-kereső utoljára választott
+    # rendezése (Nézet > Rendezés). A szűrések szándékosan nem mentődnek.
+    "deziderata_rendezes": "cim",
+    "kereso_rendezes": "cim",
     "update_frequency": "startup",
     "last_update_check_date": ""
 }
@@ -59,3 +63,14 @@ def save_settings(config_data):
     except Exception:
         logging.error("Hiba a beállítások mentésekor", exc_info=True)
         return False
+
+
+def beallitas_mentese(kulcs, ertek):
+    """Egyetlen beállítás (pl. egy ablak rendezése) elmentése. Ha az érték nem
+    változott, nem ír a lemezre. True, ha az érték a fájlban van (mentés
+    sikerült vagy nem kellett), False, ha a mentés nem sikerült."""
+    config = load_settings()
+    if config.get(kulcs) == ertek:
+        return True
+    config[kulcs] = ertek
+    return save_settings(config)

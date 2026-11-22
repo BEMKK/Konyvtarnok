@@ -13,7 +13,7 @@ from gyors_kereses import GyorsListaKereso, osszes_kijelolt_index
 # KonyvListaCtrl.FeltoltLista helyi szam_kulcs/meret_kulcs függvényeiben
 # és a StatisztikaDialog.on_szamol helyi riport_rendezes függvényében
 # egymástól függetlenül, szó szerint megegyező formában volt megírva.
-from utils import magyar_rendezesi_kulcs, konyv_mezo_rendezesi_kulcs
+from utils import magyar_rendezesi_kulcs, konyv_mezo_rendezesi_kulcs, osszetett_rendezesi_kulcs
 from oszlop_szelesseg import hasznalhato_szelesseg, szamol_celok, igazit
 
 
@@ -128,34 +128,13 @@ class KonyvListaCtrl(wx.ListCtrl):
 
         akt_rendezes = self.rendezes_kulcs if self.rendezes_kulcs else "cim"
 
-        def osszetett_rendezesi_kulcs(konyv):
-            raw_val = konyv.get(akt_rendezes, "")
-            
-            # Ellenőrizzük, hogy a mező üres-e (None, üres sztring vagy csak szóközök)
-            is_empty = raw_val is None or str(raw_val).strip() == ""
-            hianyos = 1 if is_empty else 0
+        # Az összetett rendezési kulcs (hiányos értékek a végén, másodlagos és
+        # harmadlagos mező) a utils-ban él, hogy a Dezideráta-kezelő és a
+        # KönyvTárnok-kereső is ugyanezt használja.
+        def rendezesi_kulcs(konyv):
+            return osszetett_rendezesi_kulcs(konyv, akt_rendezes)
 
-            # 1. Elsődleges rendezési érték kiszámítása - a mezőtípus szerinti
-            # (szám/méret/dátum/magyar ábécé) döntést az utils.konyv_mezo_
-            # rendezesi_kulcs közös függvénye végzi (lásd az importnál lévő
-            # kommentet).
-            elso = konyv_mezo_rendezesi_kulcs(akt_rendezes, raw_val)
-            
-            # 2. Másodlagos és harmadlagos rendezési értékek
-            if akt_rendezes == "cim":
-                masod = magyar_rendezesi_kulcs(konyv.get("szerzo", ""))
-                harmad = magyar_rendezesi_kulcs(konyv.get("ev", ""))
-            elif akt_rendezes == "szerzo":
-                masod = magyar_rendezesi_kulcs(konyv.get("cim", ""))
-                harmad = magyar_rendezesi_kulcs(konyv.get("ev", ""))
-            else:
-                masod = magyar_rendezesi_kulcs(konyv.get("cim", ""))
-                harmad = magyar_rendezesi_kulcs(konyv.get("szerzo", ""))
-
-            # A tuple első eleme a 'hianyos' jelző: 0 = van adat (előre), 1 = nincs adat (a lista végére)
-            return (hianyos, elso, masod, harmad)
-
-        self.jelenlegi_adatok.sort(key=osszetett_rendezesi_kulcs)
+        self.jelenlegi_adatok.sort(key=rendezesi_kulcs)
 
         for idx, konyv in enumerate(self.jelenlegi_adatok):
             self.sor_id_terkep[idx] = konyv.get("id")

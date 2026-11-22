@@ -6,7 +6,7 @@ from contextlib import nullcontext
 from types import SimpleNamespace
 from constants import KERESO_APP_TITLE
 from theme_manager import apply_theme_from_settings
-from config_manager import load_settings, save_settings
+from config_manager import load_settings, save_settings, beallitas_mentese
 from deziderata import (
     DATA_FILE as DEZIDERATA_DATA_FILE,
     deziderata_tetelek_hozzaadasa,
@@ -34,7 +34,7 @@ from data_manager import (
 from gyors_kereses import GyorsListaKereso, osszes_kijelolt_index
 from help import HelpNotebookDialog, sugo_megnyitasa
 from settings import azonos_utvonal, beallitasok_megnyitasa_gyermekbol
-from utils import masolas_vagolapra_szoveg
+from utils import masolas_vagolapra_szoveg, osszetett_rendezesi_kulcs
 from menu_bar import KeresoMenuBar
 from undo_manager import (
     UndoKezelo, frissit_undo_menu, szovegmezo_visszavonas, utkozes_uzenet,
@@ -86,6 +86,16 @@ class KonyvtarnokKeresoApp(wx.Frame):
         # Igaz, ha a táblázat jelenleg az alaplistát ("összes tétel") mutatja;
         # így az üres mező további szövegeseményei nem építik újra feleslegesen.
         self._alaplista_latszik = False
+        # A legutóbbi keresés (vagy az alaplista) SZŰRETLEN, rendezetlen
+        # eredménye. A Nézet menü rendezése és Státusz szűrése ebből építi
+        # újra a táblázatot, új keresés nélkül.
+        self._nyers_talalatok = []
+        # Nézet: a választott rendezés (a beállításokból töltődik, lásd
+        # lentebb) és a Státusz szűrés ("osszes" | "allomanyban" |
+        # "deziderataban"; ez szándékosan nem mentődik, indításkor "osszes").
+        self.rendezes_kulcs = "cim"
+        self.szuro_statusz = "osszes"
+        self._rendezes_mentes_hiba_jelezve = False
 
         # Gyorskeresés (gépeléssel ugrás a listában)
         self.gyors_kereses = GyorsListaKereso()
@@ -97,6 +107,14 @@ class KonyvtarnokKeresoApp(wx.Frame):
         self.menusor = menusor
         self.SetMenuBar(menusor)
         self.menu_esemenyek_bekotese(menusor)
+
+        # Az utoljára választott rendezés (ismeretlen/sérült érték esetén cím).
+        # A betöltés előtt kell, mert az alaplista már ezzel épül fel.
+        alap_rendezes = load_settings().get("kereso_rendezes", "cim")
+        if alap_rendezes not in menusor.rendezes_elemek:
+            alap_rendezes = "cim"
+        self.rendezes_kulcs = alap_rendezes
+        menusor.RendezesJelolese(alap_rendezes)
 
         # Status bar létrehozása az ablak alján
         self.CreateStatusBar()
@@ -279,6 +297,7 @@ class KonyvtarnokKeresoApp(wx.Frame):
         """Kiüríti a találati táblázatot és az eredeti sor-dictek tárolóját."""
         self.tablazat.DeleteAllItems()
         self._talalat_sorok = []
+        self._nyers_talalatok = []
         self._alaplista_latszik = False
 
     @staticmethod
@@ -287,22 +306,61 @@ class KonyvtarnokKeresoApp(wx.Frame):
         return ertek if ertek in ("ures", "osszes") else "ures"
 
     def _sorok_megjelenitese(self, sorok, alaplista=False):
-        """Kiüríti a táblázatot, majd megjeleníti a megadott sorokat a Státusz
-        oszloppal együtt. Közös a keresés (találatok) és az alaplista ("összes
-        tétel" mód) számára, hogy a két megjelenítés ne térhessen el.
+        """Egy új találati halmaz megjelenítése: a nyers találatokat eltárolja
+        (a Nézet menü ebből építi újra a táblázatot), majd a jelenlegi
+        rendezéssel és Státusz szűréssel kirajzolja. Közös a keresés
+        (találatok) és az alaplista ("összes tétel" mód) számára, hogy a két
+        megjelenítés ne térhessen el."""
+        self._nezet_kirajzolasa(list(sorok), alaplista)
+
+    def _rendez_es_szur(self, nyers_sorok, statusz_ctx):
+        """A nyers találatokból a megjelenítendő sorok: Státusz szerint szűrve,
+        a választott rendezéssel (a főlistával és a Dezideráta-kezelővel azonos
+        összetett kulccsal, a sor kanonikus mezőin). Visszatérés: (sorok,
+        {id(sor): (állományban, deziderátában)}) - utóbbi csak szűrésnél
+        töltött, hogy a kirajzolás ne számolja újra a státuszt."""
+        statuszok = {}
+        sorok = nyers_sorok
+        if self.szuro_statusz != "osszes":
+            hely = 0 if self.szuro_statusz == "allomanyban" else 1
+            sorok = []
+            for sor in nyers_sorok:
+                statusz = self._sor_statusza(sor, statusz_ctx)
+                statuszok[id(sor)] = statusz
+                if statusz[hely]:
+                    sorok.append(sor)
+        kulcs = self.rendezes_kulcs
+        sorok = sorted(
+            sorok,
+            key=lambda sor: osszetett_rendezesi_kulcs(
+                self._sor_alap_adatta_alakitasa(sor), kulcs
+            ),
+        )
+        return sorok, statuszok
+
+    def _nezet_kirajzolasa(self, nyers_sorok, alaplista=False):
+        """Kiüríti a táblázatot, majd megjeleníti a nyers találatok szűrt és
+        rendezett nézetét a Státusz oszloppal együtt.
 
         A táblázat a beszúrás idejére "befagyasztott" (Freeze), mert sok sornál
         a soronkénti újrarajzolás lenne a lassú rész."""
         self._tablazat_uritese()
-        if not sorok:
+        self._nyers_talalatok = nyers_sorok
+        if not nyers_sorok:
             self.frissit_akadalymentesites(0)
             return
 
         statusz_ctx = self._statusz_kontextus()
+        sorok, statuszok = self._rendez_es_szur(nyers_sorok, statusz_ctx)
+
         if not statusz_ctx.dezi_olvashato:
             self.SetStatusText(
                 "A dezideráta-jegyzék nem olvasható, ezért a "
                 "\u201eDeziderátában\u201d jelzés nem elérhető."
+            )
+        elif self.szuro_statusz != "osszes":
+            self.SetStatusText(
+                f"Szűrt nézet: {len(sorok)} / {len(nyers_sorok)} találat."
             )
         elif alaplista:
             self._allapot_frissitese()
@@ -323,12 +381,50 @@ class KonyvtarnokKeresoApp(wx.Frame):
                         sor_index, col_idx, str(sor.get(col_name, ""))
                     )
                 # UTOLSÓ OSZLOP: Státusz (Állományban / Deziderátában)
-                self._statusz_beallitasa(sor_index, sor, statusz_ctx)
+                self._statusz_beallitasa(sor_index, sor, statusz_ctx,
+                                         statuszok.get(id(sor)))
         finally:
             self.tablazat.Thaw()
 
         self._alaplista_latszik = alaplista
         self.frissit_akadalymentesites(len(sorok))
+
+    def _nezet_ujraepitese(self):
+        """A táblázat újraépítése a legutóbbi nyers találatokból, a jelenlegi
+        rendezéssel és szűréssel (a Nézet menü hívja, új keresés nélkül). A
+        kijelölés és a fókusz a sorok azonossága alapján megmarad."""
+        if not self.oszlopok or not self._nyers_talalatok:
+            return
+        lista = self.tablazat
+
+        def azonosito(index):
+            return id(self._sor_eredeti_dict(index))
+
+        kijeloltek = {azonosito(i) for i in osszes_kijelolt_index(lista)}
+        regi_fokusz = lista.GetFocusedItem()
+        fokusz_sor = azonosito(regi_fokusz) if regi_fokusz != -1 else None
+        volt_fokusz = lista.HasFocus()
+
+        self._nezet_kirajzolasa(self._nyers_talalatok, self._alaplista_latszik)
+
+        db = lista.GetItemCount()
+        if db == 0:
+            return
+        uj_fokusz = None
+        for i in range(db):
+            azon = azonosito(i)
+            if azon in kijeloltek:
+                lista.Select(i)
+            if azon == fokusz_sor:
+                uj_fokusz = i
+        if uj_fokusz is None and regi_fokusz != -1:
+            # A fókuszált sor kiszűrődött: a hozzá legközelebbi sor kapja.
+            uj_fokusz = min(regi_fokusz, db - 1)
+        if uj_fokusz is not None:
+            lista.Focus(uj_fokusz)
+            lista.EnsureVisible(uj_fokusz)
+        if volt_fokusz:
+            lista.SetFocus()
 
     def _alapallapot_beallitasa(self, ujra=False):
         """A táblázat alapállapota, amikor a keresőmező üres: a beállítástól
@@ -511,12 +607,21 @@ class KonyvtarnokKeresoApp(wx.Frame):
             dezi_olvashato=dezi_olvashato,
         )
 
-    def _statusz_beallitasa(self, sor_index, sor_adat, ctx):
-        """Kiszámolja és beírja egy táblázatsor Státusz cellájába, hogy a
-        tétel az állományban és/vagy a deziderátában szerepel-e, és ennek
-        megfelelően színezi a sort."""
+    def _sor_statusza(self, sor_adat, ctx):
+        """(állományban van, deziderátában van) egy sorra. A Státusz cella és a
+        Nézet > Státusz szűrés is ezt használja, hogy ne térhessenek el."""
         van_allomany = self._allomanyban_van_e(sor_adat, ctx.cim_oszlop, ctx.konyvek)
         van_dezi = self._deziderataban_van_e(sor_adat, ctx.cim_oszlop, ctx.dezi)
+        return van_allomany, van_dezi
+
+    def _statusz_beallitasa(self, sor_index, sor_adat, ctx, statusz=None):
+        """Kiszámolja és beírja egy táblázatsor Státusz cellájába, hogy a
+        tétel az állományban és/vagy a deziderátában szerepel-e, és ennek
+        megfelelően színezi a sort. A statusz (_sor_statusza eredménye) kész
+        értékként is átadható, ilyenkor nem számolja újra."""
+        if statusz is None:
+            statusz = self._sor_statusza(sor_adat, ctx)
+        van_allomany, van_dezi = statusz
 
         cimkek = []
         if van_allomany:
@@ -694,6 +799,10 @@ class KonyvtarnokKeresoApp(wx.Frame):
         self.Bind(wx.EVT_MENU, self.on_open_help, menusor.help)
         self.Bind(wx.EVT_MENU, self.on_menu_deziderata_kezelo, menusor.deziderata_kezelo)
         self.Bind(wx.EVT_MENU, self.on_beallitasok, menusor.beallitasok)
+        for kulcs, elem in menusor.rendezes_elemek.items():
+            self.Bind(wx.EVT_MENU, lambda e, k=kulcs: self.on_menu_rendezes(k), elem)
+        for kulcs, elem in menusor.statusz_elemek.items():
+            self.Bind(wx.EVT_MENU, lambda e, k=kulcs: self.on_menu_statusz_szures(k), elem)
 
     # --- VISSZAVONÁS / MÉGIS ---
 
@@ -711,7 +820,29 @@ class KonyvtarnokKeresoApp(wx.Frame):
         if self.undo is not None:
             frissit_undo_menu(self.menusor.undo, self.menusor.redo,
                               self.undo, self.FindFocus())
+        # A Nézet menü rádiócsoportjai mindig a valódi állapotot mutassák.
+        self.menusor.RendezesJelolese(self.rendezes_kulcs)
+        self.menusor.StatuszJelolese(self.szuro_statusz)
         event.Skip()
+
+    # --- NÉZET: RENDEZÉS ÉS STÁTUSZ SZŰRÉS ---
+
+    def on_menu_rendezes(self, mezo_kulcs):
+        self.rendezes_kulcs = mezo_kulcs
+        self._nezet_ujraepitese()
+        # A választott rendezés megmarad a következő indításra is.
+        if not beallitas_mentese("kereso_rendezes", mezo_kulcs):
+            if not self._rendezes_mentes_hiba_jelezve:
+                self._rendezes_mentes_hiba_jelezve = True
+                wx.MessageBox(
+                    "A rendezés mentése nem sikerült, ezért a program újraindítás után "
+                    "az előző rendezéssel nyílik meg.",
+                    "Mentési hiba", wx.OK | wx.ICON_WARNING, self,
+                )
+
+    def on_menu_statusz_szures(self, kulcs):
+        self.szuro_statusz = kulcs
+        self._nezet_ujraepitese()
 
     def on_menu_visszavonas(self, event):
         self._visszavonas_vagy_megis(ismet=False)
@@ -966,6 +1097,12 @@ class KonyvtarnokKeresoApp(wx.Frame):
         amelyeket az on_kereses is használ, hogy a két hely soha ne térjen
         el egymástól."""
         if not self.oszlopok:
+            return
+
+        if self.szuro_statusz != "osszes":
+            # Aktív Státusz szűrésnél a státusz változása sorokat vihet ki a
+            # nézetből vagy hozhat be, ezért a cellák helyett újraépítünk.
+            self._nezet_ujraepitese()
             return
 
         sorok_szama = self.tablazat.GetItemCount()

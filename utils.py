@@ -317,6 +317,34 @@ def konyv_mezo_rendezesi_kulcs(mezo_kulcs, nyers_ertek):
     return magyar_rendezesi_kulcs(nyers_ertek)
 
 
+def osszetett_rendezesi_kulcs(adat, mezo_kulcs):
+    """Egy könyv-/tételrekord összetett rendezési kulcsa a választott mező
+    szerint: (hiányos-e, elsődleges, másodlagos, harmadlagos). A hiányos
+    (üres) értékű rekordok a lista végére kerülnek; egyező értéknél a
+    másodlagos/harmadlagos mező dönt (cím szerint: szerző, év; szerző szerint:
+    cím, év; egyébként: cím, szerző).
+
+    Ezt a kulcsot korábban a KonyvListaCtrl.FeltoltLista tartalmazta; most a
+    főlista, a Dezideráta-kezelő és a KönyvTárnok-kereső is ezt használja,
+    hogy a három lista ugyanúgy rendezzen. Az adat kanonikus mezőnevű dict
+    (cim, szerzo, kiado, ev, ...)."""
+    mezo_kulcs = mezo_kulcs or "cim"
+    nyers = adat.get(mezo_kulcs, "")
+    hianyos = 1 if nyers is None or str(nyers).strip() == "" else 0
+    elso = konyv_mezo_rendezesi_kulcs(mezo_kulcs, nyers)
+
+    if mezo_kulcs == "cim":
+        masod = magyar_rendezesi_kulcs(adat.get("szerzo", ""))
+        harmad = magyar_rendezesi_kulcs(adat.get("ev", ""))
+    elif mezo_kulcs == "szerzo":
+        masod = magyar_rendezesi_kulcs(adat.get("cim", ""))
+        harmad = magyar_rendezesi_kulcs(adat.get("ev", ""))
+    else:
+        masod = magyar_rendezesi_kulcs(adat.get("cim", ""))
+        harmad = magyar_rendezesi_kulcs(adat.get("szerzo", ""))
+    return (hianyos, elso, masod, harmad)
+
+
 def kereszttabla_rendezesi_kulcs(kulcs, ertek):
     """A kereszttáblás jelentés sor- és oszlopfejléceinek rendezési kulcsa.
 
