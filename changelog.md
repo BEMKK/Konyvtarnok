@@ -4,6 +4,14 @@ A projekten végrehajtott lényegi változtatások dokumentációja.
 
 
 
+## [4.3.0] - 2026-11-23
+
+- A KönyvTárnok-keresőben szűrési lehetőség azokra a tételekre, melyek sem az állományban, sem a deziderátában nem szerepelnek.
+- Javítva a KönyvTárnok-kereső státuszfeliratai szűrt lista esetén.
+- Javítva az Alt+K gyorsbillentyű-ütközés a két keresőablakban.
+
+
+
 ## [4.2.0 - 2026-11-22
 
 - A Dezideráta-kezelő és a KönyvTárnok-kereső egymásból is megnyitható.

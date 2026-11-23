@@ -99,7 +99,7 @@ class NevjegyDialog(wx.Dialog):
         verzio_label = wx.StaticText(self, label=f"Verzió: {APP_VERSION}".strip())
         sizer.Add(verzio_label, 0, wx.ALIGN_CENTER | wx.TOP, 15)
                 
-        fejleszto_label = wx.StaticText(self, label="© 2026 KönyvTárnok")
+        fejleszto_label = wx.StaticText(self, label="© 2026 Bemkk")
         sizer.Add(fejleszto_label, 0, wx.ALIGN_CENTER | wx.BOTTOM, 4)
         
         licenc_label = wx.StaticText(
@@ -150,15 +150,9 @@ class UjdonsagokDialog(wx.Dialog):
         main_sizer.Add(wx.StaticLine(self), 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 15)
         
         ujdonsagok_lista = [
-            "A Dezideráta-kezelő és a KönyvTárnok-kereső egymásból is megnyitható.",
-            "A KönyvTárnok-keresőben lehetőség van az adatbázis összes tételének listázására a Beállítások KönyvTárnok-kereső fülén.",
-            "Ugyanitt érhető el az adatbázis útvonalának megadása.",
-            "Javítva az oszlopszélességek számítása, mely a program lassú betöltését okozta.",
-            "Nézet menü és rendezési, szűrési lehetőség a Dezideráta-kezelőben és a KönyvTárnok-keresőben.",
-            "Újratervezett Beállítások ablak, külön fül a Dezideráta-kezelőnek, az oszlopok jelölőnégyzetei listában jelennek meg.",
-            "Könyvadatlap exportnál, fájlütközés esetén jelölőnégyzet a választott művelet összes ütközésre való alkalmazására.",
-            "Az exportálás megszakítására a Mégse gomb szolgál, a kihagyás gomb valóban csak a már meglévő adatlapokat hagyja ki.",
-            "Az új verzióról szóló felugró értesítésben lehetőség a verzió figyelmen kívül hagyására."
+            "- A KönyvTárnok-keresőben szűrési lehetőség az állományban és a deziderátában nem szereplő tételekre.",
+            "Javítva a KönyvTárnok-kereső státuszfeliratai szűrt lista esetén.",
+            "Javítva az Alt+K gyorsbillentyű-ütközés a két keresőablakban."
         ]
 
         szoveg_box = wx.BoxSizer(wx.VERTICAL)
