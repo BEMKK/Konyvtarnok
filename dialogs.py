@@ -150,9 +150,9 @@ class UjdonsagokDialog(wx.Dialog):
         main_sizer.Add(wx.StaticLine(self), 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 15)
         
         ujdonsagok_lista = [
-            "- A KönyvTárnok-keresőben szűrési lehetőség az állományban és a deziderátában nem szereplő tételekre.",
-            "Javítva a KönyvTárnok-kereső státuszfeliratai szűrt lista esetén.",
-            "Javítva az Alt+K gyorsbillentyű-ütközés a két keresőablakban."
+            "A KönyvTárnok-keresőből eltávolítva a régi billentyűleütés-kezelő, mivel a funkcióit a menüesemények vették át.",
+            "Kisebb kódjavítások, nem használt importok és kódok, függőségek törlése.",
+            "Frissítés a súgóban és a readme.md fájlban."
         ]
 
         szoveg_box = wx.BoxSizer(wx.VERTICAL)
