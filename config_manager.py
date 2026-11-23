@@ -32,7 +32,8 @@ DEFAULT_CONFIG = {
     "deziderata_rendezes": "cim",
     "kereso_rendezes": "cim",
     "update_frequency": "startup",
-    "last_update_check_date": ""
+    "last_update_check_date": "",
+    "kihagyott_verzio": ""
 }
 
 def load_settings():
