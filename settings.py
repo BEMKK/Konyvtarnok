@@ -261,8 +261,8 @@ class BeallitasokDialog(wx.Dialog):
         Visszaadja a (listavezérlő, kulcsok) párt; a kulcsok a lista sorainak
         sorrendjében állnak."""
         if self._oszlop_jelolo_tamogatott:
-            cimke_szoveg = ("Válassza ki a listában megjelenő oszlopokat "
-                            "(szóközzel kapcsolható). A Cím oszlop mindig látszik.")
+            cimke_szoveg = ("Válassza ki az állománykezelőben megjelenő oszlopokat. "
+                            "A Cím oszlop mindig látszik.")
         else:
             cimke_szoveg = ("Az oszlopok kiválasztásához wxPython 4.1 vagy újabb "
                             "verzió szükséges. A jelenlegi oszlopbeállítás változatlan marad.")
