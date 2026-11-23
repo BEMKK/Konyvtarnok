@@ -50,7 +50,6 @@ python main.py
 | Csomag | Verzió | Funkció |
 |--------|--------|---------|
 | `reportlab` | 5.1.0 | PDF adatlapok és statisztikai jelentések generálása |
-| `requests` | 2.34.2 | A program új verzióinak ellenőrzése |
 | `wxpython` | 4.3.2 | Grafikus felület (GUI keretrendszer) |
 
 ## Projektstruktúra
