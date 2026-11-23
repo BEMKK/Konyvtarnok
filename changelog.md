@@ -4,6 +4,14 @@ A projekten végrehajtott lényegi változtatások dokumentációja.
 
 
 
+## [4.3.1] - 2026-11-23
+
+- A KönyvTárnok-keresőből eltávolítva a régi billentyűleütés-kezelő, mivel a funkcióit a menüesemények vették át.
+- Kisebb kódjavítások, nem használt importok és kódok, függőségek törlése.
+- Frissítés a súgóban és a readme.md fájlban.
+
+
+
 ## [4.3.0] - 2026-11-23
 
 - A KönyvTárnok-keresőben szűrési lehetőség azokra a tételekre, melyek sem az állományban, sem a deziderátában nem szerepelnek.
@@ -12,7 +20,7 @@ A projekten végrehajtott lényegi változtatások dokumentációja.
 
 
 
-## [4.2.0 - 2026-11-22
+## [4.2.0] - 2026-11-22
 
 - A Dezideráta-kezelő és a KönyvTárnok-kereső egymásból is megnyitható.
 - A KönyvTárnok-keresőben lehetőség van az adatbázis összes tételének listázására a Beállítások KönyvTárnok-kereső fülén.

@@ -1,6 +1,6 @@
 # KönyvTárnok
 
-> **Verzió:** 4.3.0
+> **Verzió:** 4.3.1
 
 > **Támogatott operációs rendszer:** Windows 10 és 11 (64 bit)
 
@@ -19,7 +19,7 @@ A **KönyvTárnok** egy akadálymentes asztali alkalmazás könyvgyűjtemények 
 - **Állománystatisztika** – részletes eloszlások, hiányzó adatok vizsgálata, kereszttáblás elemzés PDF exporttal.
 - **Keresés és szűrés** – valós idejű kereső, részletes szűrés pontos egyezéssel, gépeléses gyorskeresés a listában.
 - **Rendezés** – az állomány magyar ábécé szerinti rendezése többféle szempont szerint: cím, szerző, kiadó, év, oldalszám, méret, bekerülés dátuma.
-- **Testreszabható megjelenés** – négy beépített színtéma: Világos, Sötét, Pasztell kék, Rózsaszín, valamint a listában megjelenő oszlopok elrejtése vagy megjelenítése.
+- **Testreszabható megjelenés** – tizenkilenc beépített színtéma: Világos, Sötét, Pasztell kék, Rózsaszín, valamint a listában megjelenő oszlopok elrejtése vagy megjelenítése.
 - **Gyorsbillentyűk** – teljes billentyűzetes kezelhetőség (lásd a súgóban a billentyűparancsok listáját).
 - **Kivételkezelés naplózással** – nem kezelt hiba esetén a részletek a `hibanaplo.log` fájlba kerülnek, és felugró ablakban értesíti a felhasználót.
 
@@ -79,8 +79,8 @@ python main.py
 ├─ constants.py                # Alkalmazás‑állandók (név, verzió, állapot, alapértelmezett oszlopok, stb.)
 ├─ gyors_kereses.py                # A lista gépelés közbeni szűrése mindhárom modulban
 ├─ utils.py                # Rendezési és állománystatisztikai segédfügvények
-├─ undo_manager                # Visszavonás és ismétlés funkció kezelése
-├─ oszlop_szelesseg.py        # egédmodul az oszlopszélességek számításához
+├─ undo_manager.py                # Visszavonás és ismétlés funkció kezelése
+├─ oszlop_szelesseg.py        # Segédmodul az oszlopszélességek számításához
 ├─ ikon.ico                    # Alkalmazásikon
 ├─ Enekeskonyvek_adatai.json   # Példa JSON adatbázis a KönyvTárnok keresőhöz (megnyitható a Fájl > Adatbázis megnyitása menüponttal)
 ├─ Futtatas.bat                # Indító script
