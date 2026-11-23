@@ -70,7 +70,7 @@ class KeresoDialog(wx.Dialog):
         self.exact_match_cb = wx.CheckBox(self, label="Cs&ak teljes szó")
 
         # 3. Keresett kifejezés
-        self.label_keresett = wx.StaticText(self, label="Keresett &kifejezés:")
+        self.label_keresett = wx.StaticText(self, label="Keresett ki&fejezés:")
         self.text_ctrl = wx.TextCtrl(self, style=wx.TE_PROCESS_ENTER)
         self.text_ctrl.SetName("Keresett kifejezés")
         self.text_ctrl.Bind(wx.EVT_TEXT_ENTER, self.on_kereses)

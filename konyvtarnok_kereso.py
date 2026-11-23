@@ -658,7 +658,7 @@ class KonyvtarnokKeresoApp(wx.Frame):
         self.cb_teljes_szo = wx.CheckBox(self.panel, label="Cs&ak teljes szó")
 
         kereso_szoveg = wx.StaticText(
-            self.panel, label="Keresendő &kifejezés:"
+            self.panel, label="Keresendő ki&fejezés:"
         )
         self.kereso_mezo = wx.TextCtrl(self.panel, style=wx.TE_PROCESS_ENTER)
         self.kereso_mezo.Bind(wx.EVT_TEXT_ENTER, self.on_kereses)
