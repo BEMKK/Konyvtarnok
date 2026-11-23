@@ -13,7 +13,7 @@ from gyors_kereses import GyorsListaKereso, osszes_kijelolt_index
 # KonyvListaCtrl.FeltoltLista helyi szam_kulcs/meret_kulcs függvényeiben
 # és a StatisztikaDialog.on_szamol helyi riport_rendezes függvényében
 # egymástól függetlenül, szó szerint megegyező formában volt megírva.
-from utils import magyar_rendezesi_kulcs, konyv_mezo_rendezesi_kulcs, osszetett_rendezesi_kulcs
+from utils import osszetett_rendezesi_kulcs
 from oszlop_szelesseg import hasznalhato_szelesseg, szamol_celok, igazit
 
 

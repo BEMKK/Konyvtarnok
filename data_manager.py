@@ -3,7 +3,6 @@ import hashlib
 import hmac
 import json
 import os
-import sys
 import logging
 import uuid
 import functools
@@ -123,46 +122,6 @@ def load_hmac_json(fajlnev):
     ervenyes = hmac.compare_digest(_alairas(adat), str(nyers.get("signature", "")))
     return adat, ervenyes
 
-# ==============================================================================
-# KÖZÖS "ADDITÍV JSON IMPORT" SEGÉDFÜGGVÉNY
-# ==============================================================================
-# Ezt a mintát (JSON fájl beolvasása, lista-e ellenőrzés, majd tételenkénti,
-# duplikátum-szűrt hozzáadás egy már meglévő listához/adatbázishoz) korábban
-# a főablak ("Állományjegyzék betöltése JSON fájlból") és a Dezideráta-kezelő
-# ("Dezideráta betöltése") egymástól függetlenül, majdnem szó szerint
-# megegyező formában valósította meg.
-def additiv_lista_import(fajlnev, hozzaad_fv):
-    """Beolvas egy JSON fájlt (listát vár), és a benne szereplő minden dict
-    elemet átad a hozzaad_fv(elem) -> bool függvénynek, amely eldönti és
-    végre is hajtja a tényleges hozzáadást (pl. duplikátum-ellenőrzéssel),
-    majd True-val tér vissza, ha ténylegesen hozzáadta az elemet, egyébként
-    False-szal (pl. mert már szerepelt duplikátumként).
-
-    A nem dict típusú listaelemeket szó nélkül kihagyja.
-
-    Visszatérési érték: (hozzaadva, kihagyva) számpár.
-
-    ValueError-t dob, ha a fájl tartalma nem lista, hogy a hívó egységes
-    hibaüzenetet tudjon megjeleníteni. Minden egyéb hibát (fájl-I/O, JSON
-    dekódolási hiba) a hívóra bíz.
-    """
-    with open(fajlnev, "r", encoding="utf-8") as f:
-        importalt_adatok = json.load(f)
-
-    if not isinstance(importalt_adatok, list):
-        raise ValueError("A kiválasztott JSON fájl formátuma nem megfelelő!")
-
-    hozzaadva = 0
-    kihagyva = 0
-    for elem in importalt_adatok:
-        if not isinstance(elem, dict):
-            continue
-        if hozzaad_fv(elem):
-            hozzaadva += 1
-        else:
-            kihagyva += 1
-
-    return hozzaadva, kihagyva
 
 # ==============================================================================
 # KÖZÖS "TÖMEGES FELVÉTEL AZ ÁLLOMÁNYBA" SEGÉDFÜGGVÉNY

@@ -6,13 +6,12 @@ import uuid
 from contextlib import contextmanager
 import wx
 from config_manager import load_settings, save_settings, beallitas_mentese
+from help import sugo_megnyitasa
 from theme_manager import apply_theme_from_settings
-from help import HelpNotebookDialog, sugo_megnyitasa
 from settings import beallitasok_megnyitasa_gyermekbol
 from data_manager import (
     load_hmac_json,
     save_hmac_json,
-    additiv_lista_import,
     konyvek_tomeges_felvetele,
     kerj_tomeges_atemeles_megerositest,
     mutass_tomeges_atemeles_eredmenyt,

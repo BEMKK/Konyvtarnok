@@ -683,12 +683,3 @@ class KeresoDialog(wx.Dialog):
                 dlg = DeziderataReszletekDialog(self, adat)
                 dlg.ShowModal()
                 dlg.Destroy()
-
-    # Visszafelé kompatibilitási metódusok
-    def get_search_text(self):
-        """Visszaadja a beírt keresőszöveget."""
-        return self.text_ctrl.GetValue()
-
-    def is_exact_match(self):
-        """Visszaadja, hogy be van-e jelölve a „Csak teljes szó”."""
-        return self.exact_match_cb.IsChecked()

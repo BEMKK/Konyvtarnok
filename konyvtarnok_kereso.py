@@ -7,6 +7,7 @@ from types import SimpleNamespace
 from constants import KERESO_APP_TITLE
 from theme_manager import apply_theme_from_settings
 from config_manager import load_settings, save_settings, beallitas_mentese
+from help import sugo_megnyitasa
 from deziderata import (
     DATA_FILE as DEZIDERATA_DATA_FILE,
     deziderata_tetelek_hozzaadasa,
@@ -32,7 +33,6 @@ from data_manager import (
     allomany_szerkesztheto,
 )
 from gyors_kereses import GyorsListaKereso, osszes_kijelolt_index
-from help import HelpNotebookDialog, sugo_megnyitasa
 from settings import azonos_utvonal, beallitasok_megnyitasa_gyermekbol
 from utils import masolas_vagolapra_szoveg, osszetett_rendezesi_kulcs
 from menu_bar import KeresoMenuBar

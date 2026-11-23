@@ -4,7 +4,7 @@ from constants import (
     DEFAULT_LATHATO_OSZLOPOK, ELERHETO_OSZLOPOK,
     DEFAULT_DEZIDERATA_LATHATO_OSZLOPOK, DEZIDERATA_ELERHETO_OSZLOPOK,
 )
-from help import HelpNotebookDialog, sugo_megnyitasa
+from help import sugo_megnyitasa
 from theme_manager import get_theme_names, apply_theme
 
 class BeallitasokDialog(wx.Dialog):

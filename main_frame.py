@@ -7,11 +7,11 @@ import logging
 from contextlib import contextmanager
 from constants import APP_TITLE, MEZO_DEFINICIOK
 from dialogs import NevjegyDialog, UjdonsagokDialog, FajlutkozesDialog, exportal_egy_konyv, JsonImportValasztoDialog, licenc_megjelenitese
+from help import sugo_megnyitasa
 from kereso import KeresoDialog
 from settings import BeallitasokDialog
 from konyvdialogs import KonyvReszletekDialog, KonyvSzerkesztoDialog
 from statisztika import StatisztikaDialog
-from help import HelpNotebookDialog, sugo_megnyitasa
 from export_manager import tomeges_export_pdf, katalogus_mentese, FajlUtkozesValasz
 from config_manager import load_settings, save_settings, beallitas_mentese
 from theme_manager import apply_theme
@@ -20,7 +20,6 @@ from menu_bar import MenuBar
 from konyv_lista import KonyvListaCtrl
 from deziderata import Deziderata, DeziderataFajlTarolo
 from data_manager import (
-    additiv_lista_import, szoveg_szuro_egyezik, szuresi_talalatok, MentesiHiba,
     elemez_json_import, allomany_szerkesztheto,
 )
 from utils import statisztikai_szures, masolas_vagolapra_szoveg
