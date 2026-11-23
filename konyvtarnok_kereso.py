@@ -1183,23 +1183,9 @@ class KonyvtarnokKeresoApp(wx.Frame):
         self.gyors_kereses.kezel_char_esemeny(event, self.feldolgoz_kereso_karakter)
 
     def on_billentyu_leutve(self, event):
-        """Kezeli a táblázatban leütött gyorsbillentyűket (Ctrl+C, Ctrl+A, Ctrl+F, Ctrl+D)."""
-        kod = event.GetKeyCode()
-        control_lenyomva = event.ControlDown()
-
-        if control_lenyomva and kod == ord("C"):
-            self.masolas_vagolapra()
-        elif control_lenyomva and kod == ord("F"):
-            self.atemeles_allomanyba()
-        elif control_lenyomva and kod == ord("D"):
-            self.atemeles_deziderataba()
-        elif control_lenyomva and kod == ord("A"):
-            if event.ShiftDown():
-                self.egyik_sem_kijelolese()
-            else:
-                self.osszes_kijelolese()
-        elif kod == wx.WXK_SPACE:
-            # A szóköz billentyű ne nyissa meg a helyi menüt, de adja hozzá a keresési pufferhez
+        """A szóköz ne nyissa meg a helyi menüt, hanem a gyorskereső pufferébe kerüljön.
+        A többi gyorsbillentyűt a menüelemek hordozzák."""
+        if event.GetKeyCode() == wx.WXK_SPACE:
             self.feldolgoz_kereso_karakter(' ')
         else:
             event.Skip()
@@ -1214,7 +1200,7 @@ class KonyvtarnokKeresoApp(wx.Frame):
             wx.ID_ANY, "Kijelöltek másolása a vágólapra\tCTRL+C"
         )
         atemeles_item = menu.Append(wx.ID_ANY, "Felvétel az állományba\tCTRL+F")
-        deziderata_item = menu.Append(wx.ID_ANY, "Felvétel a dezideráta-jegyzékbe\tCTRL+D")
+        deziderata_item = menu.Append(wx.ID_ANY, "Felvétel a dezideráta-jegyzékbe\tCTRL+SHIFT+D")
 
         menu.Bind(
             wx.EVT_MENU, lambda e: self.masolas_vagolapra(), masolas_item
