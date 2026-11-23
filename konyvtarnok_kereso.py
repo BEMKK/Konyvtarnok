@@ -92,7 +92,8 @@ class KonyvtarnokKeresoApp(wx.Frame):
         self._nyers_talalatok = []
         # Nézet: a választott rendezés (a beállításokból töltődik, lásd
         # lentebb) és a Státusz szűrés ("osszes" | "allomanyban" |
-        # "deziderataban"; ez szándékosan nem mentődik, indításkor "osszes").
+        # "deziderataban" | "egyikben_sem"; ez szándékosan nem mentődik,
+        # indításkor "osszes").
         self.rendezes_kulcs = "cim"
         self.szuro_statusz = "osszes"
         self._rendezes_mentes_hiba_jelezve = False
@@ -322,12 +323,12 @@ class KonyvtarnokKeresoApp(wx.Frame):
         statuszok = {}
         sorok = nyers_sorok
         if self.szuro_statusz != "osszes":
-            hely = 0 if self.szuro_statusz == "allomanyban" else 1
+            feltetel = self._STATUSZ_SZURO_FELTETELEK[self.szuro_statusz]
             sorok = []
             for sor in nyers_sorok:
                 statusz = self._sor_statusza(sor, statusz_ctx)
                 statuszok[id(sor)] = statusz
-                if statusz[hely]:
+                if feltetel(*statusz):
                     sorok.append(sor)
         kulcs = self.rendezes_kulcs
         sorok = sorted(
@@ -983,6 +984,16 @@ class KonyvtarnokKeresoApp(wx.Frame):
     _STATUSZ_SZURO_NEVEK = {
         "allomanyban": "Állományban",
         "deziderataban": "Deziderátában",
+        "egyikben_sem": "Egyikben sem",
+    }
+
+    # Státusz szűrés: kulcs -> feltétel az (állományban, deziderátában) párra.
+    # Az "egyikben_sem" azokat a tételeket adja, amelyek sem az állományban,
+    # sem a deziderátában nincsenek (a Státusz cellájuk üres).
+    _STATUSZ_SZURO_FELTETELEK = {
+        "allomanyban":   lambda van_allomany, van_dezi: van_allomany,
+        "deziderataban": lambda van_allomany, van_dezi: van_dezi,
+        "egyikben_sem":  lambda van_allomany, van_dezi: not van_allomany and not van_dezi,
     }
 
     def _szuro_cimke_frissitese(self, darabszam):

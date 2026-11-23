@@ -228,6 +228,9 @@ class KeresoMenuBar(NezetMenuBar):
         self.osszes = status_menu.AppendRadioItem(wx.ID_ANY, '&Összes')
         self.allomanyban = status_menu.AppendRadioItem(wx.ID_ANY, 'Állományban')
         self.deziderataban = status_menu.AppendRadioItem(wx.ID_ANY, 'Deziderátában')
+        self.egyikben_sem = status_menu.AppendRadioItem(
+            wx.ID_ANY, 'Egyikben sem',
+            'Azok a tételek, amelyek sem az állományban, sem a deziderátában nincsenek')
         view_menu.AppendSubMenu(status_menu, '&Státusz')
         self.Append(view_menu, '&Nézet')
 
@@ -243,6 +246,7 @@ class KeresoMenuBar(NezetMenuBar):
             "osszes": self.osszes,
             "allomanyban": self.allomanyban,
             "deziderataban": self.deziderataban,
+            "egyikben_sem": self.egyikben_sem,
         }
 
         set_menu = wx.Menu()
