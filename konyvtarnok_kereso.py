@@ -702,14 +702,18 @@ class KonyvtarnokKeresoApp(wx.Frame):
         fő_sizer.Add(self.checkbox_sizer, flag=wx.ALL, border=10)
 
         # --- Eredmény lista (wx.ListCtrl táblázat) ---
-        # A szűrő-felirat a "Találatok" felirat ELŐTT jön létre, hogy annak
-        # Alt-gyorsbillentyűje továbbra is közvetlenül a táblázatra vigyen.
+        # A vezérlők létrehozási sorrendje (Z-sorrend) határozza meg, hogy a
+        # képernyőolvasó (NVDA) melyik megelőző feliratot tekinti a táblázat
+        # címkéjének. A szűrő-kijelző közvetlenül a táblázat előtt jön létre,
+        # így aktív szűrésnél annak a szövegét olvassa be a főablakhoz és a
+        # Dezideráta-kezelőhöz hasonlóan (az Alt-L gyorsbillentyű a StaticText-et
+        # átugorva továbbra is a táblázatra viszi a fókuszt).
+        self.eredmeny_szoveg = wx.StaticText(self.panel, label="Találatok:")
+
         self.szuro_kijelzo = wx.StaticText(self.panel, label="")
         szuro_font = self.szuro_kijelzo.GetFont()
         szuro_font.MakeItalic()
         self.szuro_kijelzo.SetFont(szuro_font)
-
-        self.eredmeny_szoveg = wx.StaticText(self.panel, label="Találatok:")
         eredmeny_fejlec = wx.BoxSizer(wx.HORIZONTAL)
         eredmeny_fejlec.Add(self.eredmeny_szoveg, flag=wx.ALIGN_CENTER_VERTICAL)
         eredmeny_fejlec.AddStretchSpacer(1)
@@ -980,12 +984,37 @@ class KonyvtarnokKeresoApp(wx.Frame):
         if cimke is None:
             return
         szoveg = ""
-        if self.szuro_statusz != "osszes" and self._nyers_talalatok:
+        szures_aktiv = self.szuro_statusz != "osszes" and bool(self._nyers_talalatok)
+        if szures_aktiv:
             nev = self._STATUSZ_SZURO_NEVEK.get(self.szuro_statusz, self.szuro_statusz)
             szoveg = f"Szűrés: Státusz = '{nev}' ({darabszam} találat)"
         if cimke.GetLabel() != szoveg:
             cimke.SetLabel(szoveg)
             cimke.GetParent().Layout()
+
+        # Akadálymentesítés (NVDA): a Win32 Z-sorrendben annak a feliratnak kell
+        # közvetlenül megelőznie a táblázatot, amelyiknek a felolvasása az adott
+        # állapotban a legrelevánsabb:
+        # - Szűrt listánál a szuro_kijelzo ("Szűrés: Státusz = ... (X találat)").
+        # - Szűretlen listánál az eredmeny_szoveg ("Találatok (X db):").
+        if wx.Platform == "__WXMSW__":
+            eredmeny = getattr(self, "eredmeny_szoveg", None)
+            if eredmeny is not None and cimke is not None:
+                try:
+                    import ctypes
+                    flags = 0x0013  # SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE
+                    if szures_aktiv:
+                        # szuro_kijelzo közvetlenül a táblázat elé (az eredmeny_szoveg mögé)
+                        ctypes.windll.user32.SetWindowPos(
+                            cimke.GetHandle(), eredmeny.GetHandle(), 0, 0, 0, 0, flags
+                        )
+                    else:
+                        # eredmeny_szoveg közvetlenül a táblázat elé (a szuro_kijelzo mögé)
+                        ctypes.windll.user32.SetWindowPos(
+                            eredmeny.GetHandle(), cimke.GetHandle(), 0, 0, 0, 0, flags
+                        )
+                except Exception:
+                    pass
 
     def frissit_torles_gomb_allapot(self):
         """Engedélyezi a törlés gombot, ha van szöveg a mezőben vagy van találat a táblázatban.
