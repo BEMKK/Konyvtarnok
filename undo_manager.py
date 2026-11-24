@@ -472,7 +472,7 @@ def frissit_undo_menu(undo_item, redo_item, kezelo, fokuszalt_ctrl=None):
     A tételeket szándékosan nem tiltjuk le: a menü-gyorsbillentyűk
     engedélyezettségét Windowson csak a menü megnyitásakor frissíti a wx, így
     egy elavult 'letiltott' állapot elnyelné a Ctrl+Z-t. Ha nincs mit
-    visszavonni, a kezelő a státuszsorban jelzi."""
+    visszavonni, a kezelő csendesen nem csinál semmit (nem írja felül a státuszsor szövegét)."""
     if fokuszalt_ctrl is not None and hasattr(fokuszalt_ctrl, "CanUndo"):
         undo_item.SetItemLabel("Visszavonás\tCtrl+Z")
         redo_item.SetItemLabel("Mégis\tCtrl+Y")

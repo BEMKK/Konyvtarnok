@@ -1060,7 +1060,6 @@ def undo_lepes(kezelo, ismet, parent, statusz):
     """
     leiras = kezelo.ismetlendo_leiras() if ismet else kezelo.visszavonando_leiras()
     if leiras is None:
-        statusz("Nincs mit újra alkalmazni." if ismet else "Nincs visszavonható művelet.")
         return False
 
     # A lépés minden érintett oldalát (állomány, adott esetben a dezideráta
