@@ -150,7 +150,8 @@ class UjdonsagokDialog(wx.Dialog):
         main_sizer.Add(wx.StaticLine(self), 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 15)
         
         ujdonsagok_lista = [
-            "A KönyvTárnok-keresőből eltávolítva a régi billentyűleütés-kezelő, mivel a funkcióit a menüesemények vették át.",
+            "A KönyvTárnok-keresőben javítva a lista címkéjének felolvasási hibája szűrés esetén.",
+            "Ugyanitt egységesítve és javítva a státuszsor szövege.",
             "Kisebb kódjavítások, nem használt importok és kódok, függőségek törlése.",
             "Frissítés a súgóban és a readme.md fájlban."
         ]

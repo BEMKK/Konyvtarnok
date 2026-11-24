@@ -6,7 +6,8 @@ A projekten végrehajtott lényegi változtatások dokumentációja.
 
 ## \[4.3.1] - 2026-11-24
 
-* A KönyvTárnok-keresőből eltávolítva a régi billentyűleütés-kezelő, mivel a funkcióit a menüesemények vették át.
+- A KönyvTárnok-keresőben javítva a lista címkéjének felolvasási hibája szűrés esetén.
+- Ugyanitt egységesítve és javítva a státuszsor szövege.
 * Kisebb kódjavítások, nem használt importok és kódok, függőségek törlése.
 * Frissítés a súgóban és a readme.md fájlban.
 
