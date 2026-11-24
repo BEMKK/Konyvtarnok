@@ -349,6 +349,8 @@ class KonyvtarnokKeresoApp(wx.Frame):
         self._tablazat_uritese()
         self._nyers_talalatok = nyers_sorok
         if not nyers_sorok:
+            if self.adatok is not None and not alaplista:
+                self.SetStatusText(f"Nincs találat a {len(self.adatok)} kötetben.")
             self.frissit_akadalymentesites(0)
             return
 
@@ -360,15 +362,18 @@ class KonyvtarnokKeresoApp(wx.Frame):
                 "A dezideráta-jegyzék nem olvasható, ezért a "
                 "\u201eDeziderátában\u201d jelzés nem elérhető."
             )
-        elif self.szuro_statusz != "osszes":
-            # Aktív szűrésnél a főablakkal azonos felirat.
-            self.SetStatusText(
-                f"Találatok száma: {len(sorok)} a {len(nyers_sorok)} kötetből."
-            )
-        elif alaplista:
-            self._allapot_frissitese()
         else:
-            self.SetStatusText(f"Keresés {len(self.adatok)} kötet adataiban")
+            # Keresésnél, szűrésnél és az alaplistánál is ugyanaz a felirat
+            # (a főablakkal azonos). A forrás az ablakcímben látszik.
+            # Nevező: szűretlen nézetben az adatbázis összes tétele, aktív
+            # Státusz szűrésnél a szűrendő lista (a keresés találatai).
+            if self.szuro_statusz != "osszes":
+                osszes = len(nyers_sorok)
+            else:
+                osszes = len(self.adatok)
+            self.SetStatusText(
+                f"Találatok száma: {len(sorok)} a {osszes} kötetből."
+            )
 
         self.tablazat.Freeze()
         try:
@@ -445,6 +450,7 @@ class KonyvtarnokKeresoApp(wx.Frame):
         else:
             self._tablazat_uritese()
             self.frissit_akadalymentesites(0)
+            self._allapot_frissitese()
 
     def beallitasok_alkalmazasa(self, config):
         """A főablak hívja a Beállítások mentése után, ha a kereső nyitva van.
