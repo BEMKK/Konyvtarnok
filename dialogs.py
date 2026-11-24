@@ -152,6 +152,7 @@ class UjdonsagokDialog(wx.Dialog):
         ujdonsagok_lista = [
             "A KönyvTárnok-keresőben javítva a lista címkéjének felolvasási hibája szűrés esetén.",
             "Ugyanitt egységesítve és javítva a státuszsor szövege.",
+            "Eltávolítva a státuszsor felirata visszavonás és ismétlés esetén, ha nincs visszavonható vagy ismételhető művelet.",
             "Kisebb kódjavítások, nem használt importok és kódok, függőségek törlése.",
             "Frissítés a súgóban és a readme.md fájlban."
         ]
