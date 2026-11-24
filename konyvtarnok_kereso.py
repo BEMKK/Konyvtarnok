@@ -7,7 +7,6 @@ from types import SimpleNamespace
 from constants import KERESO_APP_TITLE
 from theme_manager import apply_theme_from_settings
 from config_manager import load_settings, save_settings, beallitas_mentese
-from help import sugo_megnyitasa
 from deziderata import (
     DATA_FILE as DEZIDERATA_DATA_FILE,
     deziderata_tetelek_hozzaadasa,
@@ -31,13 +30,15 @@ from data_manager import (
     is_same_book,
     MentesiHiba,
     allomany_szerkesztheto,
+    undo_lepes,
 )
 from gyors_kereses import GyorsListaKereso, osszes_kijelolt_index
+from help import sugo_megnyitasa
 from settings import azonos_utvonal, beallitasok_megnyitasa_gyermekbol
 from utils import masolas_vagolapra_szoveg, osszetett_rendezesi_kulcs
 from menu_bar import KeresoMenuBar
 from undo_manager import (
-    UndoKezelo, frissit_undo_menu, szovegmezo_visszavonas, utkozes_uzenet,
+    UndoKezelo, frissit_undo_menu, szovegmezo_visszavonas,
 )
 
 # A Státusz oszlop sorainak háttérszíne (RGB). Ha egy tétel mindkét helyen
@@ -874,34 +875,10 @@ class KonyvtarnokKeresoApp(wx.Frame):
                 "A visszavonás csak a főablakból indított keresőben érhető el."
             )
             return
-        leiras = self.undo.ismetlendo_leiras() if ismet else self.undo.visszavonando_leiras()
-        if leiras is None:
-            self.SetStatusText(
-                "Nincs mit újra alkalmazni." if ismet
-                else "Nincs visszavonható átemelés."
-            )
-            return
-
         # A lépés minden érintett oldalát (állomány, deziderata) a regiszter
         # alkalmazza; a főablak és a Dezideráta-ablak nézetét, valamint e
         # táblázat Státusz oszlopát a tárolók frissítői újraszámolják.
-        if not (self.undo.ismet() if ismet else self.undo.visszavon()):
-            uzenet = utkozes_uzenet(self.undo, ismet)
-            if uzenet:
-                wx.MessageBox(
-                    uzenet, "A művelet most nem hajtható végre",
-                    wx.OK | wx.ICON_INFORMATION, self,
-                )
-            else:
-                wx.MessageBox(
-                    "A művelet nem hajtható végre (a változás nem menthető), ezért "
-                    "az adatok a korábbi állapotukban maradtak.",
-                    "Mentési hiba", wx.OK | wx.ICON_ERROR, self,
-                )
-            return
-        self.SetStatusText(
-            f"Újra alkalmazva: {leiras}." if ismet else f"Visszavonva: {leiras}."
-        )
+        undo_lepes(self.undo, ismet, self, self.SetStatusText)
 
     def on_menu_megnyitas(self, event):
         """Fájl > Adatbázis megnyitása (Ctrl+O)."""
