@@ -4,91 +4,91 @@ A projekten végrehajtott lényegi változtatások dokumentációja.
 
 
 
-## [4.3.1] - 2026-11-23
+## \[4.3.1] - 2026-11-24
 
-- A KönyvTárnok-keresőből eltávolítva a régi billentyűleütés-kezelő, mivel a funkcióit a menüesemények vették át.
-- Kisebb kódjavítások, nem használt importok és kódok, függőségek törlése.
-- Frissítés a súgóban és a readme.md fájlban.
-
-
-
-## [4.3.0] - 2026-11-23
-
-- A KönyvTárnok-keresőben szűrési lehetőség azokra a tételekre, melyek sem az állományban, sem a deziderátában nem szerepelnek.
-- Javítva a KönyvTárnok-kereső státuszfeliratai szűrt lista esetén.
-- Javítva az Alt+K gyorsbillentyű-ütközés a két keresőablakban.
+* A KönyvTárnok-keresőből eltávolítva a régi billentyűleütés-kezelő, mivel a funkcióit a menüesemények vették át.
+* Kisebb kódjavítások, nem használt importok és kódok, függőségek törlése.
+* Frissítés a súgóban és a readme.md fájlban.
 
 
 
-## [4.2.0] - 2026-11-22
+## \[4.3.0] - 2026-11-23
 
-- A Dezideráta-kezelő és a KönyvTárnok-kereső egymásból is megnyitható.
-- A KönyvTárnok-keresőben lehetőség van az adatbázis összes tételének listázására a Beállítások KönyvTárnok-kereső fülén.
-- Ugyanitt érhető el az adatbázis útvonalának megadása.
-- Javítva az oszlopszélességek számítása, mely a program lassú betöltését okozta.
-- Nézet menü és rendezési, szűrési lehetőség a Dezideráta-kezelőben és a KönyvTárnok-keresőben.
-- Újratervezett Beállítások ablak, külön fül a Dezideráta-kezelőnek, az oszlopok jelölőnégyzetei listában jelennek meg.
-- Könyvadatlap exportnál, fájlütközés esetén jelölőnégyzet a választott művelet összes ütközésre való alkalmazására.
-- Az exportálás megszakítására a Mégse gomb szolgál, a kihagyás gomb valóban csak a már meglévő adatlapokat hagyja ki.
-- Az új verzióról szóló felugró értesítésben lehetőség a verzió figyelmen kívül hagyására.
+* A KönyvTárnok-keresőben szűrési lehetőség azokra a tételekre, melyek sem az állományban, sem a deziderátában nem szerepelnek.
+* Javítva a KönyvTárnok-kereső státuszfeliratai szűrt lista esetén.
+* Javítva az Alt+K gyorsbillentyű-ütközés a két keresőablakban.
 
 
 
-## [4.1.0] - 2026-11-21
+## \[4.2.0] - 2026-11-22
 
-- A beállításokban külön mező a katalóguslap, valamint az állomány- és dezideráta-jegyzék mappájának.
-- A súgó a Beállítások ablakból, a Dezideráta-kezelőből és a KönyvTárnok-keresőből is megnyitható.
-- Külön menüpont és gyorsbillentyű a billentyűparancsok listájának megnyitásához.
-- A KönyvTárnok-kereső által megnyitandó adatbázis a beállításokban is megadható.
-- A beállítások ablak szélesebb lett a megnövekedett helyigény miatt.
-- A frissítések letiltására jelölőnégyzet helyett a gyakoriság Soha opciója szolgál.
-- A licenc szövege megtekinthető a programon belül menüből és a névjegy ablakból is.
-
-
-
-## [4.0.0] - 2026-11-18
-
-- Könyvek kiválasztása és hiányzó adatok pótlási lehetősége JSON import esetén.
-- Eltávolítva az enekeskonyvek_adatai.json, a KönyvTárnok-kereső mostantól kizárólag a felhasználó által választott JSON fájlokban keres.
-- A Dezideráta-kezelőhöz hasonlóan a fő állományban is tiltva lett a JSON import, ha az állományjegyzék betöltése nem sikerül.
-- Tiltásra került a JSON export az állományban és a Deziderátában, ha a jegyzék üres.
-- Műveletek visszavonásának és ismételt végrehajtásának lehetősége a KönyvTárnok-keresőben.
-- Új státusz és hozzá kapcsolódó négy új mező a Dezideráta-kezelőben.
-- Státuszváltás esetén a dinamikusan megjelenő mezők tartalma csak mentéskor törlődik, elkerülve a véletlen adatvesztést.
-- A lista alapértelmezett rendezése a beállításokból már nem lehetséges, ezt a nézet menüben választhatjuk ki.
-- Törölve a beállítások sikeres mentésekor felugró üzenet, így csak a sikertelen mentésről kapunk visszajelzést.
-- Névjegy ablak optimalizálva: verziószám a leírás alatt, megnövelt térközök.
-- Az újdonságok ablak magassága mostantól a sorok számához igazodik.
-- A főablakhoz hasonlóan a gyermekmodulok ablakcíme is a constants.py-be lett kiszervezve.
-- A főablak címsorába bekerült az "állománykezelő" kifejezés.
-- Az Újdonságok és Névjegy ablakban a verziószám előtti "v" betűt töröltük.
-- Az újdonságok ablakban mostantól "A verzió főbb újdonságai" felirat szerepel, utalva arra, hogy a kódszintű változtatásokat nem sorolja fel.
-- Javítások és kiegészítések, valamint az új funkciók leírása a Súgóban.
-- A bekerülés dátuma mostantól többféle formátumban is megadható (pl. 2026 Július 28, 2026-07-28, 2026.07.28., 2026 Július), a lista rendezése ezeket is helyesen kezeli.
-- A Dezideráta-kezelőben az állományhoz hasonlóan kötelező a cím megadása.
-- Javítva a Dezideráta tételeinek állományba emelése sikertelen mentés esetén: a tételek ilyenkor nem törlődnek a deziderátából, így nem vesznek el.
-- Javítva az állományba átemelt tételek adatszerkezete (hiányzó bekerülési dátum mező, felesleges rövid cím mező).
-- A frissítés letöltése után a program ellenőrzi, hogy a teljes fájl megérkezett-e, hiányos letöltés esetén nem kezdi el a telepítést.
-- A hibanaplo.log mostantól az elkapott hibákat is rögzíti, nem csak az összeomlásokat; a napló mérete korlátozott.
-- Pontosított hibaüzenet a JSON import sikertelen mentésekor.
-- Kisebb kódjavítások.
+* A Dezideráta-kezelő és a KönyvTárnok-kereső egymásból is megnyitható.
+* A KönyvTárnok-keresőben lehetőség van az adatbázis összes tételének listázására a Beállítások KönyvTárnok-kereső fülén.
+* Ugyanitt érhető el az adatbázis útvonalának megadása.
+* Javítva az oszlopszélességek számítása, mely a program lassú betöltését okozta.
+* Nézet menü és rendezési, szűrési lehetőség a Dezideráta-kezelőben és a KönyvTárnok-keresőben.
+* Újratervezett Beállítások ablak, külön fül a Dezideráta-kezelőnek, az oszlopok jelölőnégyzetei listában jelennek meg.
+* Könyvadatlap exportnál, fájlütközés esetén jelölőnégyzet a választott művelet összes ütközésre való alkalmazására.
+* Az exportálás megszakítására a Mégse gomb szolgál, a kihagyás gomb valóban csak a már meglévő adatlapokat hagyja ki.
+* Az új verzióról szóló felugró értesítésben lehetőség a verzió figyelmen kívül hagyására.
 
 
 
-## [3.21.2] - 2026-11-10
+## \[4.1.0] - 2026-11-21
+
+* A beállításokban külön mező a katalóguslap, valamint az állomány- és dezideráta-jegyzék mappájának.
+* A súgó a Beállítások ablakból, a Dezideráta-kezelőből és a KönyvTárnok-keresőből is megnyitható.
+* Külön menüpont és gyorsbillentyű a billentyűparancsok listájának megnyitásához.
+* A KönyvTárnok-kereső által megnyitandó adatbázis a beállításokban is megadható.
+* A beállítások ablak szélesebb lett a megnövekedett helyigény miatt.
+* A frissítések letiltására jelölőnégyzet helyett a gyakoriság Soha opciója szolgál.
+* A licenc szövege megtekinthető a programon belül menüből és a névjegy ablakból is.
+
+
+
+## \[4.0.0] - 2026-11-18
+
+* Könyvek kiválasztása és hiányzó adatok pótlási lehetősége JSON import esetén.
+* Eltávolítva az enekeskonyvek\_adatai.json, a KönyvTárnok-kereső mostantól kizárólag a felhasználó által választott JSON fájlokban keres.
+* A Dezideráta-kezelőhöz hasonlóan a fő állományban is tiltva lett a JSON import, ha az állományjegyzék betöltése nem sikerül.
+* Tiltásra került a JSON export az állományban és a Deziderátában, ha a jegyzék üres.
+* Műveletek visszavonásának és ismételt végrehajtásának lehetősége a KönyvTárnok-keresőben.
+* Új státusz és hozzá kapcsolódó négy új mező a Dezideráta-kezelőben.
+* Státuszváltás esetén a dinamikusan megjelenő mezők tartalma csak mentéskor törlődik, elkerülve a véletlen adatvesztést.
+* A lista alapértelmezett rendezése a beállításokból már nem lehetséges, ezt a nézet menüben választhatjuk ki.
+* Törölve a beállítások sikeres mentésekor felugró üzenet, így csak a sikertelen mentésről kapunk visszajelzést.
+* Névjegy ablak optimalizálva: verziószám a leírás alatt, megnövelt térközök.
+* Az újdonságok ablak magassága mostantól a sorok számához igazodik.
+* A főablakhoz hasonlóan a gyermekmodulok ablakcíme is a constants.py-be lett kiszervezve.
+* A főablak címsorába bekerült az "állománykezelő" kifejezés.
+* Az Újdonságok és Névjegy ablakban a verziószám előtti "v" betűt töröltük.
+* Az újdonságok ablakban mostantól "A verzió főbb újdonságai" felirat szerepel, utalva arra, hogy a kódszintű változtatásokat nem sorolja fel.
+* Javítások és kiegészítések, valamint az új funkciók leírása a Súgóban.
+* A bekerülés dátuma mostantól többféle formátumban is megadható (pl. 2026 Július 28, 2026-07-28, 2026.07.28., 2026 Július), a lista rendezése ezeket is helyesen kezeli.
+* A Dezideráta-kezelőben az állományhoz hasonlóan kötelező a cím megadása.
+* Javítva a Dezideráta tételeinek állományba emelése sikertelen mentés esetén: a tételek ilyenkor nem törlődnek a deziderátából, így nem vesznek el.
+* Javítva az állományba átemelt tételek adatszerkezete (hiányzó bekerülési dátum mező, felesleges rövid cím mező).
+* A frissítés letöltése után a program ellenőrzi, hogy a teljes fájl megérkezett-e, hiányos letöltés esetén nem kezdi el a telepítést.
+* A hibanaplo.log mostantól az elkapott hibákat is rögzíti, nem csak az összeomlásokat; a napló mérete korlátozott.
+* Pontosított hibaüzenet a JSON import sikertelen mentésekor.
+* Kisebb kódjavítások.
+
+
+
+## \[3.21.2] - 2026-11-10
 
 * Javítva a folyamatjelző hibás működése frissítés letöltése alatt.
 
 
 
-## [3.21.1] - 2026-11-03
+## \[3.21.1] - 2026-11-03
 
 * Javítva a lista rendezése számokkal kezdődő könyvcímek esetén, valamint a római számok hibás kezelése.
 * Program függőségei frissítve.
 
 
 
-## [3.21.0] - 2026-10-27
+## \[3.21.0] - 2026-10-27
 
 * A Dezideráta és az állományjegyzék tételeinek törlése mostantól a Keresés a gyűjteményekben dialog találati listájából indítva is lehetséges.
 * Javítva az évszázadok megjelenítési sorrendje az állománystatisztikában Kiadási évszázad, Összes érték szerinti megoszlásnál.
@@ -548,7 +548,7 @@ A projekten végrehajtott lényegi változtatások dokumentációja.
 
 * Eltávolítva az rtf fájlok importálásának lehetősége.
 * A főprogram és a dezideráta kezelő mostantól titkosítva tárolja az adatokat a json-ban a külső módosítás elkerülése érdekében.
-- Az alkalmazás neve BEM Állomány- és Katalóguskezelő lett.
+* Az alkalmazás neve BEM Állomány- és Katalóguskezelő lett.
 
 
 
@@ -558,18 +558,18 @@ A projekten végrehajtott lényegi változtatások dokumentációja.
 
 
 
-## [0.9.6] - 2026-08-08
+## \[0.9.6] - 2026-08-08
 
 * Javítva a lista rendezésének hibái.
-- Javítva a json fájlok betöltési hibája.
-- A program működése stabilizálva.
+* Javítva a json fájlok betöltési hibája.
+* A program működése stabilizálva.
 
 
 
-## [0.9.5] - 2026-08-04
+## \[0.9.5] - 2026-08-04
 
 * Első, tesztelésre lefordított verzió.
-- Az alkalmazás neve BEM Állománykezelő lett.
+* Az alkalmazás neve BEM Állománykezelő lett.
 
 
 
@@ -624,11 +624,12 @@ A projekten végrehajtott lényegi változtatások dokumentációja.
 ## \[0.1.0] - 2026-07-19
 
 * Új, egypaneles nézet. A teljes ablakot a könyvek listája foglalja el.
-- Az alkalmazás neve BEM Katalóguskezelő.
+* Az alkalmazás neve BEM Katalóguskezelő.
 
 
 
 ## \[0.0.1] - 2026-07-18
 
 * Kétpaneles nézet, bal oldalon a könyvek listája, jobb oldalon a kijelölt könyv adatlapja.
-- Az alkalmazás neve KönyvtárApp.
+* Az alkalmazás neve KönyvtárApp.
+
