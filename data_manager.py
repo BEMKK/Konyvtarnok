@@ -18,7 +18,7 @@ from constants import (
     BIBLIOGRAFIAI_KULCSOK, KERESO_MEZO_ALIASOK, MEZOK,
     DEZIDERATA_STATUS_NEM_KAPHATO, DEZIDERATA_BESZERZES_MEZOKULCSOK,
 )
-from undo_manager import UndoRegiszter, UndoKezelo, ListaTarolo
+from undo_manager import UndoRegiszter, UndoKezelo, ListaTarolo, utkozes_uzenet
 
 _BASE_DIR = alkalmazas_alapmappa()
 
@@ -121,7 +121,6 @@ def load_hmac_json(fajlnev):
     adat = nyers["data"]
     ervenyes = hmac.compare_digest(_alairas(adat), str(nyers.get("signature", "")))
     return adat, ervenyes
-
 
 # ==============================================================================
 # KÖZÖS "TÖMEGES FELVÉTEL AZ ÁLLOMÁNYBA" SEGÉDFÜGGVÉNY
@@ -1039,3 +1038,47 @@ def szuresi_talalatok(tetelek, keresett_szoveg, pontos_egyezes=False, mezok=None
         tetel for tetel in tetelek
         if szoveg_szuro_egyezik(tetel, keresett, pontos_egyezes, mezok, szavankent)
     ]
+
+
+# ==============================================================================
+# KÖZÖS "VISSZAVONÁS / MÉGIS" LÉPÉS
+# ==============================================================================
+# A főablak, a Dezideráta-kezelő és a KönyvTárnok-kereső visszavonás/mégis
+# kezelője korábban a leírás lekérdezésétől az ütközés-/mentési hiba
+# üzenetéig egymástól függetlenül, szinte szó szerint megegyező formában
+# volt megírva; csak a státuszsor elérése és az ablak-specifikus őrfeltételek
+# (szövegmező-visszavonás, szerkesztés tiltása) tértek el.
+def undo_lepes(kezelo, ismet, parent, statusz):
+    """Egy visszavonás (ismet=False) vagy mégis (ismet=True) végrehajtása a
+    kezelőn, a megfelelő üzenetekkel.
+
+    statusz: egy szöveget váró függvény (pl. a státuszsor SetStatusText-je).
+    True-t ad, ha a lépés végrehajtódott; False-t, ha nem volt mit
+    visszavonni/ismételni, vagy a lépés ütközés vagy mentési hiba miatt
+    nem hajtható végre (ilyenkor a hibaüzenetet ez a függvény már
+    megjelenítette).
+    """
+    leiras = kezelo.ismetlendo_leiras() if ismet else kezelo.visszavonando_leiras()
+    if leiras is None:
+        statusz("Nincs mit újra alkalmazni." if ismet else "Nincs visszavonható művelet.")
+        return False
+
+    # A lépés minden érintett oldalát (állomány, adott esetben a dezideráta
+    # is) a regiszter alkalmazza, és a nézeteket is frissíti.
+    if not (kezelo.ismet() if ismet else kezelo.visszavon()):
+        uzenet = utkozes_uzenet(kezelo, ismet)
+        if uzenet:
+            wx.MessageBox(
+                uzenet, "A művelet most nem hajtható végre",
+                wx.OK | wx.ICON_INFORMATION, parent,
+            )
+        else:
+            wx.MessageBox(
+                "A művelet nem hajtható végre (a változás nem menthető), ezért "
+                "az adatok a korábbi állapotukban maradtak.",
+                "Mentési hiba", wx.OK | wx.ICON_ERROR, parent,
+            )
+        return False
+
+    statusz(f"Újra alkalmazva: {leiras}." if ismet else f"Visszavonva: {leiras}.")
+    return True

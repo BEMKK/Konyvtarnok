@@ -1,20 +1,105 @@
+from contextlib import contextmanager
+
 import wx
 
 from constants import DEFAULT_LATHATO_OSZLOPOK, OSZLOP_DEFINICIOK, OSZLOP_SULYOK
 from gyors_kereses import GyorsListaKereso, osszes_kijelolt_index
-# A rendezési/dátumfeldolgozó segédfüggvények (magyar_rendezesi_kulcs,
-# konyv_mezo_rendezesi_kulcs) az utils.py-ba kerültek át, mert tisztán
-# szöveg-/adatfeldolgozó logika, semmi közük a wx-hez - így más, nem-GUI
-# modulok (statisztika.py, deziderata.py) is ezekből, nem pedig ebből a
-# vizuális komponensből (KonyvListaCtrl) importálhatják őket.
-# A konyv_mezo_rendezesi_kulcs (mezőtípus szerinti: szám/méret/dátum/
-# magyar ábécé rendezési kulcs) ugyanaz a közös függvény, amit a
-# statisztika.py jelentés-rendezése is használ - korábban ez a logika a
-# KonyvListaCtrl.FeltoltLista helyi szam_kulcs/meret_kulcs függvényeiben
-# és a StatisztikaDialog.on_szamol helyi riport_rendezes függvényében
-# egymástól függetlenül, szó szerint megegyező formában volt megírva.
+# Az összetett rendezési kulcs a utils.py-ban él (tisztán adatfeldolgozó
+# logika, semmi köze a wx-hez), így a nem-GUI modulok is használhatják.
 from utils import osszetett_rendezesi_kulcs
 from oszlop_szelesseg import hasznalhato_szelesseg, szamol_celok, igazit
+
+
+# ==============================================================================
+# KÖZÖS "LISTAHELYZET MEGŐRZÉSE" SEGÉDFÜGGVÉNYEK
+# ==============================================================================
+# A lista helyzetének (fókusz, kijelölés, görgetés) sor-azonosító alapú
+# megőrzése egy újraépítés (FeltoltLista, refresh_list) során. Ezt korábban a
+# főablak és a Dezideráta-kezelő egymástól függetlenül, szinte szó szerint
+# megegyező formában tartalmazta.
+#
+# A `terkep` a lista sorindex -> tétel-azonosító szótára. FONTOS: a hívónak
+# helyben kell módosítania (clear()/update()), nem új szótárat hozzárendelnie
+# az attribútumhoz, mert a lista_helyzet_megtartasa a with-blokk ELEJÉN kapott
+# hivatkozással dolgozik, és az újraépítés után is azt olvassa.
+def lista_helyzet_mentese(lista, terkep):
+    """A lista helyzetének (fókusz, kijelölés, görgetés) elmentése
+    azonosító alapján, hogy egy újraépítés után visszaállítható legyen."""
+    fokusz_idx = lista.GetFocusedItem()
+    top_idx = lista.GetTopItem()
+    return {
+        "listan_van_fokusz": lista.HasFocus(),
+        "fokusz_idx": fokusz_idx,
+        "fokusz_id": terkep.get(fokusz_idx),
+        "kijelolt_idk": {terkep.get(i) for i in osszes_kijelolt_index(lista)} - {None},
+        "top_idx": top_idx,
+        "top_id": terkep.get(top_idx),
+    }
+
+
+def lista_helyzet_visszaallitasa(lista, terkep, allapot, erintett_idk=None):
+    """A lista_helyzet_mentese által elmentett helyzet visszaállítása.
+
+    erintett_idk megadása esetén a fókusz és a kijelölés ezekre kerül."""
+    db = lista.GetItemCount()
+    if db == 0:
+        return
+    id_index = {azon: i for i, azon in terkep.items()}
+
+    kijeloltek, fokusz = [], None
+    if erintett_idk:
+        kijeloltek = [id_index[a] for a in erintett_idk if a in id_index]
+        fokusz = kijeloltek[0] if kijeloltek else None
+    if fokusz is None:
+        kijeloltek = [id_index[a] for a in allapot["kijelolt_idk"] if a in id_index]
+        fokusz = id_index.get(allapot["fokusz_id"])
+    if fokusz is None and kijeloltek:
+        fokusz = min(kijeloltek)
+    if fokusz is None and allapot["fokusz_idx"] != -1:
+        # A korábban fókuszban lévő elem megszűnt (pl. felvétel
+        # visszavonása): a hozzá legközelebbi sor kapja a fókuszt.
+        fokusz = min(allapot["fokusz_idx"], db - 1)
+        if not kijeloltek and allapot["kijelolt_idk"]:
+            kijeloltek = [fokusz]
+
+    for i in kijeloltek:
+        lista.Select(i)
+    if fokusz is not None:
+        lista.Focus(fokusz)
+
+    # Görgetési helyzet: előbb a lista aljára, majd a korábbi első látható
+    # sorra görgetünk, így az újra felülre kerül.
+    top = id_index.get(allapot["top_id"])
+    if top is None:
+        top = min(max(allapot["top_idx"], 0), db - 1)
+    lista.EnsureVisible(db - 1)
+    lista.EnsureVisible(top)
+    if fokusz is not None:
+        lista.EnsureVisible(fokusz)
+
+    if erintett_idk or allapot["listan_van_fokusz"]:
+        lista.SetFocus()
+
+
+@contextmanager
+def lista_helyzet_megtartasa(lista, terkep, erintett_idk=None, fagyaszt=True):
+    """Context manager: a blokkban a lista újraépíthető, a fókusz, a
+    kijelölés és a görgetés utána visszaáll.
+
+    fagyaszt=True esetén a lista az újraépítés alatt le van fagyasztva
+    (nincs villogás/lassulás); akkor kell False, ha az újraépítő kód maga
+    fagyaszt."""
+    allapot = lista_helyzet_mentese(lista, terkep)
+    if fagyaszt:
+        lista.Freeze()
+    try:
+        yield
+    finally:
+        try:
+            lista_helyzet_visszaallitasa(lista, terkep, allapot, erintett_idk)
+        finally:
+            if fagyaszt:
+                lista.Thaw()
 
 
 class KonyvListaCtrl(wx.ListCtrl):
@@ -30,6 +115,7 @@ class KonyvListaCtrl(wx.ListCtrl):
     def __init__(self, parent, db, aktiv_oszlopok=None):
         super().__init__(parent, style=wx.LC_REPORT | wx.LC_VIRTUAL | wx.BORDER_SUNKEN | wx.LC_HRULES | wx.LC_VRULES)
         self.db = db
+        # Helyben módosítandó (clear/update), lásd lista_helyzet_megtartasa.
         self.sor_id_terkep = {}
         self.jelenlegi_adatok = []
         self.rendezes_kulcs = "cim"

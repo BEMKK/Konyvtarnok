@@ -1,30 +1,31 @@
 import wx
 import os
-import sys
 import re
-import json
 import logging
-from contextlib import contextmanager
 from constants import APP_TITLE, MEZO_DEFINICIOK
-from dialogs import NevjegyDialog, UjdonsagokDialog, FajlutkozesDialog, exportal_egy_konyv, JsonImportValasztoDialog, licenc_megjelenitese
-from help import sugo_megnyitasa
+from dialogs import (
+    NevjegyDialog, UjdonsagokDialog, FajlutkozesDialog, exportal_egy_konyv,
+    licenc_megjelenitese, eroforras_utvonal, json_lista_betoltese, json_import_valasztas,
+)
 from kereso import KeresoDialog
 from settings import BeallitasokDialog
 from konyvdialogs import KonyvReszletekDialog, KonyvSzerkesztoDialog
 from statisztika import StatisztikaDialog
+from help import sugo_megnyitasa
 from export_manager import tomeges_export_pdf, katalogus_mentese, FajlUtkozesValasz
 from config_manager import load_settings, save_settings, beallitas_mentese
 from theme_manager import apply_theme
 from konyvtarnok_kereso import KonyvtarnokKeresoApp
 from menu_bar import MenuBar
-from konyv_lista import KonyvListaCtrl
+from konyv_lista import KonyvListaCtrl, lista_helyzet_megtartasa
 from deziderata import Deziderata, DeziderataFajlTarolo
 from data_manager import (
-    elemez_json_import, allomany_szerkesztheto,
+    szoveg_szuro_egyezik, szuresi_talalatok, MentesiHiba,
+    elemez_json_import, allomany_szerkesztheto, undo_lepes,
 )
 from utils import statisztikai_szures, masolas_vagolapra_szoveg
 from update import check_for_updates_async
-from undo_manager import frissit_undo_menu, szovegmezo_visszavonas, utkozes_uzenet
+from undo_manager import frissit_undo_menu, szovegmezo_visszavonas
 
 
 class Konyvtarnok(wx.Frame):
@@ -44,15 +45,14 @@ class Konyvtarnok(wx.Frame):
         self.deziderata_frame = None
         self.konyvtarnok_kereso_frame = None
 
-        base_dir = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
-        icon_path = os.path.join(base_dir, "ikon.ico")
+        icon_path = eroforras_utvonal("ikon.ico")
 
         try:
-            if os.path.exists(icon_path):
+            if icon_path:
                 icon = wx.Icon(icon_path, wx.BITMAP_TYPE_ICO)
                 self.SetIcon(icon)
             else:
-                logging.warning(f"Az ikon nem található ezen az útvonalon: {icon_path}")
+                logging.warning("Az alkalmazás ikonja (ikon.ico) nem található.")
         except Exception as e:
             logging.error(f"Nem sikerült betölteni az alkalmazás ikonját: {e}")
 
@@ -528,111 +528,20 @@ class Konyvtarnok(wx.Frame):
         if szovegmezo_visszavonas(self.FindFocus(), ismet):
             return
 
-        kezelo = self.db.undo
-        leiras = kezelo.ismetlendo_leiras() if ismet else kezelo.visszavonando_leiras()
-        if leiras is None:
-            self.statusbar.SetStatusText(
-                "Nincs mit újra alkalmazni." if ismet else "Nincs visszavonható művelet."
-            )
-            return
-
-        # A lépés minden érintett oldalát (állomány, adott esetben a
-        # dezideráta is) a regiszter alkalmazza, és a nézeteket is frissíti.
-        if not (kezelo.ismet() if ismet else kezelo.visszavon()):
-            uzenet = utkozes_uzenet(kezelo, ismet)
-            if uzenet:
-                wx.MessageBox(
-                    uzenet, "A művelet most nem hajtható végre",
-                    wx.OK | wx.ICON_INFORMATION, self,
-                )
-                return
-            wx.MessageBox(
-                "A művelet nem hajtható végre (a változás nem menthető), ezért "
-                "az adatok a korábbi állapotukban maradtak.",
-                "Mentési hiba", wx.OK | wx.ICON_ERROR, self,
-            )
-            return
-        self.statusbar.SetStatusText(
-            f"Újra alkalmazva: {leiras}." if ismet else f"Visszavonva: {leiras}."
-        )
+        undo_lepes(self.db.undo, ismet, self, self.statusbar.SetStatusText)
 
     # Visszavonás/mégis után a lista a korábbi helyén marad (fókusz, kijelölés,
     # görgetés). True esetén ehelyett a visszavont/újraalkalmazott könyvek
     # kerülnek kijelölésre és fókuszba (a korábbi viselkedés).
     UNDO_UTAN_ERINTETT_KIJELOLESE = False
 
-    def _lista_helyzet_mentese(self):
-        """A lista helyzetének (fókusz, kijelölés, görgetés) elmentése
-        könyv-id alapján, hogy egy újraépítés után visszaállítható legyen."""
-        lista = self.lista
-        terkep = lista.sor_id_terkep
-        fokusz_idx = lista.GetFocusedItem()
-        top_idx = lista.GetTopItem()
-        return {
-            "listan_van_fokusz": lista.HasFocus(),
-            "fokusz_idx": fokusz_idx,
-            "fokusz_id": terkep.get(fokusz_idx),
-            "kijelolt_idk": {terkep.get(i) for i in lista.GetKijeloltIndexek()} - {None},
-            "top_idx": top_idx,
-            "top_id": terkep.get(top_idx),
-        }
-
-    def _lista_helyzet_visszaallitasa(self, allapot, erintett_idk=None):
-        lista = self.lista
-        db = lista.GetItemCount()
-        if db == 0:
-            return
-        id_index = {azon: i for i, azon in lista.sor_id_terkep.items()}
-
-        kijeloltek, fokusz = [], None
-        if erintett_idk:
-            kijeloltek = [id_index[a] for a in erintett_idk if a in id_index]
-            fokusz = kijeloltek[0] if kijeloltek else None
-        if fokusz is None:
-            kijeloltek = [id_index[a] for a in allapot["kijelolt_idk"] if a in id_index]
-            fokusz = id_index.get(allapot["fokusz_id"])
-        if fokusz is None and kijeloltek:
-            fokusz = min(kijeloltek)
-        if fokusz is None and allapot["fokusz_idx"] != -1:
-            # A korábban fókuszban lévő könyv megszűnt (pl. felvétel
-            # visszavonása): a hozzá legközelebbi sor kapja a fókuszt.
-            fokusz = min(allapot["fokusz_idx"], db - 1)
-            if not kijeloltek and allapot["kijelolt_idk"]:
-                kijeloltek = [fokusz]
-
-        for i in kijeloltek:
-            lista.Select(i)
-        if fokusz is not None:
-            lista.Focus(fokusz)
-
-        # Görgetési helyzet: előbb a lista aljára, majd a korábbi első látható
-        # sorra görgetünk, így az újra felülre kerül.
-        top = id_index.get(allapot["top_id"])
-        if top is None:
-            top = min(max(allapot["top_idx"], 0), db - 1)
-        lista.EnsureVisible(db - 1)
-        lista.EnsureVisible(top)
-        if fokusz is not None:
-            lista.EnsureVisible(fokusz)
-
-        if erintett_idk or allapot["listan_van_fokusz"]:
-            lista.SetFocus()
-
-    @contextmanager
     def _lista_helyzet_megtartasa(self, erintett_idk=None):
         """Context manager: a blokkban a lista újraépíthető (FeltoltLista),
         a fókusz, a kijelölés és a görgetés utána visszaáll, az újraépítés
-        alatt pedig a lista le van fagyasztva (nincs villogás/lassulás)."""
-        lista = self.lista
-        allapot = self._lista_helyzet_mentese()
-        lista.Freeze()
-        try:
-            yield
-        finally:
-            try:
-                self._lista_helyzet_visszaallitasa(allapot, erintett_idk)
-            finally:
-                lista.Thaw()
+        alatt pedig a lista le van fagyasztva (lásd
+        konyv_lista.lista_helyzet_megtartasa)."""
+        return lista_helyzet_megtartasa(
+            self.lista, self.lista.sor_id_terkep, erintett_idk)
 
     def _szurt_lista_ujraszamolasa(self):
         """Az aktív szűrés újraszámolása az adatbázis jelenlegi állapotából.
@@ -934,45 +843,9 @@ class Konyvtarnok(wx.Frame):
     def OnJsonImport(self, event):
         if not allomany_szerkesztheto(self.db, self):
             return
-        config = load_settings()
-        default_dir = config.get("last_allomany_dir", "")
-
-        megnyit_dlg = wx.FileDialog(
-            self, "Állományjegyzék megnyitása (JSON)", 
-            defaultDir=default_dir,
-            wildcard="JSON fájl (*.json)|*.json", 
-            style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST
-        )
-        if megnyit_dlg.ShowModal() != wx.ID_OK:
-            megnyit_dlg.Destroy()
-            return
-
-        kivalasztott_utvonal = megnyit_dlg.GetPath()
-        megnyit_dlg.Destroy()
-
-        config["last_allomany_dir"] = os.path.dirname(kivalasztott_utvonal)
-        save_settings(config)
-
-        # Fájl beolvasása és elemzése
-        try:
-            with open(kivalasztott_utvonal, "r", encoding="utf-8") as f:
-                importalt_adatok = json.load(f)
-        except Exception as e:
-            wx.MessageBox(
-                f"Hiba a JSON fájl beolvasásakor vagy értelmezésekor:\n{e}",
-                "Fájl olvasási hiba",
-                wx.OK | wx.ICON_ERROR,
-                self,
-            )
-            return
-
-        if not isinstance(importalt_adatok, list):
-            wx.MessageBox(
-                "A kiválasztott JSON fájl formátuma nem megfelelő (listát várunk)!",
-                "Hiba",
-                wx.OK | wx.ICON_ERROR,
-                self,
-            )
+        importalt_adatok = json_lista_betoltese(
+            self, "last_allomany_dir", "Állományjegyzék megnyitása (JSON)")
+        if importalt_adatok is None:
             return
 
         # Elemzés: új tételek, kiegészíthető duplikátumok és változatlan duplikátumok szétválogatása
@@ -980,39 +853,19 @@ class Konyvtarnok(wx.Frame):
             importalt_adatok, self.db.konyvek
         )
 
-        if not uj_tetelek and not kiegeszitheto_tetelek:
-            uzenet = "A kiválasztott fájl nem tartalmaz importálható új könyvet vagy kiegészíthető adatot."
-            if kihagyott_duplum_db > 0:
-                uzenet += f"\n\nKihagyva (már létező duplikátum): {kihagyott_duplum_db} db"
-            wx.MessageBox(uzenet, "Importálás", wx.OK | wx.ICON_INFORMATION, self)
-            return
-
-        # Megjelenítjük a választó párbeszédablakot (csak az új és kiegészíthető könyvekkel)
-        dlg = JsonImportValasztoDialog(
-            self,
-            uj_tetelek=uj_tetelek,
-            kiegeszitheto_tetelek=kiegeszitheto_tetelek,
+        valasztas = json_import_valasztas(
+            self, uj_tetelek, kiegeszitheto_tetelek, kihagyott_duplum_db,
+            "A kiválasztott fájl nem tartalmaz importálható új könyvet vagy kiegészíthető adatot.",
         )
-        valasz = dlg.ShowModal()
-        if valasz != wx.ID_OK:
-            dlg.Destroy()
+        if valasztas is None:
             return
-
-        kivalasztott_ujak = dlg.get_kivalasztott_uj_konyvek()
-        kivalasztott_kiegeszitesek = dlg.get_kivalasztott_kiegeszitesek()
-        dlg.Destroy()
-
-        if not kivalasztott_ujak and not kivalasztott_kiegeszitesek:
-            return
+        kivalasztott_ujak = valasztas.uj_tetelek
+        kivalasztott_kiegeszitesek = valasztas.kiegeszitesek
+        osszes_kihagyva = valasztas.osszes_kihagyva
 
         uj_konyv_objektumok = []
         hozzaadva = 0
         kiegeszitve = 0
-        osszes_kihagyva = (
-            (len(uj_tetelek) - len(kivalasztott_ujak))
-            + (len(kiegeszitheto_tetelek) - len(kivalasztott_kiegeszitesek))
-            + kihagyott_duplum_db
-        )
 
         try:
             with self.db.undo.muvelet("JSON importálás"):

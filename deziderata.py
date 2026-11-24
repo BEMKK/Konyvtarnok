@@ -3,11 +3,10 @@ import locale
 import logging
 import os
 import uuid
-from contextlib import contextmanager
 import wx
 from config_manager import load_settings, save_settings, beallitas_mentese
-from help import sugo_megnyitasa
 from theme_manager import apply_theme_from_settings
+from help import sugo_megnyitasa
 from settings import beallitasok_megnyitasa_gyermekbol
 from data_manager import (
     load_hmac_json,
@@ -22,8 +21,10 @@ from data_manager import (
     allomany_szerkesztheto,
     elemez_json_import,
     DEZIDERATA_ALAPERTEKEK,
+    undo_lepes,
 )
-from dialogs import JsonImportValasztoDialog
+from dialogs import json_lista_betoltese, json_import_valasztas
+from konyv_lista import lista_helyzet_megtartasa
 from oszlop_szelesseg import hasznalhato_szelesseg, szamol_celok, igazit
 from constants import (
     DEFAULT_DEZIDERATA_LATHATO_OSZLOPOK,
@@ -44,7 +45,6 @@ from export_manager import katalogus_mentese
 from menu_bar import DeziderataMenuBar
 from undo_manager import (
     UndoRegiszter, UndoKezelo, ListaTarolo, rekordlista_masolata, frissit_undo_menu,
-    utkozes_uzenet,
 )
 # A magyar_rendezesi_kulcs és az alkalmazas_alapmappa az utils.py-ba
 # kerültek át: tisztán szövegfeldolgozó, illetve az alkalmazás mappáját
@@ -270,6 +270,7 @@ class Deziderata(wx.Frame):
 
         # sorindex -> tétel id (a főlista KonyvListaCtrl.sor_id_terkep-jének
         # megfelelője); a refresh_list építi újra minden frissítéskor.
+        # Helyben módosítandó (clear/update), lásd konyv_lista.lista_helyzet_megtartasa.
         self.sor_id_terkep = {}
 
         # Nézet: a választott rendezés (Nézet > Rendezés; a beállításokból
@@ -722,33 +723,8 @@ class Deziderata(wx.Frame):
     def _visszavonas_vagy_megis(self, ismet):
         if not self._szerkesztes_engedelyezett():
             return
-        leiras = self.undo.ismetlendo_leiras() if ismet else self.undo.visszavonando_leiras()
-        if leiras is None:
-            self.statusbar.SetStatusText(
-                "Nincs mit újra alkalmazni." if ismet else "Nincs visszavonható művelet."
-            )
-            return
-
-        # Kapcsolt lépésnél (pl. átemelés az állományba) a főablak
-        # könyvlistáját is a regiszter frissíti.
-        if not (self.undo.ismet() if ismet else self.undo.visszavon()):
-            uzenet = utkozes_uzenet(self.undo, ismet)
-            if uzenet:
-                wx.MessageBox(
-                    uzenet, "A művelet most nem hajtható végre",
-                    wx.OK | wx.ICON_INFORMATION, self,
-                )
-            else:
-                wx.MessageBox(
-                    "A művelet nem hajtható végre (a változás nem menthető), ezért "
-                    "az adatok a korábbi állapotukban maradtak.",
-                    "Mentési hiba", wx.OK | wx.ICON_ERROR, self,
-                )
+        if not undo_lepes(self.undo, ismet, self, self.statusbar.SetStatusText):
             self.list.SetFocus()
-            return
-        self.statusbar.SetStatusText(
-            f"Újra alkalmazva: {leiras}." if ismet else f"Visszavonva: {leiras}."
-        )
 
     # Visszavonás/mégis után a lista a korábbi helyén marad (fókusz,
     # kijelölés, görgetés), mint a főablakban. True esetén ehelyett a
@@ -769,73 +745,13 @@ class Deziderata(wx.Frame):
         if ablak_fokusz:
             self.list.SetFocus()
 
-    def _lista_helyzet_mentese(self):
-        """A lista helyzetének (fókusz, kijelölés, görgetés) elmentése
-        tétel-id alapján (a főablak MainFrame._lista_helyzet_mentese
-        megfelelője)."""
-        lista = self.list
-        terkep = self.sor_id_terkep
-        fokusz_idx = lista.GetFocusedItem()
-        top_idx = lista.GetTopItem()
-        return {
-            "listan_van_fokusz": lista.HasFocus(),
-            "fokusz_idx": fokusz_idx,
-            "fokusz_id": terkep.get(fokusz_idx),
-            "kijelolt_idk": {terkep.get(i) for i in osszes_kijelolt_index(lista)} - {None},
-            "top_idx": top_idx,
-            "top_id": terkep.get(top_idx),
-        }
-
-    def _lista_helyzet_visszaallitasa(self, allapot, erintett_idk=None):
-        lista = self.list
-        db = lista.GetItemCount()
-        if db == 0:
-            return
-        id_index = {azon: i for i, azon in self.sor_id_terkep.items()}
-
-        kijeloltek, fokusz = [], None
-        if erintett_idk:
-            kijeloltek = [id_index[a] for a in erintett_idk if a in id_index]
-            fokusz = kijeloltek[0] if kijeloltek else None
-        if fokusz is None:
-            kijeloltek = [id_index[a] for a in allapot["kijelolt_idk"] if a in id_index]
-            fokusz = id_index.get(allapot["fokusz_id"])
-        if fokusz is None and kijeloltek:
-            fokusz = min(kijeloltek)
-        if fokusz is None and allapot["fokusz_idx"] != -1:
-            # A korábban fókuszban lévő tétel megszűnt (pl. felvétel
-            # visszavonása): a hozzá legközelebbi sor kapja a fókuszt.
-            fokusz = min(allapot["fokusz_idx"], db - 1)
-            if not kijeloltek and allapot["kijelolt_idk"]:
-                kijeloltek = [fokusz]
-
-        for i in kijeloltek:
-            lista.Select(i)
-        if fokusz is not None:
-            lista.Focus(fokusz)
-
-        # Görgetési helyzet: előbb a lista aljára, majd a korábbi első látható
-        # sorra görgetünk, így az újra felülre kerül.
-        top = id_index.get(allapot["top_id"])
-        if top is None:
-            top = min(max(allapot["top_idx"], 0), db - 1)
-        lista.EnsureVisible(db - 1)
-        lista.EnsureVisible(top)
-        if fokusz is not None:
-            lista.EnsureVisible(fokusz)
-
-        if erintett_idk or allapot["listan_van_fokusz"]:
-            lista.SetFocus()
-
-    @contextmanager
     def _lista_helyzet_megtartasa(self, erintett_idk=None):
         """Context manager: a blokkban a lista újraépíthető (refresh_list),
-        a fókusz, a kijelölés és a görgetés utána visszaáll."""
-        allapot = self._lista_helyzet_mentese()
-        try:
-            yield
-        finally:
-            self._lista_helyzet_visszaallitasa(allapot, erintett_idk)
+        a fókusz, a kijelölés és a görgetés utána visszaáll. A refresh_list
+        maga fagyaszt, ezért itt fagyaszt=False (lásd
+        konyv_lista.lista_helyzet_megtartasa)."""
+        return lista_helyzet_megtartasa(
+            self.list, self.sor_id_terkep, erintett_idk, fagyaszt=False)
 
     def _celszelessegek(self):
         alapok = [LISTA_OSZLOP_ADATOK[k][0] for k in self.lathato_kulcsok]
@@ -899,9 +815,10 @@ class Deziderata(wx.Frame):
         self._biztosit_idk()
         self.rendez_listat()
         self.lathato_items = self._lathato_tetelek()
-        self.sor_id_terkep = {
-            idx: item.get("id") for idx, item in enumerate(self.lathato_items)
-        }
+        self.sor_id_terkep.clear()
+        self.sor_id_terkep.update(
+            (idx, item.get("id")) for idx, item in enumerate(self.lathato_items)
+        )
         # Freeze/Thaw: a sorok beszúrása közben nincs közbenső újrarajzolás.
         self.list.Freeze()
         try:
@@ -1211,44 +1128,9 @@ class Deziderata(wx.Frame):
     def on_import_json(self, event):
         if not self._szerkesztes_engedelyezett():
             return
-        config = load_settings()
-        default_dir = config.get("last_deziderata_dir", "")
-
-        with wx.FileDialog(
-            self,
-            message="Jegyzék betöltése",
-            defaultDir=default_dir,
-            wildcard="JSON fájlok (*.json)|*.json",
-            style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST
-        ) as fileDialog:
-
-            if fileDialog.ShowModal() == wx.ID_CANCEL:
-                return
-
-            pathname = fileDialog.GetPath()
-            config["last_deziderata_dir"] = os.path.dirname(pathname)
-            save_settings(config)
-
-        # Fájl beolvasása és elemzése
-        try:
-            with open(pathname, "r", encoding="utf-8") as f:
-                importalt_adatok = json.load(f)
-        except Exception as e:
-            wx.MessageBox(
-                f"Hiba a JSON fájl beolvasásakor vagy értelmezésekor:\n{e}",
-                "Fájl olvasási hiba",
-                wx.OK | wx.ICON_ERROR,
-                self,
-            )
-            return
-
-        if not isinstance(importalt_adatok, list):
-            wx.MessageBox(
-                "A kiválasztott JSON fájl formátuma nem megfelelő (listát várunk)!",
-                "Hiba",
-                wx.OK | wx.ICON_ERROR,
-                self,
-            )
+        importalt_adatok = json_lista_betoltese(
+            self, "last_deziderata_dir", "Jegyzék betöltése")
+        if importalt_adatok is None:
             return
 
         deziderata_mezok = [k for k, _ in DEZIDERATA_MEZO_DEFINICIOK]
@@ -1262,40 +1144,21 @@ class Deziderata(wx.Frame):
             regikulcsok_atalakitasa=True,
         )
 
-        if not uj_tetelek and not kiegeszitheto_tetelek:
-            uzenet = "A kiválasztott fájl nem tartalmaz importálható új vagy kiegészíthető tételt."
-            if kihagyott_duplum_db > 0:
-                uzenet += f"\n\nKihagyva (már létező duplikátum): {kihagyott_duplum_db} db"
-            wx.MessageBox(uzenet, "Importálás", wx.OK | wx.ICON_INFORMATION, self)
-            return
-
-        dlg = JsonImportValasztoDialog(
-            self,
-            uj_tetelek=uj_tetelek,
-            kiegeszitheto_tetelek=kiegeszitheto_tetelek,
+        valasztas = json_import_valasztas(
+            self, uj_tetelek, kiegeszitheto_tetelek, kihagyott_duplum_db,
+            "A kiválasztott fájl nem tartalmaz importálható új vagy kiegészíthető tételt.",
             cim="Dezideráta-tételek kiválasztása JSON importáláshoz",
             fejlec="Válassza ki az importálandó új tételeket és a kiegészítendő köteteket:",
             muvelet_uj="Új tétel",
         )
-        valasz = dlg.ShowModal()
-        if valasz != wx.ID_OK:
-            dlg.Destroy()
+        if valasztas is None:
             return
-
-        kivalasztott_ujak = dlg.get_kivalasztott_uj_konyvek()
-        kivalasztott_kiegeszitesek = dlg.get_kivalasztott_kiegeszitesek()
-        dlg.Destroy()
-
-        if not kivalasztott_ujak and not kivalasztott_kiegeszitesek:
-            return
+        kivalasztott_ujak = valasztas.uj_tetelek
+        kivalasztott_kiegeszitesek = valasztas.kiegeszitesek
+        osszes_kihagyva = valasztas.osszes_kihagyva
 
         hozzaadva = 0
         kiegeszitve = 0
-        osszes_kihagyva = (
-            (len(uj_tetelek) - len(kivalasztott_ujak))
-            + (len(kiegeszitheto_tetelek) - len(kivalasztott_kiegeszitesek))
-            + kihagyott_duplum_db
-        )
 
         try:
             with self.undo.muvelet("JSON importálás"):

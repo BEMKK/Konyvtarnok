@@ -1,13 +1,15 @@
 import os
 import sys
+import json
 import logging
+from collections import namedtuple
 import wx
 from config_manager import load_settings, save_settings
 from constants import APP_NAME, APP_VERSION
 from export_manager import export_konyv_pdf, get_biztonsagos_pdf_fajlnev
 from theme_manager import apply_theme_from_settings
 
-def _eroforras_utvonal(fajlnev):
+def eroforras_utvonal(fajlnev):
     """Csomagolt (PyInstaller) és forrásból futtatott környezetben is megkeresi a fájlt."""
     helyek = [
         getattr(sys, '_MEIPASS', None),
@@ -44,7 +46,7 @@ class LicencDialog(wx.Dialog):
 def licenc_megjelenitese(parent):
     """Betölti a license.txt-t és megjeleníti a licencablakot.
     Névjegy gombból és menüből is ez hívandó."""
-    licenc_ut = _eroforras_utvonal("license.txt")
+    licenc_ut = eroforras_utvonal("license.txt")
     szoveg = None
     if licenc_ut:
         try:
@@ -68,12 +70,10 @@ class NevjegyDialog(wx.Dialog):
         
         sizer = wx.BoxSizer(wx.VERTICAL)
 
-        base_dir = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
-
-        icon_path = os.path.join(base_dir, "ikon.ico")
+        icon_path = eroforras_utvonal("ikon.ico")
 
         try:
-            if os.path.exists(icon_path):
+            if icon_path:
                 img = wx.Image(icon_path, wx.BITMAP_TYPE_ANY)
                 if img.IsOk():
                     img = img.Scale(80, 80, wx.IMAGE_QUALITY_HIGH)
@@ -82,7 +82,7 @@ class NevjegyDialog(wx.Dialog):
                     icon_bitmap = wx.StaticBitmap(self, bitmap=bitmap)
                     sizer.Add(icon_bitmap, 0, wx.ALIGN_CENTER | wx.TOP, 15)
             else:
-                logging.warning(f"Névjegy ikon nem található: {icon_path}")
+                logging.warning("Névjegy ikon nem található: ikon.ico")
         except Exception as e:
             logging.error(f"Névjegy ikon hiba: {e}")
 
@@ -463,3 +463,107 @@ class JsonImportValasztoDialog(wx.Dialog):
             if self.lista.IsItemChecked(row_idx):
                 valasztott.append(self.kiegeszitheto_tetelek[tetel_idx])
         return valasztott
+
+
+# ==============================================================================
+# KÖZÖS "JSON IMPORT" ELŐKÉSZÍTÉS (főablak és Dezideráta-kezelő)
+# ==============================================================================
+# A fájlválasztás, a beolvasás, a "lista-e" ellenőrzés, az üres eredmény
+# üzenete és a választó párbeszédablak felépítése korábban a főablak
+# OnJsonImport és a Dezideráta-kezelő on_import_json függvényében
+# egymástól függetlenül, szinte szó szerint megegyező formában szerepelt.
+# A tényleges felvétel/kiegészítés a két helyen eltér, ezért az itt marad.
+def json_lista_betoltese(parent, konfig_kulcs, ablakcim):
+    """JSON fájl kiválasztása és beolvasása (listát vár).
+
+    konfig_kulcs: a beállításokban az utoljára használt mappa kulcsa.
+    A hibákat maga jeleníti meg. Megszakításnál vagy hibánál None-t ad.
+    """
+    config = load_settings()
+    with wx.FileDialog(
+        parent,
+        message=ablakcim,
+        defaultDir=config.get(konfig_kulcs, ""),
+        wildcard="JSON fájl (*.json)|*.json",
+        style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST,
+    ) as megnyit_dlg:
+        if megnyit_dlg.ShowModal() != wx.ID_OK:
+            return None
+        utvonal = megnyit_dlg.GetPath()
+
+    config[konfig_kulcs] = os.path.dirname(utvonal)
+    save_settings(config)
+
+    try:
+        with open(utvonal, "r", encoding="utf-8") as f:
+            importalt_adatok = json.load(f)
+    except Exception as e:
+        wx.MessageBox(
+            f"Hiba a JSON fájl beolvasásakor vagy értelmezésekor:\n{e}",
+            "Fájl olvasási hiba",
+            wx.OK | wx.ICON_ERROR,
+            parent,
+        )
+        return None
+
+    if not isinstance(importalt_adatok, list):
+        wx.MessageBox(
+            "A kiválasztott JSON fájl formátuma nem megfelelő (listát várunk)!",
+            "Hiba",
+            wx.OK | wx.ICON_ERROR,
+            parent,
+        )
+        return None
+    return importalt_adatok
+
+
+ImportValasztas = namedtuple("ImportValasztas", "uj_tetelek kiegeszitesek osszes_kihagyva")
+
+
+def json_import_valasztas(
+    parent, uj_tetelek, kiegeszitheto_tetelek, kihagyott_duplum_db, nincs_uzenet,
+    **dialog_kwargs,
+):
+    """Az elemez_json_import eredményének megjelenítése és a felhasználó
+    választásának bekérése.
+
+    nincs_uzenet: az üzenet, ha nincs sem új, sem kiegészíthető tétel.
+    dialog_kwargs: a JsonImportValasztoDialog további paraméterei (cim,
+    fejlec, muvelet_uj).
+
+    None-t ad, ha nincs mit importálni, a felhasználó megszakította, vagy
+    semmit sem választott ki. Egyébként ImportValasztas(uj_tetelek,
+    kiegeszitesek, osszes_kihagyva): a kiválasztott új tételek, a
+    kiválasztott kiegészítések, és a kihagyott tételek eddigi száma (a
+    nem kiválasztottak és a már létező duplikátumok).
+    """
+    if not uj_tetelek and not kiegeszitheto_tetelek:
+        uzenet = nincs_uzenet
+        if kihagyott_duplum_db > 0:
+            uzenet += f"\n\nKihagyva (már létező duplikátum): {kihagyott_duplum_db} db"
+        wx.MessageBox(uzenet, "Importálás", wx.OK | wx.ICON_INFORMATION, parent)
+        return None
+
+    dlg = JsonImportValasztoDialog(
+        parent,
+        uj_tetelek=uj_tetelek,
+        kiegeszitheto_tetelek=kiegeszitheto_tetelek,
+        **dialog_kwargs,
+    )
+    try:
+        if dlg.ShowModal() != wx.ID_OK:
+            return None
+        kivalasztott_ujak = dlg.get_kivalasztott_uj_konyvek()
+        kivalasztott_kiegeszitesek = dlg.get_kivalasztott_kiegeszitesek()
+    finally:
+        dlg.Destroy()
+
+    if not kivalasztott_ujak and not kivalasztott_kiegeszitesek:
+        return None
+
+    osszes_kihagyva = (
+        (len(uj_tetelek) - len(kivalasztott_ujak))
+        + (len(kiegeszitheto_tetelek) - len(kivalasztott_kiegeszitesek))
+        + kihagyott_duplum_db
+    )
+    return ImportValasztas(kivalasztott_ujak, kivalasztott_kiegeszitesek, osszes_kihagyva)
