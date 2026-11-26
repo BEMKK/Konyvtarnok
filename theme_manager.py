@@ -8,7 +8,7 @@ THEMES = {
     "rendszer": {
         # Helyőrző: a színeket a _rendszer_tema() állítja elő a Windows
         # aktuális (akár magas kontrasztos) beállításaiból.
-        "name": "Rendszer (Windows színek)",
+        "name": "Rendszer",
     },
     "vilagos": {
         "name": "Világos",

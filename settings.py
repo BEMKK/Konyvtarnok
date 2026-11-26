@@ -99,6 +99,14 @@ class BeallitasokDialog(wx.Dialog):
             self.ELERHETO_OSZLOPOK, self.lathato_oszlopok,
             "Listában megjelenő oszlopok", DEFAULT_LATHATO_OSZLOPOK,
         )
+        # Állományjegyzék alapértelmezett import/export mappája (kizárólag a
+        # nyers JSON-hoz, a program egyébként az alapmappából tölt be!)
+        self.txt_allomanyjegyzek = self._mappa_sor(
+            panel_allomany, allomany_sizer,
+            "Állományjegyzék alapértelmezett import/export mappája:",
+            config.get("last_allomany_dir", ""),
+            "Állományjegyzék mappájának kiválasztása")
+        allomany_sizer.AddSpacer(10)
         self.txt_pdf = self._mappa_sor(
             panel_allomany, allomany_sizer,
             "Könyvadatlapok alapértelmezett mappája:",
@@ -114,14 +122,7 @@ class BeallitasokDialog(wx.Dialog):
             "Katalóguslapok alapértelmezett mappája:",
             config.get("last_katalogus_dir", ""),
             "Katalóguslapok alapértelmezett mappája")
-        # Állományjegyzék alapértelmezett import/export mappája (kizárólag a
-        # nyers JSON-hoz, a program egyébként az alapmappából tölt be!)
-        self.txt_allomanyjegyzek = self._mappa_sor(
-            panel_allomany, allomany_sizer,
-            "Állományjegyzék alapértelmezett import/export mappája:",
-            config.get("last_allomany_dir", ""),
-            "Állományjegyzék mappájának kiválasztása")
-        allomany_sizer.AddSpacer(10)
+
         panel_allomany.SetSizer(allomany_sizer)
 
         # --- 3. FÜL: Dezideráta-kezelő (oszlopok a listában + mappa) ---
@@ -261,7 +262,7 @@ class BeallitasokDialog(wx.Dialog):
         Visszaadja a (listavezérlő, kulcsok) párt; a kulcsok a lista sorainak
         sorrendjében állnak."""
         if self._oszlop_jelolo_tamogatott:
-            cimke_szoveg = ("Válassza ki az állománykezelőben megjelenő oszlopokat. "
+            cimke_szoveg = ("Válassza ki a listában megjelenő oszlopokat. "
                             "A Cím oszlop mindig látszik.")
         else:
             cimke_szoveg = ("Az oszlopok kiválasztásához wxPython 4.1 vagy újabb "
@@ -294,7 +295,7 @@ class BeallitasokDialog(wx.Dialog):
         sizer.Add(lista, 1, wx.EXPAND | wx.LEFT | wx.RIGHT, 10)
 
         gombok = wx.BoxSizer(wx.HORIZONTAL)
-        btn_mind = wx.Button(panel, label="Mindet kijelöl")
+        btn_mind = wx.Button(panel, label="Összes kijelölése")
         btn_alap = wx.Button(panel, label="Alapértelmezettek visszaállítása")
         if not self._oszlop_jelolo_tamogatott:
             btn_mind.Disable()
