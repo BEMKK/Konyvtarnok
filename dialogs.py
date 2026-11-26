@@ -150,11 +150,8 @@ class UjdonsagokDialog(wx.Dialog):
         main_sizer.Add(wx.StaticLine(self), 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 15)
         
         ujdonsagok_lista = [
-            "A KönyvTárnok-keresőben javítva a lista címkéjének felolvasási hibája szűrés esetén.",
-            "Ugyanitt egységesítve és javítva a státuszsor szövege.",
-            "Eltávolítva a státuszsor felirata visszavonás és ismétlés esetén, ha nincs visszavonható vagy ismételhető művelet.",
-            "Kisebb kódjavítások, nem használt importok és kódok, függőségek törlése.",
-            "Frissítés a súgóban és a readme.md fájlban."
+            "Javítva az oszloplisták megtévesztő felirata a Beállításokban.",
+            "Kisebb javítások a Súgóban és az UI szövegekben."
         ]
 
         szoveg_box = wx.BoxSizer(wx.VERTICAL)

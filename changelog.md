@@ -4,6 +4,13 @@ A projekten végrehajtott lényegi változtatások dokumentációja.
 
 
 
+## [4.3.2] - 2026-11-26
+
+- Javítva az oszloplisták megtévesztő felirata a Beállításokban.
+- Kisebb javítások a Súgóban és az UI szövegekben.
+
+
+
 ## \[4.3.1] - 2026-11-24
 
 - A KönyvTárnok-keresőben javítva a lista címkéjének felolvasási hibája szűrés esetén.
