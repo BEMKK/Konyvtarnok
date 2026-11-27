@@ -4,6 +4,13 @@ A projekten végrehajtott lényegi változtatások dokumentációja.
 
 
 
+## [4.4.0] - 2026-11-27
+
+- Visszavonás és Mégis menüpontok tiltása mindhárom modulban, ha nincs visszavonható vagy ismételhető művelet a képernyőolvasó visszajelzésének javítására.
+- Javítva a főablak lista fókuszának megtartása rendezéskor.
+
+
+
 ## [4.3.2] - 2026-11-26
 
 - Javítva az oszloplisták megtévesztő felirata a Beállításokban.

@@ -1,5 +1,5 @@
 APP_NAME = "KönyvTárnok"
-APP_VERSION = "4.3.2"
+APP_VERSION = "4.4.0"
 APP_STAGE = ""
 APP_TITLE = f"{APP_NAME} – Állománykezelő"
 # A különálló ablakok (programrészek) címe. EZ AZ EGYETLEN HELY, ahol definiálva van.
