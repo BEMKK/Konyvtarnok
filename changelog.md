@@ -8,6 +8,7 @@ A projekten végrehajtott lényegi változtatások dokumentációja.
 
 - Visszavonás és Mégis menüpontok tiltása mindhárom modulban, ha nincs visszavonható vagy ismételhető művelet a képernyőolvasó visszajelzésének javítására.
 - Javítva a főablak lista fókuszának megtartása rendezéskor.
+- Javítások és frissítések a súgóban.
 
 
 

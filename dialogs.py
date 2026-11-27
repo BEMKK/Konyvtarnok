@@ -151,7 +151,8 @@ class UjdonsagokDialog(wx.Dialog):
         
         ujdonsagok_lista = [
             "Visszavonás és Mégis menüpontok tiltása, ha nincs visszavonható vagy ismételhető művelet a képernyőolvasó visszajelzésének javítására.",
-            "Javítva a főablak lista fókuszának megtartása rendezéskor."
+            "Javítva a főablak lista fókuszának megtartása rendezéskor.",
+            "Javítások és frissítések a súgóban."
         ]
 
         szoveg_box = wx.BoxSizer(wx.VERTICAL)
