@@ -182,6 +182,10 @@ class Konyvtarnok(wx.Frame):
         self.Bind(wx.EVT_MENU, self.OnLicenc, menusor.licenc)
         self.Bind(wx.EVT_MENU, self.OnFrissites, menusor.frissites)
 
+        # Menüelemek tiltása
+        self.Bind(wx.EVT_UPDATE_UI, self.OnUpdateUndoUI, id=self.menusor.undo.GetId())
+        self.Bind(wx.EVT_UPDATE_UI, self.OnUpdateRedoUI, id=self.menusor.redo.GetId())
+
         self.Bind(wx.EVT_MENU, lambda e: self.kereso_ctrl.SetFocus(), id=id_kereso_fokusz)
 
         # GOMB ÉS KERESŐ ESEMÉNYEK (Visszaállítva!)
@@ -1155,10 +1159,11 @@ class Konyvtarnok(wx.Frame):
 
     def OnRendezes(self, mezo_kulcs):
         self.statusbar.SetStatusText(f"Rendezés {mezo_kulcs} szerint...")
-        if hasattr(self.lista, 'Rendezes'):
-            self.lista.Rendezes(mezo_kulcs)
-        elif hasattr(self.lista, 'FeltoltLista'):
-            self.lista.FeltoltLista()
+        with self._lista_helyzet_megtartasa():
+            if hasattr(self.lista, 'Rendezes'):
+                self.lista.Rendezes(mezo_kulcs)
+            elif hasattr(self.lista, 'FeltoltLista'):
+                self.lista.FeltoltLista()
         self.FrissitStatusBar()
 
         # A választott rendezés megmarad a következő indításra is. Csak a
@@ -1238,3 +1243,23 @@ class Konyvtarnok(wx.Frame):
 
     def OnLicenc(self, event):
         licenc_megjelenitese(self)
+
+    def OnUpdateUndoUI(self, event):
+        fokusz = self.FindFocus()
+        # Ha épp beviteli mezőben állunk (pl. keresősáv):
+        if fokusz and hasattr(fokusz, "CanUndo"):
+            event.Enable(fokusz.CanUndo())
+        else:
+            # Ha a listában/táblázatban: van-e lépés az undo veremben?
+            van_undo = self.db.undo.visszavonando_leiras() is not None
+            event.Enable(van_undo)
+
+    def OnUpdateRedoUI(self, event):
+        fokusz = self.FindFocus()
+        # Ha épp beviteli mezőben állunk (pl. keresősáv):
+        if fokusz and hasattr(fokusz, "CanRedo"):
+            event.Enable(fokusz.CanRedo())
+        else:
+            # Ha a listában/táblázatban: van-e lépés az undo veremben?
+            van_redo = self.db.undo.ismetlendo_leiras() is not None
+            event.Enable(van_redo)

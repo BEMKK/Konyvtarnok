@@ -823,6 +823,11 @@ class KonyvtarnokKeresoApp(wx.Frame):
         self.Bind(wx.EVT_MENU, self.on_open_help, menusor.help)
         self.Bind(wx.EVT_MENU, self.on_menu_deziderata_kezelo, menusor.deziderata_kezelo)
         self.Bind(wx.EVT_MENU, self.on_beallitasok, menusor.beallitasok)
+
+        # Menüelemek tiltása
+        self.Bind(wx.EVT_UPDATE_UI, self.OnUpdateUndoUI, id=self.menusor.undo.GetId())
+        self.Bind(wx.EVT_UPDATE_UI, self.OnUpdateRedoUI, id=self.menusor.redo.GetId())
+
         for kulcs, elem in menusor.rendezes_elemek.items():
             self.Bind(wx.EVT_MENU, lambda e, k=kulcs: self.on_menu_rendezes(k), elem)
         for kulcs, elem in menusor.statusz_elemek.items():
@@ -1464,6 +1469,26 @@ class KonyvtarnokKeresoApp(wx.Frame):
     def on_menu_deziderata_kezelo(self, event):
         if self.parent is not None and hasattr(self.parent, "on_deziderata"):
             self.parent.on_deziderata(event)
+
+    def OnUpdateUndoUI(self, event):
+        fokusz = self.FindFocus()
+        # Ha épp beviteli mezőben állunk (pl. keresősáv):
+        if fokusz and hasattr(fokusz, "CanUndo"):
+            event.Enable(fokusz.CanUndo())
+        else:
+            # Ha a listában/táblázatban: van-e lépés az undo veremben?
+            van_undo = self.undo.visszavonando_leiras() is not None if getattr(self, "undo", None) else False
+            event.Enable(van_undo)
+
+    def OnUpdateRedoUI(self, event):
+        fokusz = self.FindFocus()
+        # Ha épp beviteli mezőben állunk (pl. keresősáv):
+        if fokusz and hasattr(fokusz, "CanRedo"):
+            event.Enable(fokusz.CanRedo())
+        else:
+            # Ha a listában/táblázatban: van-e lépés az undo veremben?
+            van_redo = self.undo.ismetlendo_leiras() is not None if getattr(self, "undo", None) else False
+            event.Enable(van_redo)
 
 if __name__ == "__main__":
     app = wx.App()
